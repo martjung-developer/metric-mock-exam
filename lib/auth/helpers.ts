@@ -6,12 +6,30 @@ import { redirect }        from 'next/navigation'
 import type { Profile, StudentProfile, UserRole } from '@/lib/types/auth'
 import { getDashboardByRole, canManageContent }   from '@/lib/types/auth'
 
+function isInvalidRefreshTokenError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false
+  }
+  const message = error.message.toLowerCase()
+  return (
+    message.includes('invalid refresh token') &&
+    message.includes('refresh token not found')
+  )
+}
+
 // ── Get current user ──────────────────────────────────────────────────────────
 export async function getUser() {
-  const supabase = await createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
-  if (error || !user) {return null}
-  return user
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error || !user) {return null}
+    return user
+  } catch (error) {
+    if (isInvalidRefreshTokenError(error)) {
+      return null
+    }
+    throw error
+  }
 }
 
 // ── Get profile row ───────────────────────────────────────────────────────────

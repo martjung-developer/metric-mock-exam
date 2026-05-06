@@ -9,19 +9,14 @@
 //  6. fetchAttemptCounts       → new helper for list page
 //  7. All inserts properly awaited and validated
 // ─────────────────────────────────────────────────────────────────────────────
-
-<<<<<<< Updated upstream
-import { createClient } from '@/lib/supabase/client'
+import { createClient }             from '@/lib/supabase/client'
 import { notifyAdminsExamSubmitted } from '@/lib/services/notifications/adminAlerts.service'
-import type { ExamAttempt, AnswerMap, Question } from '@/lib/types/student/mock-exams/mock-exams'
-=======
-import { createClient }      from '@/lib/supabase/client'
 import type {
-  ExamAttempt, AnswerMap, Question, SessionCreateResult, AttemptCountMap,
-  SubmissionStatus, 
+  ExamAttempt, AnswerMap, Question,
+  SessionCreateResult, AttemptCountMap,
+  SubmissionStatus,
 } from '@/lib/types/student/mock-exams/mock-exams'
-import { MAX_ATTEMPTS }         from '@/lib/types/student/mock-exams/mock-exams'
->>>>>>> Stashed changes
+import { MAX_ATTEMPTS } from '@/lib/types/student/mock-exams/mock-exams'
 
 // ── Internal row shapes (no `any`) ────────────────────────────────────────────
 
@@ -496,7 +491,6 @@ export async function createNewSubmission(
         : 'Could not create new attempt.',
     )
   }
-<<<<<<< Updated upstream
 }
 
 export async function sendExamSubmittedNotificationToAdmins(
@@ -508,7 +502,7 @@ export async function sendExamSubmittedNotificationToAdmins(
     studentLabel,
     examTitle,
   })
-=======
+
 
   return { kind: 'started', submissionId: data.id, startedAt: now, attemptNo: nextAttemptNo }
 }
@@ -539,6 +533,5 @@ export async function verifyStudentExamAccess(
       .maybeSingle(),
   ])
 
-  return examRes.data !== null && assignmentRes.data !== null
->>>>>>> Stashed changes
+return examRes.data !== null && assignmentRes.data !== null
 }

@@ -1,17 +1,44 @@
 // app/(auth)/login/page.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+// Reads ?role= query param as a UI hint only.
+// Actual role is detected from ID input via detectRoleFromId() — this is the
+// SOURCE OF TRUTH and overrides the query param for the final redirect.
+//
+// Detection badge behaviour:
+//   • Student IDs  → immediately show "Detected: Student"
+//   • Staff IDs    → show "Detected: Staff (PREFIX)" until the server resolves
+//                    the actual role; after login the server role is authoritative.
+//   • Mismatch     → warn but allow sign-in; server role wins.
+// ─────────────────────────────────────────────────────────────────────────────
 'use client'
 
-import { useState }        from 'react'
-import Image               from 'next/image'
-import Link                from 'next/link'
+import { useState, useEffect }     from 'react'
+import Image                       from 'next/image'
+import Link                        from 'next/link'
+import { useSearchParams }         from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react'
-import { MoleculeBackground }                        from '@/animations/auth/MoleculeBackground'
-import { signInWithId, signInWithGoogle, signInWithFacebook } from '@/lib/services/auth'
-import { validateStudentIdInput }                    from '@/lib/utils/auth'
+import { Eye, EyeOff, ArrowRight, AlertCircle, ArrowLeft } from 'lucide-react'
+import { MoleculeBackground }      from '@/animations/auth/MoleculeBackground'
+import {
+  signInWithId, signInWithGoogle, signInWithFacebook,
+} from '@/lib/services/auth'
+import {
+  detectRoleFromId,
+  validateLoginId,
+  getStaffPrefix,
+} from '@/lib/utils/auth'
+import type { UserRole } from '@/lib/types/auth'
 import styles from '../auth.module.css'
 
-// ── Animation variants ─────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  student: 'Student',
+  faculty: 'Faculty',
+  admin:   'Department Admin',
+}
+
+// ── Animation variants ────────────────────────────────────────────────────────
 
 const cardAnim = {
   initial:    { opacity: 0, y: 18, scale: 0.97 },
@@ -25,90 +52,125 @@ const fieldAnim = (delay = 0) => ({
   transition: { duration: 0.28, delay },
 })
 
-// ── Component ──────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function isValidRole(v: string | null): v is UserRole {
+  return v === 'student' || v === 'faculty' || v === 'admin'
+}
+
+/**
+ * Returns the label shown in the detection badge BEFORE the server resolves
+ * the user's actual role.
+ *
+ * - Student ID  → "Student"
+ * - Staff ID    → "Staff (PREFIX)"   e.g. "Staff (SSLATE)"
+ * - Unknown     → null (badge hidden)
+ */
+function getPreResolveBadgeLabel(userId: string): string | null {
+  const role   = detectRoleFromId(userId)
+  if (!role) { return null }
+
+  if (role === 'student') { return 'Student' }
+
+  // Staff — show prefix only (admin vs faculty is resolved by the server)
+  const prefix = getStaffPrefix(userId)
+  return prefix ? `Staff (${prefix})` : 'Staff'
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function LoginPage() {
-  const [userId,   setUserId]   = useState('')
-  const [password, setPassword] = useState('')
-  const [showPw,   setShowPw]   = useState(false)
-  const [loading,  setLoading]  = useState(false)
-  const [error,    setError]    = useState<string | null>(null)
-  const [idError,  setIdError]  = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const queryRole    = searchParams.get('role')
+  const selectedRole = isValidRole(queryRole) ? queryRole : null
 
-  // Validate the ID prefix on blur without blocking typing
-  function validateIdOnBlur() {
-    if (!userId.trim()) {return}
-    const err = validateStudentIdInput(userId)
-    // Only show the prefix warning — let the submit catch the rest
-    if (err && !/^(STU|FAC|ADM)-/i.test(userId.trim())) {
-      setIdError('Enter a Student ID (STU-…), Faculty ID (FAC-…), or Admin ID (ADM-…).')
+  const [userId,       setUserId]       = useState('')
+  const [password,     setPassword]     = useState('')
+  const [showPw,       setShowPw]       = useState(false)
+  const [loading,      setLoading]      = useState(false)
+  const [error,        setError]        = useState<string | null>(null)
+  const [idError,      setIdError]      = useState<string | null>(null)
+
+  // Pre-resolve: what the ID format implies (used for badge + mismatch check)
+  const [detectedRole, setDetectedRole] = useState<UserRole | null>(null)
+
+  // The label shown in the detection badge before server resolve
+  const [badgeLabel,   setBadgeLabel]   = useState<string | null>(null)
+
+  const [mismatch,     setMismatch]     = useState(false)
+
+  // ── Real-time ID analysis ─────────────────────────────────────────────────
+  useEffect(() => {
+    const detected = detectRoleFromId(userId)
+    setDetectedRole(detected)
+    setBadgeLabel(getPreResolveBadgeLabel(userId))
+
+    // Mismatch: only flag when the selected role and detected role are both
+    // known and they disagree.
+    if (detected && selectedRole && detected !== selectedRole) {
+      setMismatch(true)
     } else {
-      setIdError(null)
+      setMismatch(false)
     }
+  }, [userId, selectedRole])
+
+  function validateIdOnBlur() {
+    if (!userId.trim()) { return }
+    const err = validateLoginId(userId)
+    if (err) { setIdError(err) } else { setIdError(null) }
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-  e.preventDefault()
+    e.preventDefault()
+    if (loading) { return }
 
-  if (loading) {return} // prevent double submit
+    setError(null)
+    setIdError(null)
 
-  setError(null)
-  setIdError(null)
+    const idErr = validateLoginId(userId)
+    if (idErr) { setIdError(idErr); return }
 
-  const normalizedId = userId.trim().toUpperCase()
+    if (!password) { setError('Please enter your password.'); return }
 
-  if (!normalizedId) {
-    setIdError('Please enter your ID.')
-    return
-  }
-
-  if (!/^(STU|FAC|ADM)-/i.test(normalizedId)) {
-    setIdError('Invalid ID format (STU-, FAC-, ADM-)')
-    return
-  }
-
-  if (!password) {
-    setError('Please enter your password.')
-    return
-  }
-
-  setLoading(true)
-
-  console.log('[LOGIN ATTEMPT]', {
-    input: userId,
-    normalized: normalizedId,
-  })
-
-  const result = await signInWithId(normalizedId, password)
-
-  setLoading(false)
-
-  console.log('[LOGIN RESULT]', result)
-
-  if (!result.success) {
-    if (result.error?.toLowerCase().includes('not found')) {
-      setIdError('Student ID not found.')
-    } else if (result.error?.toLowerCase().includes('password')) {
-      setError('Incorrect password.')
-    } else {
-      setError(result.error || 'Login failed.')
+    // Mismatch warning — inform user but proceed; detected role may be wrong
+    // at the prefix level (admin vs faculty). Server is authoritative.
+    if (mismatch && detectedRole) {
+      setError(
+        `Your ID was detected as ${ROLE_LABELS[detectedRole]}, ` +
+        `not ${selectedRole ? ROLE_LABELS[selectedRole] : 'the selected role'}. ` +
+        `Signing in as ${ROLE_LABELS[detectedRole]}.`
+      )
+      // Do not return — allow sign-in to proceed.
     }
-    return
-  }
 
-  window.location.href = result.redirectTo
-}
+    setLoading(true)
+    const result = await signInWithId(userId.trim(), password)
+    setLoading(false)
+
+    if (!result.success) {
+      if (result.error?.toLowerCase().includes('not found')) {
+        setIdError('ID not found.')
+      } else if (result.error?.toLowerCase().includes('password')) {
+        setError('Incorrect password.')
+      } else {
+        setError(result.error || 'Login failed.')
+      }
+      return
+    }
+
+    window.location.href = result.redirectTo
+  }
 
   async function handleGoogle() {
     setError(null)
     const result = await signInWithGoogle()
-    if (!result.success) {setError(result.error)}
+    if (!result.success) { setError(result.error) }
   }
 
   async function handleFacebook() {
     setError(null)
     const result = await signInWithFacebook()
-    if (!result.success) {setError(result.error)}
+    if (!result.success) { setError(result.error) }
   }
 
   return (
@@ -118,8 +180,12 @@ export default function LoginPage() {
       <div className={styles.authPage}>
         <motion.div className={styles.card} {...cardAnim}>
 
-          {/* ── Logo ── */}
-          <div className={styles.logoWrap}>
+          {/* ── Back + Logo row ── */}
+          <div className={styles.logoWrap} style={{ position: 'relative' }}>
+            <Link href="/role-select" className={styles.cardBackLink} aria-label="Back to role selection">
+              <ArrowLeft size={13} strokeWidth={2} />
+              Back
+            </Link>
             <Image
               src="/images/veripraxis-logo.png"
               alt="VeriPraxis"
@@ -136,14 +202,27 @@ export default function LoginPage() {
             />
           </div>
 
+          {/* ── Selected role hint pill ── */}
+          {selectedRole && (
+            <div className={styles.roleHintRow}>
+              <span className={styles.roleHintLabel}>Signing in as</span>
+              <span className={styles.roleHintPill} data-role={selectedRole}>
+                {ROLE_LABELS[selectedRole]}
+              </span>
+              <Link href="/role-select" className={styles.roleHintChange}>
+                Change
+              </Link>
+            </div>
+          )}
+
           <h1 className={styles.heading}>Welcome back</h1>
           <p className={styles.subheading}>Enter your credentials to access your account</p>
 
-          {/* ── Error banner ── */}
+          {/* ── Error / warning banner ── */}
           <AnimatePresence>
             {error && (
               <motion.div
-                className={styles.errorBanner}
+                className={`${styles.errorBanner} ${mismatch ? styles.errorBannerWarn : ''}`}
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
@@ -159,21 +238,53 @@ export default function LoginPage() {
 
             {/* ── ID Number ── */}
             <motion.div className={styles.fieldGroup} {...fieldAnim(0)}>
-              <label className={styles.label} htmlFor="login-id">
-                ID NUMBER
-              </label>
+              <div className={styles.fieldRow}>
+                <label className={styles.label} htmlFor="login-id">
+                  ID NUMBER
+                </label>
+
+                {/*
+                  Detection badge:
+                  • Student IDs  → "✓ Detected: Student"
+                  • Staff IDs    → "✓ Detected: Staff (SSLATE)"
+                    The actual admin/faculty split is shown only after the server
+                    resolves it (redirect URL reveals the dashboard, not this badge).
+                  • Mismatch     → "⚠ Detected: Student" / "⚠ Detected: Staff (…)"
+                */}
+                <AnimatePresence>
+                  {badgeLabel && (
+                    <motion.span
+                      className={`${styles.detectedBadge} ${mismatch ? styles.detectedBadgeMismatch : ''}`}
+                      initial={{ opacity: 0, scale: 0.85 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.85 }}
+                      transition={{ duration: 0.18 }}
+                    >
+                      {mismatch ? '⚠ ' : '✓ '}Detected: {badgeLabel}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </div>
+
               <input
                 id="login-id"
-                className={`${styles.input} ${idError ? styles.inputError : ''}`}
+                className={`${styles.input} ${idError ? styles.inputError : ''} ${mismatch ? styles.inputMismatch : ''}`}
                 type="text"
-                placeholder="STU-… / FAC-… / ADM-…"
+                placeholder="23-0249-605  or  SBIT-16113"
                 value={userId}
-                onChange={(e) => { setUserId(e.target.value); setIdError(null) }}
+                onChange={(e) => { setUserId(e.target.value); setIdError(null); setError(null) }}
                 onBlur={validateIdOnBlur}
                 autoComplete="username"
                 spellCheck={false}
               />
+
               {idError && <span className={styles.fieldError}>{idError}</span>}
+
+              {mismatch && detectedRole && !idError && (
+                <span className={styles.fieldWarn}>
+                  ID does not match selected role — will sign in as {ROLE_LABELS[detectedRole]}.
+                </span>
+              )}
             </motion.div>
 
             {/* ── Password ── */}
@@ -213,7 +324,9 @@ export default function LoginPage() {
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.985 }}
             >
-              {loading ? 'Signing in…' : <> Log in <ArrowRight size={15} strokeWidth={2.5} /></>}
+              {loading
+                ? 'Signing in…'
+                : <> Log in <ArrowRight size={15} strokeWidth={2.5} /></>}
             </motion.button>
 
             {/* ── Divider ── */}
@@ -242,7 +355,7 @@ export default function LoginPage() {
   )
 }
 
-// ── Social button sub-components ───────────────────────────────────────────
+// ── Social button sub-components ──────────────────────────────────────────────
 
 function GoogleButton({ onClick }: { onClick: () => void }) {
   return (

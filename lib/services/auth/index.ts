@@ -1,13 +1,14 @@
 // lib/services/auth/index.ts
 // ─────────────────────────────────────────────────────────────────────────────
-// Client-side auth service — wraps Supabase Auth SDK calls and our API routes.
-// EMAIL-ONLY FLOW: no OTP is triggered from any function here.
-// All functions return typed AuthResult objects and never throw.
+// Client-side auth service.
+// signInWithId now uses detectRoleFromId as a local fast-path for the redirect
+// URL, while the server-resolved role from the DB remains the source of truth
+// for Supabase auth. The two should always agree.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { createClient }    from '@/lib/supabase/client'
-import { normaliseId }     from '@/lib/utils/auth/'
-import { ROLE_DASHBOARDS } from '@/lib/types/auth/'
+import { createClient } from '@/lib/supabase/client'
+import { normaliseId } from '@/lib/utils/auth/'
+import { getDashboardByRole } from '@/lib/auth/routing'
 import type {
   AuthResult,
   ResolveUserResult,
@@ -18,10 +19,7 @@ import type {
 } from '@/lib/types/auth/'
 
 // ── resolveUserById ───────────────────────────────────────────────────────────
-/**
- * Maps a STU- / FAC- / ADM- ID to the linked email via the server-side API.
- * The API uses the service role key — this client call never exposes it.
- */
+
 export async function resolveUserById(rawId: string): Promise<ResolveUserResult> {
   try {
     const res = await fetch('/api/auth/resolve-user-by-id', {
@@ -37,20 +35,16 @@ export async function resolveUserById(rawId: string): Promise<ResolveUserResult>
 
 // ── signInWithId ──────────────────────────────────────────────────────────────
 /**
- * Resolve a role-prefixed ID to its email, then call signInWithPassword.
+ * 1. Resolve the ID → email via the server API (uses service role key safely).
+ * 2. Sign in with email + password via Supabase.
+ * 3. Resolve canonical role from profiles.role and redirect.
  */
 export async function signInWithId(rawId: string, password: string): Promise<AuthResult> {
   const normalizedId = normaliseId(rawId)
 
-  console.log('[signInWithId]', {
-    input: rawId,
-    normalized: normalizedId,
-  })
-
   const resolved = await resolveUserById(normalizedId)
 
   if (!resolved.found) {
-    console.log('[resolveUserById FAILED]', resolved)
     return { success: false, error: resolved.error }
   }
 
@@ -71,25 +65,23 @@ export async function signInWithId(rawId: string, password: string): Promise<Aut
     }
   }
 
-  return {
-    success: true,
-    redirectTo: ROLE_DASHBOARDS[resolved.role],
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', data.user.id)
+    .single()
+
+  if (profileError || !profile) {
+    return { success: false, error: 'Could not resolve your account role.' }
   }
+
+  const redirectTo = getDashboardByRole(profile.role)
+
+  return { success: true, redirectTo }
 }
 
 // ── signUpStudent ─────────────────────────────────────────────────────────────
-/**
- * Create a new student account.
- *
- * EMAIL-ONLY FLOW:
- *   1. supabase.auth.signUp — creates the auth.users row.
- *      Supabase sends its built-in confirmation email automatically.
- *   2. POST /api/auth/create-profile — writes profiles + students rows
- *      using the anon-key server client (reading the session cookie).
- *   3. Returns redirect to /signup-success so the user knows to check email.
- *
- * NO OTP is generated or sent from this function.
- */
+
 export async function signUpStudent(
   studentId:   string,
   fullName:    string,
@@ -101,7 +93,6 @@ export async function signUpStudent(
 ): Promise<AuthResult> {
   const supabase = createClient()
 
-  // 1. Create auth user — Supabase sends its own confirmation email.
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -114,17 +105,13 @@ export async function signUpStudent(
         year_level:   yearLevel,
         phone:        phone?.trim() ?? '',
       },
-      // Let Supabase send its own confirmation link — no custom OTP.
       emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`,
     },
   })
 
-  if (error)      {return { success: false, error: error.message }}
-  if (!data.user) {return { success: false, error: 'Account creation failed. Please try again.' }}
+  if (error)      { return { success: false, error: error.message } }
+  if (!data.user) { return { success: false, error: 'Account creation failed. Please try again.' } }
 
-  // 2. Write profiles + students rows via the create-profile API route.
-  //    This runs server-side with the anon client that reads the session cookie,
-  //    so RLS policies are respected without exposing the service role key.
   try {
     const res = await fetch('/api/auth/create-profile', {
       method:  'POST',
@@ -141,16 +128,12 @@ export async function signUpStudent(
     const result = (await res.json()) as { success: boolean; error?: string }
 
     if (!result.success) {
-      // Non-fatal: the auth user was created. Log and continue.
-      // The DB trigger (handle_new_user) may still write the rows.
       console.warn('[signUpStudent] create-profile warning:', result.error)
     }
   } catch (err) {
-    // Network failure — non-fatal, same reasoning as above.
     console.warn('[signUpStudent] create-profile network error:', err)
   }
 
-  // 3. Redirect to a static success page — user needs to confirm their email.
   return { success: true, redirectTo: '/signup-success' }
 }
 
@@ -166,8 +149,7 @@ export async function signInWithGoogle(): Promise<AuthResult> {
         : '/auth/callback',
     },
   })
-  if (error) {return { success: false, error: error.message }}
-  // OAuth flow triggers a full redirect — this line is rarely reached.
+  if (error) { return { success: false, error: error.message } }
   return { success: true, redirectTo: '/auth/callback' }
 }
 
@@ -183,7 +165,7 @@ export async function signInWithFacebook(): Promise<AuthResult> {
         : '/auth/callback',
     },
   })
-  if (error) {return { success: false, error: error.message }}
+  if (error) { return { success: false, error: error.message } }
   return { success: true, redirectTo: '/auth/callback' }
 }
 
@@ -195,7 +177,7 @@ export async function signOut(): Promise<void> {
 }
 
 // ── sendOtp / verifyOtp ───────────────────────────────────────────────────────
-// Kept for future use. NOT called anywhere in the current email-only flow.
+// Kept for future use. NOT called in the current email-only flow.
 
 export async function sendOtp(email: string): Promise<SendOtpResult> {
   try {

@@ -1,142 +1,91 @@
-// app/api/auth/resolve-user-by-id/route.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// POST { id: string }
-//
-// Accepts a student_id / faculty_id / admin_id, looks up the linked email in
-// the appropriate table, and returns it so the client can call
-// supabase.auth.signInWithPassword(email, password).
-//
-// Uses the Supabase SERVICE ROLE key — server-side only, never exposed to the
-// browser. All table queries bypass RLS intentionally.
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient }                   from '@supabase/supabase-js'
-import type { Database }                  from '@/lib/types/database'
-import { normaliseId, getRoleFromId }     from '@/lib/utils/auth'
-import type { ResolveUserResult }         from '@/lib/types/auth/'
-
-// ── Service-role client ───────────────────────────────────────────────────────
-// NEVER expose this outside of server-side code (API routes, Server Actions).
+import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/types/database'
+import { normaliseId } from '@/lib/utils/auth'
+import type { ResolveUserResult } from '@/lib/types/auth/'
 
 function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) {throw new Error('Missing Supabase service role env vars.')}
+  if (!url || !key) {
+    throw new Error('Missing Supabase service role env vars.')
+  }
   return createClient<Database>(url, key, { auth: { persistSession: false } })
 }
 
-// ── Row shapes returned by the .returns<>() helper ───────────────────────────
-
-interface StudentWithProfile {
-  id:       string
-  profiles: { email: string } | null
-}
-
-interface FacultyRow {
-  email: string
-}
-
-interface AdminRow {
-  email: string
-}
-
-// ── Handler ───────────────────────────────────────────────────────────────────
+interface StudentLookup { id: string }
+interface FacultyLookup { user_id: string | null; is_active: boolean }
+interface AdminLookup { user_id: string | null }
 
 export async function POST(req: NextRequest): Promise<NextResponse<ResolveUserResult>> {
   try {
-    const body  = await req.json() as Record<string, unknown>
+    const body = (await req.json()) as Record<string, unknown>
     const rawId = typeof body.id === 'string' ? body.id : ''
 
     if (!rawId) {
       return NextResponse.json({ found: false, error: 'ID is required.' }, { status: 400 })
     }
 
-    const id   = normaliseId(rawId)
-    const role = getRoleFromId(id)
+    const id = normaliseId(rawId)
+    const supabase = getServiceClient()
 
-    if (!role) {
+    const [studentResult, facultyResult, adminResult] = await Promise.all([
+      supabase
+        .from('students')
+        .select('id')
+        .eq('student_id', id)
+        .maybeSingle()
+        .overrideTypes<StudentLookup, { merge: false }>(),
+      supabase
+        .from('faculty')
+        .select('user_id, is_active')
+        .eq('faculty_id', id)
+        .maybeSingle()
+        .overrideTypes<FacultyLookup, { merge: false }>(),
+      supabase
+        .from('admins')
+        .select('user_id')
+        .eq('admin_id', id)
+        .maybeSingle()
+        .overrideTypes<AdminLookup, { merge: false }>(),
+    ])
+
+    const student = studentResult.data
+    const faculty = facultyResult.data
+    const admin = adminResult.data
+
+    let userId: string | null = null
+    if (student?.id) {
+      userId = student.id
+    } else if (faculty?.user_id && faculty.is_active) {
+      userId = faculty.user_id
+    } else if (admin?.user_id) {
+      userId = admin.user_id
+    }
+
+    if (!userId) {
+      return NextResponse.json({ found: false, error: 'ID not found.' }, { status: 404 })
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('email, role')
+      .eq('id', userId)
+      .single()
+
+    if (profileError || !profile?.email) {
       return NextResponse.json(
-        { found: false, error: 'Invalid ID format. Use STU-…, FAC-…, or ADM-…' },
-        { status: 400 },
+        { found: false, error: 'Account profile not found for this ID.' },
+        { status: 404 },
       )
     }
 
-    const supabase = getServiceClient()
-
-    // ── Student ───────────────────────────────────────────────────────────────
-    if (role === 'student') {
-  // 1. Get student row
-  const { data: student, error: studentError } = await supabase
-    .from('students')
-    .select('id')
-    .eq('student_id', id)
-    .single()
-
-  if (studentError || !student) {
-    return NextResponse.json(
-      { found: false, error: 'Student ID not found.' },
-      { status: 404 }
-    )
-  }
-
-  // 2. Get profile using same id
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('email')
-    .eq('id', student.id)
-    .single()
-
-  if (profileError || !profile?.email) {
-    return NextResponse.json(
-      { found: false, error: 'Student account has no linked email.' },
-      { status: 404 }
-    )
-  }
-
-  return NextResponse.json({
-    found: true,
-    email: profile.email,
-    role: 'student',
-  })
-}
-
-    // ── Faculty ───────────────────────────────────────────────────────────────
-    if (role === 'faculty') {
-      const { data, error } = await supabase
-        .from('faculty')
-        .select('email')
-        .eq('faculty_id', id)
-        .eq('is_active', true)
-        .single()
-        .overrideTypes<FacultyRow, { merge: false }>()
-
-      if (error || !data?.email) {
-        return NextResponse.json(
-          { found: false, error: 'Faculty ID not found or account is inactive.' },
-          { status: 404 },
-        )
-      }
-
-      return NextResponse.json({ found: true, email: data.email, role: 'faculty' })
-    }
-
-    // ── Admin ─────────────────────────────────────────────────────────────────
-    const { data, error } = await supabase
-      .from('admins')
-      .select('email')
-      .eq('admin_id', id)
-      .single()
-      .overrideTypes<AdminRow, { merge: false }>()
-
-    if (error || !data?.email) {
-      return NextResponse.json({ found: false, error: 'Admin ID not found.' }, { status: 404 })
-    }
-
-    return NextResponse.json({ found: true, email: data.email, role: 'admin' })
-
+    return NextResponse.json({ found: true, email: profile.email, role: profile.role })
   } catch (err) {
     console.error('[resolve-user-by-id] Unexpected error:', err)
-    return NextResponse.json({ found: false, error: 'Server error. Please try again.' }, { status: 500 })
+    return NextResponse.json(
+      { found: false, error: 'Server error. Please try again.' },
+      { status: 500 },
+    )
   }
 }

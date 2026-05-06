@@ -103,7 +103,6 @@ export function useMockExamSession(examId: string): ExamSessionState {
   const [saveStatus,         setSaveStatus]          = useState<SaveStatus>('idle')
   const [tabViolations,      setTabViolations]       = useState(0)
 
-<<<<<<< Updated upstream
   const timerRef       = useRef<ReturnType<typeof setInterval> | null>(null)
   const startedAtRef   = useRef<string | null>(null)
   const submittingRef  = useRef(false)
@@ -113,16 +112,6 @@ export function useMockExamSession(examId: string): ExamSessionState {
   const examRef        = useRef<ExamMeta | null>(null)
   const userLabelRef   = useRef<string>('A student')
   const violationsRef  = useRef(0)
-=======
-  const timerRef      = useRef<ReturnType<typeof setInterval> | null>(null)
-  const startedAtRef  = useRef<string | null>(null)
-  const submittingRef = useRef(false)
-  const answersRef    = useRef<AnswerMap>({})
-  const questionsRef  = useRef<Question[]>([])
-  const submissionRef = useRef<string | null>(null)
-  const examRef       = useRef<ExamMeta | null>(null)
-  const violationsRef = useRef(0)
->>>>>>> Stashed changes
 
   useEffect(() => { submittingRef.current = submitting   }, [submitting])
   useEffect(() => { answersRef.current    = answers      }, [answers])
@@ -146,7 +135,6 @@ export function useMockExamSession(examId: string): ExamSessionState {
 
     try {
       await dbSubmitExam(sid, startedAtRef.current ?? new Date().toISOString(), ans, qs)
-<<<<<<< Updated upstream
       try {
         await sendExamSubmittedNotificationToAdmins(
           userLabelRef.current,
@@ -156,8 +144,6 @@ export function useMockExamSession(examId: string): ExamSessionState {
         console.error('Exam submitted but failed to notify admins:', notifyErr)
       }
       setSubmitted(true)
-=======
->>>>>>> Stashed changes
     } catch {
       // still mark submitted client-side to avoid re-submission loops
     } finally {

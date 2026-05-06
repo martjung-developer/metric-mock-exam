@@ -1,19 +1,16 @@
 // lib/types/auth/index.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// Central auth type definitions.
-// Signup is student-only. Faculty/admin are created out-of-band.
-// ─────────────────────────────────────────────────────────────────────────────
 
 // ── Roles ─────────────────────────────────────────────────────────────────────
 export type UserRole = 'student' | 'faculty' | 'admin'
+export type SignupRole = 'student'   // signup is student-only
 
 // ── ID prefixes ───────────────────────────────────────────────────────────────
-// Student IDs: STU-YYYYNNNNN  (e.g. STU-202400123)
-// Faculty IDs: FAC-XXXXXXXX
-// Admin IDs:   ADM-XXX
-export type StudentId = `STU-${string}`
-export type FacultyId = `FAC-${string}`
-export type AdminId   = `ADM-${string}`
+// Student IDs: YY-NNNN-NNN          (e.g. 23-0249-605)
+// Faculty IDs: <PREFIX>-<DIGITS>    (e.g. SARFAID-17839, SSLATE-14304)
+// Admin IDs:   <PREFIX>-<DIGITS>    (e.g. SBIT-16113)
+export type StudentId = `${string}-${string}-${string}`
+export type FacultyId = `${Uppercase<string>}-${string}`
+export type AdminId   = `${Uppercase<string>}-${string}`
 export type AnyUserId = StudentId | FacultyId | AdminId
 
 // ── Programs (9 supported) ────────────────────────────────────────────────────
@@ -43,7 +40,6 @@ export const YEAR_LEVEL_OPTIONS = [
 export type YearLevel = typeof YEAR_LEVEL_OPTIONS[number]['value']  // 1 | 2 | 3 | 4 | 5
 
 // ── Signup steps (student only) ───────────────────────────────────────────────
-// 'review' is the final confirmation step before account creation.
 export type SignupStep = 'id' | 'credentials' | 'program' | 'review'
 
 export interface SignupState {
@@ -51,7 +47,7 @@ export interface SignupState {
   studentId:   string
   fullName:    string
   email:       string
-  phone:       string          
+  phone:       string
   password:    string
   programCode: ProgramCode | ''
   yearLevel:   YearLevel   | null
@@ -70,7 +66,7 @@ export const INITIAL_SIGNUP_STATE: SignupState = {
 
 // ── Login form ────────────────────────────────────────────────────────────────
 export interface LoginForm {
-  userId:   string   // any of student/faculty/admin ID
+  userId:   string
   password: string
 }
 
@@ -109,22 +105,40 @@ export interface VerifyOtpSuccess { verified: true;  redirectTo: string }
 export interface VerifyOtpFailure { verified: false; error: string }
 export type VerifyOtpResult = VerifyOtpSuccess | VerifyOtpFailure
 
-// ── Student ID validation ─────────────────────────────────────────────────────
-const STUDENT_ID_RE = /^STU-\d{4}\d{5}$/   // STU-YYYYNNNNN
-const FACULTY_ID_RE = /^FAC-[A-Z0-9]{6,}$/
-const ADMIN_ID_RE   = /^ADM-[A-Z0-9]{3,}$/
-
-export function detectRole(id: string): UserRole | null {
-  if (STUDENT_ID_RE.test(id)) {return 'student'}
-  if (FACULTY_ID_RE.test(id)) {return 'faculty'}
-  if (ADMIN_ID_RE.test(id))   {return 'admin'}
-  return null
+// ── Role → dashboard (per role, not collapsed) ────────────────────────────────
+export const ROLE_DASHBOARDS: Record<UserRole, string> = {
+  student: '/student/dashboard',
+  faculty: '/faculty/dashboard',   // ← faculty gets its own dashboard
+  admin:   '/admin/dashboard',
 }
 
-export function validateStudentId(id: string): string | null {
-  if (!id.trim())                  {return 'Student ID is required.'}
-  if (!STUDENT_ID_RE.test(id.trim())) {return 'Format must be STU-YYYYNNNNN (e.g. STU-202400123).'}
-  return null
+export function getDashboardByRole(role: UserRole | string): string {
+  return ROLE_DASHBOARDS[role as UserRole] ?? '/student/dashboard'
+}
+
+// ── Content management access ─────────────────────────────────────────────────
+export function canManageContent(role: UserRole): boolean {
+  return role === 'faculty' || role === 'admin'
+}
+
+// ── Profile shapes ────────────────────────────────────────────────────────────
+export interface Profile {
+  id:         string
+  email:      string
+  full_name:  string | null
+  role:       UserRole
+  avatar_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface StudentProfile extends Profile {
+  student_id:  string | null
+  school:      string | null
+  year_level:  number | null
+  target_exam: string | null
+  program_id:  string | null
+  school_id:   string | null
 }
 
 // ── Program utilities ────────────────────────────────────────────────────────
@@ -134,14 +148,7 @@ export function isProgramCode(value: unknown): value is ProgramCode {
 }
 
 export function getProgramLabel(code: ProgramCode | '' | null | undefined): string {
-  if (!code) {return '—'}
+  if (!code) { return '—' }
   const match = PROGRAMS.find((p) => p.value === code)
   return match?.label ?? '—'
-}
-
-// ── Role → dashboard ──────────────────────────────────────────────────────────
-export const ROLE_DASHBOARDS: Record<UserRole, string> = {
-  student: '/student/dashboard',
-  faculty: '/admin/dashboard',
-  admin:   '/admin/dashboard',
 }

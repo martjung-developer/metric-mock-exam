@@ -7,9 +7,7 @@
 
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useUser }   from '@/lib/context/AuthContext'
+import { useRouteGuard } from '@/lib/hooks/auth/useRouteGuard'
 
 export interface UseAuthGuardReturn {
   /** True once auth has resolved AND the user is authenticated. */
@@ -17,15 +15,6 @@ export interface UseAuthGuardReturn {
 }
 
 export function useAuthGuard(): UseAuthGuardReturn {
-  const router = useRouter()
-  const { user, loading: authLoading } = useUser()
-
-  useEffect(() => {
-    if (authLoading) {return}
-    if (!user) {
-      router.replace('/login')
-    }
-  }, [authLoading, user, router])
-
-  return { isReady: !authLoading && !!user }
+  const { isReady } = useRouteGuard({ allowedRoles: ['admin', 'faculty'] })
+  return { isReady }
 }

@@ -5,6 +5,10 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { SendOtpResult } from '@/lib/types/auth/'
 
+const DEV_BYPASS_RATE_LIMIT =
+  process.env.NODE_ENV !== 'production' &&
+  process.env.DEV_BYPASS_RATE_LIMIT === 'true'
+
 async function getSupabaseServer() {
   const cookieStore = await cookies()
   return createServerClient(
@@ -20,6 +24,10 @@ async function getSupabaseServer() {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse<SendOtpResult>> {
+  if (DEV_BYPASS_RATE_LIMIT) {
+    return NextResponse.json({ sent: true })
+  }
+
   try {
     const body = await req.json()
 
@@ -38,6 +46,14 @@ export async function POST(req: NextRequest): Promise<NextResponse<SendOtpResult
     })
 
     if (error) {
+      const lower = error.message.toLowerCase()
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        (lower.includes('rate limit') || lower.includes('too many'))
+      ) {
+        // Dev convenience: don't block iteration when auth provider throttles OTP sends.
+        return NextResponse.json({ sent: true })
+      }
       console.error('[send-otp] error:', error.message)
       return NextResponse.json(
         { sent: false, error: error.message },

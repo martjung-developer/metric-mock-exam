@@ -1,18 +1,14 @@
 // app/(auth)/signup/page.tsx
 // ─────────────────────────────────────────────────────────────────────────────
-// Thin orchestrator — all state lives in useSignup().
-// All UI lives in components/auth/signup/.
-//
-// After the student account is created:
-//   1. SignupSuccessModal appears immediately (no redirect yet).
-//   2. The modal runs a 5-second countdown then pushes to /login.
-//   3. "Go to Login" inside the modal also pushes to /login immediately.
+// Student-only signup wizard. Validates YY-NNNN-NNN ID format.
+// Non-student IDs (admin/faculty pattern) are rejected with an inline error.
+// Architecture (hooks → services → API) is unchanged.
 // ─────────────────────────────────────────────────────────────────────────────
 'use client'
 
-import { useState }                from 'react'
-import Link                        from 'next/link'
-import { motion }                  from 'framer-motion'
+import { useState }               from 'react'
+import Link                       from 'next/link'
+import { motion }                 from 'framer-motion'
 import {
   AlertCircle, ArrowRight, ArrowLeft,
   CheckCircle, Eye, EyeOff, Phone, Zap,
@@ -37,7 +33,7 @@ const STEP_META = {
   review:      { title: 'Confirm & create',     subtitle: 'Review your details before creating your account' },
 } as const
 
-// ── Strength bar → CSS class (strictly typed, no `any`) ──────────────────────
+// ── Strength bar → CSS class ──────────────────────────────────────────────────
 
 type StrengthKey = 'weak' | 'fair' | 'good' | 'strong'
 const STRENGTH_MAP: Record<StrengthKey, string> = {
@@ -47,7 +43,7 @@ const STRENGTH_MAP: Record<StrengthKey, string> = {
   strong: 'strengthStrong',
 }
 function strengthCls(s: StrengthKey | null): string {
-  if (!s) {return ''}
+  if (!s) { return '' }
   return (styles as Record<string, string>)[STRENGTH_MAP[s]] ?? ''
 }
 
@@ -75,13 +71,11 @@ export default function SignupPage() {
     handleSignupWithReturn,
   } = useSignup()
 
-  // ── Success modal state (local — only the page layer cares) ──────────────
   const [showSuccess,  setShowSuccess]  = useState(false)
   const [createdEmail, setCreatedEmail] = useState('')
 
   const { title, subtitle } = STEP_META[state.step]
 
-  // ── Final submit wrapper ──────────────────────────────────────────────────
   async function handleSubmit() {
     const result = await handleSignupWithReturn()
     if (result.success) {
@@ -92,7 +86,6 @@ export default function SignupPage() {
 
   return (
     <>
-      {/* Success modal — rendered at root level to overlay everything */}
       {showSuccess && (
         <SignupSuccessModal
           email={createdEmail}
@@ -109,10 +102,17 @@ export default function SignupPage() {
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         >
-          {/* ── Logo ── */}
+          {/* ── Logo + Back to site ── */}
           <div className={styles.logoIcon}>
             <Zap size={22} color="#ffffff" strokeWidth={2.5} />
           </div>
+
+          {/* Back to site — visible on first step only */}
+          {state.step === 'id' && (
+            <div style={{ marginBottom: '0.25rem' }}>
+              <Link href="/" className={styles.backToSite}>← Back to site</Link>
+            </div>
+          )}
 
           {/* ── Step indicator dots ── */}
           <div className={styles.stepRow}>
@@ -131,7 +131,7 @@ export default function SignupPage() {
           <h1 className={styles.heading}>{title}</h1>
           <p className={styles.subheading}>{subtitle}</p>
 
-          {/* Student-only notice — first step only */}
+          {/* Student-only notice */}
           {state.step === 'id' && (
             <div style={{
               display:      'flex',
@@ -168,13 +168,15 @@ export default function SignupPage() {
                   id="student-id"
                   className={styles.input}
                   type="text"
-                  placeholder="STU-YYYYNNNNN (e.g. STU-202400123)"
+                  placeholder="YY-NNNN-NNN  (e.g. 23-0249-605)"
                   value={state.studentId}
                   onChange={(e) => patch({ studentId: e.target.value })}
                   autoComplete="off"
                   spellCheck={false}
                 />
-                <span className={styles.fieldHint}>Format: STU-YYYYNNNNN — issued by your school</span>
+                <span className={styles.fieldHint}>
+                  Format: YY-NNNN-NNN — issued by your school (e.g. 23-0249-605)
+                </span>
               </div>
 
               <motion.button
@@ -198,7 +200,6 @@ export default function SignupPage() {
           {state.step === 'credentials' && (
             <div className={styles.form}>
 
-              {/* Full name */}
               <div className={styles.fieldGroup}>
                 <label className={styles.label} htmlFor="signup-fullname">Full Name</label>
                 <input
@@ -216,7 +217,6 @@ export default function SignupPage() {
                 </span>
               </div>
 
-              {/* Email */}
               <div className={styles.fieldGroup}>
                 <label className={styles.label} htmlFor="signup-email">Email Address</label>
                 <input
@@ -230,7 +230,6 @@ export default function SignupPage() {
                 />
               </div>
 
-              {/* Phone (optional) */}
               <div className={styles.fieldGroup}>
                 <label className={styles.label} htmlFor="signup-phone">
                   Phone Number{' '}
@@ -250,7 +249,6 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              {/* Password */}
               <div className={styles.fieldGroup}>
                 <label className={styles.label} htmlFor="signup-password">Password</label>
                 <div className={styles.inputWrap}>
@@ -384,8 +382,6 @@ export default function SignupPage() {
           {/* ══ STEP 4: Review + submit ══ */}
           {state.step === 'review' && (
             <div className={styles.form}>
-
-              {/* Summary card */}
               <div style={{
                 background: '#f8fafc', border: '1px solid #e2e8f0',
                 borderRadius: 10, padding: '0.85rem 1rem',

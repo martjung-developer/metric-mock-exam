@@ -11,9 +11,8 @@ export type AuthResult =
   | { success: true;  redirectTo: string }
   | { success: false; error: string }
 
-// faculty (UI label) → admin (DB value)
 function normalizeRole(role: string): UserRole {
-  if (role === 'faculty') {return 'admin'}
+  if (role === 'faculty') {return 'faculty'}
   if (role === 'student') {return 'student'}
   if (role === 'admin')   {return 'admin'}
   return 'student'   // safe default
@@ -34,7 +33,7 @@ export async function signUp(
     options: {
       data: {
         full_name: fullName,
-        role:      normalizedRole,   // always 'student' or 'admin'
+        role:      normalizedRole,
       },
     },
   })

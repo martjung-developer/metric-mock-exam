@@ -1,0 +1,42 @@
+/* components/dashboard/admin/faculty/css/FacultyStatsBar.module.css */
+
+.bar {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 1100px) {
+  .bar { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .bar { grid-template-columns: repeat(2, 1fr); }
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+}
+
+.label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+  font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+}

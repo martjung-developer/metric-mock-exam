@@ -154,19 +154,6 @@ export default function TicketForm({
               <><Send size={15} strokeWidth={2} /> Submit Ticket</>
             )}
           </button>
-
-          <button
-            type="button"
-            className={styles.submitBtn}
-            disabled={notifying}
-            onClick={() => { void onSendNotification() }}
-          >
-            {notifying ? (
-              <><Loader2 size={15} className={styles.spinner} /> Sending Notification…</>
-            ) : (
-              <><Send size={15} strokeWidth={2} /> Send Notification to Admin</>
-            )}
-          </button>
         </form>
       </div>
     </section>

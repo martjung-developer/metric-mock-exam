@@ -86,9 +86,31 @@ export type GradingMode = 'auto' | 'manual'
 // Matches: CHECK (link_type IS NULL OR link_type = ANY (ARRAY[...]))
 export type LinkType = 'video' | 'meeting' | 'drive' | 'other'
 
+type TableShape = {
+  Row: Record<string, unknown>
+  Insert: Record<string, unknown>
+  Update: Record<string, unknown>
+}
+
+type ViewShape =
+  | { Row: Record<string, unknown> }
+  | {
+      Row: Record<string, unknown>
+      Insert: Record<string, unknown>
+      Update: Record<string, unknown>
+    }
+
+type AddRelationships<T extends Record<string, TableShape>> = {
+  [K in keyof T]: T[K] & { Relationships: [] }
+}
+
+type AddViewRelationships<T extends Record<string, ViewShape>> = {
+  [K in keyof T]: T[K] & { Relationships: [] }
+}
+
 export type Database = {
   public: {
-    Tables: {
+    Tables: AddRelationships<{
 
       profiles: {
         Row: {
@@ -116,6 +138,7 @@ export type Database = {
           avatar_url?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
 
       students: {
@@ -158,15 +181,23 @@ export type Database = {
 
       schools: {
         Row: {
-          id:          string
-          code:        string
-          name:        string
-          full_name:   string
-          description: string | null
-          created_at:  string
+          id:             string
+          admin_id:       string | null  // FK to admins.admin_id for schools with assigned admin
+          program_id:     string | null
+          program_code:   string | null
+          program_name:   string | null
+          code:           string
+          name:           string
+          full_name:      string
+          description:    string | null
+          created_at:      string
         }
         Insert: {
           id?:          string
+          admin_id?:       string | null  // FK to admins.admin_id for schools with assigned admin
+          program_id?:     string | null
+          program_code?:   string | null
+          program_name?:   string | null
           code:         string
           name:         string
           full_name:    string
@@ -174,11 +205,16 @@ export type Database = {
           created_at?:  string
         }
         Update: {
+          admin_id?:       string | null  // FK to admins.admin_id for schools with assigned admin
+          program_id?:     string | null
+          program_code?:   string | null
+          program_name?:   string | null
           code?:        string
           name?:        string
           full_name?:   string
           description?: string | null
         }
+        Relationships: []
       }
 
       programs: {
@@ -216,6 +252,7 @@ export type Database = {
           years?:       number | null
           description?: string | null
         }
+        Relationships: []
       }
 
       exam_categories: {
@@ -711,7 +748,11 @@ export type Database = {
           user_id:    string | null
           faculty_id: string           
           full_name:  string
+          admin_id:   string | null  // FK to admins.admin_id for faculty who are also admins
+          school_id: string | null 
+          program_id: string | null
           email:      string
+          role_type:  'professional' | 'major' | 'minor' | null
           is_active:  boolean
           created_by: string | null
           created_at: string
@@ -722,7 +763,11 @@ export type Database = {
           user_id?:    string | null
           faculty_id:  string
           full_name:   string
+          admin_id?:    string | null
+          school_id?:   string | null
+          program_id?:  string | null
           email:       string
+          role_type?:  'professional' | 'major' | 'minor' | null
           is_active?:  boolean
           created_by?: string | null
           created_at?: string
@@ -732,10 +777,15 @@ export type Database = {
           user_id?:    string | null
           faculty_id?: string
           full_name?:  string
+          admin_id?:   string | null
+          school_id?:   string | null
+          program_id?:  string | null
           email?:      string
+          role_type?:  'professional' | 'major' | 'minor' | null
           is_active?:  boolean
           updated_at?: string
         }
+        Relationships: []
       }
 
       // ── admins ────────────────────────────────────────────────────────────────
@@ -762,6 +812,7 @@ export type Database = {
           full_name?: string
           email?:     string
         }
+        Relationships: []
       }
 
       // ── users ─────────────────────────────────────────────────────────────────
@@ -781,9 +832,9 @@ export type Database = {
         }
       }
 
-    }
+    }>
 
-    Views: {
+    Views: AddViewRelationships<{
       published_study_materials: {
         Row: {
           id:            string
@@ -800,9 +851,10 @@ export type Database = {
           program_name:  string | null
         }
       }
-    }
+    }>
 
-    Functions: Record<string, never>
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+    Functions: {} 
 
     Enums: {
       user_role:         UserRole
@@ -836,3 +888,4 @@ export type TablesUpdate<T extends keyof Database['public']['Tables']> =
 //   type PublishedMaterialRow = ViewRow<'published_study_materials'>
 export type ViewRow<V extends keyof Database['public']['Views']> =
   Database['public']['Views'][V]['Row']
+

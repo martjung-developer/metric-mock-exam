@@ -9,14 +9,18 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { useRouter } from 'next/navigation'
 import type { User, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import type { AuthProfile } from '@/lib/auth/profile'
+import { fetchProfileForUser } from '@/lib/auth/profile'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface AuthState {
   user:    User    | null
   session: Session | null
+  profile: AuthProfile | null
   loading: boolean
   error:   string  | null
 }
@@ -33,9 +37,11 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 // ── Provider ───────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter()
   const [state, setState] = useState<AuthState>({
     user:    null,
     session: null,
+    profile: null,
     loading: true,
     error:   null,
   })
@@ -44,6 +50,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const supabase = createClient()
 
+  function isInvalidRefreshTokenError(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false
+    }
+    const message = error.message.toLowerCase()
+    return (
+      message.includes('invalid refresh token') &&
+      message.includes('refresh token not found')
+    )
+  }
+
+  async function recoverFromStaleToken() {
+    await supabase.auth.signOut()
+    setState({ user: null, session: null, profile: null, loading: false, error: null })
+    router.replace('/login')
+  }
+
   async function loadSession() {
     if (fetchingRef.current) {
       return
@@ -51,29 +74,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchingRef.current = true
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession()
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError) {
+        if (isInvalidRefreshTokenError(sessionError)) {
+          await recoverFromStaleToken()
+          return
+        }
+        setState({ user: null, session: null, profile: null, loading: false, error: sessionError.message })
+        return
+      }
 
       if (!sessionData.session) {
-        setState({ user: null, session: null, loading: false, error: null })
+        setState({ user: null, session: null, profile: null, loading: false, error: null })
         return
       }
 
       const { data: { user }, error } = await supabase.auth.getUser()
 
       if (error) {
-        setState({ user: null, session: null, loading: false, error: error.message })
+        setState({ user: null, session: null, profile: null, loading: false, error: error.message })
         return
       }
+
+      const profile = await fetchProfileForUser(supabase, user)
 
       setState({
         user,
         session: sessionData.session,
+        profile,
         loading: false,
         error:   null,
       })
     } catch (err) {
+      if (isInvalidRefreshTokenError(err)) {
+        await recoverFromStaleToken()
+        return
+      }
       const message = err instanceof Error ? err.message : 'Unknown auth error'
-      setState({ user: null, session: null, loading: false, error: message })
+      setState({ user: null, session: null, profile: null, loading: false, error: message })
     } finally {
       fetchingRef.current = false
     }
@@ -83,14 +121,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadSession()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setState(prev => ({
-          ...prev,
-          user:    session?.user ?? null,
-          session: session ?? null,
-          loading: false,
-          error:   null,
-        }))
+      async (_event, session) => {
+        try {
+          const profile = await fetchProfileForUser(supabase, session?.user ?? null)
+          setState(prev => ({
+            ...prev,
+            user:    session?.user ?? null,
+            session: session ?? null,
+            profile,
+            loading: false,
+            error:   null,
+          }))
+        } catch (err) {
+          if (isInvalidRefreshTokenError(err)) {
+            await recoverFromStaleToken()
+            return
+          }
+          const message = err instanceof Error ? err.message : 'Unknown auth error'
+          setState(prev => ({
+            ...prev,
+            user: null,
+            session: null,
+            profile: null,
+            loading: false,
+            error: message,
+          }))
+        }
       },
     )
 

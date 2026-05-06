@@ -101,6 +101,7 @@ export default function AdminTopbar() {
 
         <Link
           href="/admin/notifications"
+          prefetch={false}
           className={styles.iconBtn}
           title={unreadCount > 0 ? `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` : 'Notifications'}
           aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
@@ -113,7 +114,7 @@ export default function AdminTopbar() {
           )}
         </Link>
 
-        <Link href="/admin/settings" className={styles.iconBtn} title="Settings">
+        <Link href="/admin/settings" prefetch={false} className={styles.iconBtn} title="Settings">
           <Settings size={15} />
         </Link>
 

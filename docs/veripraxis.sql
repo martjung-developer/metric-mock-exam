@@ -8,8 +8,10 @@ CREATE TABLE public.admins (
   full_name text NOT NULL,
   email text NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
+  school_id uuid,
   CONSTRAINT admins_pkey PRIMARY KEY (id),
-  CONSTRAINT admins_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+  CONSTRAINT admins_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT admins_school_id_fkey FOREIGN KEY (school_id) REFERENCES public.schools(id)
 );
 CREATE TABLE public.analytics (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -61,16 +63,6 @@ CREATE TABLE public.exam_assignments (
   CONSTRAINT exam_assignments_program_id_fkey FOREIGN KEY (program_id) REFERENCES public.programs(id),
   CONSTRAINT exam_assignments_assigned_by_fkey FOREIGN KEY (assigned_by) REFERENCES public.profiles(id)
 );
-CREATE TABLE public.program_exam_assignments (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  exam_id uuid NOT NULL,
-  program_code text NOT NULL,
-  year_level integer,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT program_exam_assignments_pkey PRIMARY KEY (id),
-  CONSTRAINT program_exam_assignments_exam_id_fkey FOREIGN KEY (exam_id) REFERENCES public.exams(id),
-  CONSTRAINT program_exam_assignments_exam_program_year_key UNIQUE (exam_id, program_code, year_level)
-);
 CREATE TABLE public.exam_categories (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   name text NOT NULL UNIQUE,
@@ -112,9 +104,14 @@ CREATE TABLE public.faculty (
   created_by uuid,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  role_type text CHECK (role_type = ANY (ARRAY['professional'::text, 'major'::text, 'minor'::text])),
+  program_id uuid,
+  school_id uuid,
   CONSTRAINT faculty_pkey PRIMARY KEY (id),
   CONSTRAINT faculty_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT faculty_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
+  CONSTRAINT faculty_program_id_fkey FOREIGN KEY (program_id) REFERENCES public.programs(id),
+  CONSTRAINT faculty_school_id_fkey FOREIGN KEY (school_id) REFERENCES public.schools(id),
+  CONSTRAINT faculty_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.favorites (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -239,36 +236,6 @@ CREATE TABLE public.students (
   CONSTRAINT students_school_id_fkey FOREIGN KEY (school_id) REFERENCES public.schools(id),
   CONSTRAINT students_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
-ALTER TABLE public.exam_assignments
-  ADD CONSTRAINT exam_assignments_student_exam_unique UNIQUE (student_id, exam_id);
-
-CREATE OR REPLACE FUNCTION public.sync_program_exam_assignments_for_student()
-RETURNS trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  INSERT INTO public.exam_assignments (exam_id, student_id, is_active)
-  SELECT
-    pea.exam_id,
-    NEW.id,
-    true
-  FROM public.program_exam_assignments pea
-  JOIN public.programs p
-    ON p.code = pea.program_code
-  WHERE p.id = NEW.program_id
-    AND (pea.year_level IS NULL OR pea.year_level = NEW.year_level)
-  ON CONFLICT (student_id, exam_id) DO NOTHING;
-
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_sync_program_exam_assignments_for_student ON public.students;
-CREATE TRIGGER trg_sync_program_exam_assignments_for_student
-AFTER INSERT OR UPDATE OF program_id, year_level
-ON public.students
-FOR EACH ROW
-EXECUTE FUNCTION public.sync_program_exam_assignments_for_student();
 CREATE TABLE public.study_materials (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   title text NOT NULL,
@@ -307,10 +274,6 @@ CREATE TABLE public.submissions (
   attempt_no smallint NOT NULL DEFAULT 1 CHECK (attempt_no >= 1 AND attempt_no <= 3),
   CONSTRAINT submissions_pkey PRIMARY KEY (id),
   CONSTRAINT submissions_exam_id_fkey FOREIGN KEY (exam_id) REFERENCES public.exams(id),
-<<<<<<< Updated upstream
-  CONSTRAINT submissions_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id)
-);
-=======
   CONSTRAINT submissions_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id),
   CONSTRAINT submissions_program_id_fkey FOREIGN KEY (program_id) REFERENCES public.programs(id)
 );
@@ -335,4 +298,3 @@ CREATE TABLE public.users (
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
->>>>>>> Stashed changes

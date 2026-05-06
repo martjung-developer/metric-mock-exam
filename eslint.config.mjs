@@ -18,17 +18,12 @@ const eslintConfig = defineConfig([
       // React & Next.js rules
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
-<<<<<<< Updated upstream
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/set-state-in-render": "warn",
       "react-hooks/purity": "warn",
       "react-hooks/immutability": "warn",
       "react-hooks/preserve-manual-memoization": "warn",
       "react/no-unescaped-entities": "warn",
-=======
-      'react-hooks/set-state-in-effect': 'off',
-      'react-hooks/set-state-in-render': 'off',
->>>>>>> Stashed changes
       "next/no-img-element": "off",
 
       // General code quality

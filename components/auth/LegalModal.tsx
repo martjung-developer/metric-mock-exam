@@ -1,3 +1,4 @@
+// components/auth/LegalModal.tsx
 'use client'
 
 import { useEffect, useRef } from 'react'

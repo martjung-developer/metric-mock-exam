@@ -143,11 +143,7 @@ export async function fetchAssignmentsForExam(
 
     client
       .from('students')
-<<<<<<< Updated upstream
       .select('id, student_id, year_level, programs:program_id ( code, name )')
-=======
-      .select('id, student_id, programs:program_id ( code, name )')
->>>>>>> Stashed changes
       .in('id', studentIds),
   ])
 
@@ -160,33 +156,23 @@ export async function fetchAssignmentsForExam(
   const studentMap: Record<string, {
     id: string
     student_id: string | null
-<<<<<<< Updated upstream
     year_level: number | null
     program_code: string | null
-=======
->>>>>>> Stashed changes
     program_name: string | null
   }> = {}
   for (const s of (studentsRes.data ?? []) as unknown as Array<{
     id: string
     student_id: string | null
-<<<<<<< Updated upstream
     year_level: number | null
-=======
->>>>>>> Stashed changes
     programs: { code: string; name: string } | { code: string; name: string }[] | null
   }>) {
     const studentProgram = unwrapJoin(s.programs)
     studentMap[s.id] = {
       id: s.id,
       student_id: s.student_id,
-<<<<<<< Updated upstream
       year_level: s.year_level,
       program_code: studentProgram?.code ?? null,
       program_name: studentProgram?.name ?? null,
-=======
-      program_name: studentProgram ? `${studentProgram.code} — ${studentProgram.name}` : null,
->>>>>>> Stashed changes
     }
   }
 
@@ -211,18 +197,12 @@ export async function fetchAssignmentsForExam(
         email:      profile?.email     ?? '',
         student_id: student?.student_id ?? null,
       },
-<<<<<<< Updated upstream
       program_name:      student?.program_code && student?.program_name
         ? `${student.program_code} — ${student.program_name}`
         : prog
           ? `${prog.code} — ${prog.name}`
           : null,
       assignment_source: isProgramAssignment ? 'program' : 'manual',
-=======
-      program_name:      prog
-        ? `${prog.code} — ${prog.name}`
-        : (student?.program_name ?? null),
->>>>>>> Stashed changes
       assigned_at:       a.assigned_at,
       deadline:          a.deadline,
       is_active:         a.is_active,
@@ -306,10 +286,7 @@ export async function assignProgramToExam(
   client:  AppClient,
   payload: AssignProgramPayload,
 ): Promise<MutationResult> {
-<<<<<<< Updated upstream
-  const { examId, programId, deadline, yearLevel = null } = payload
-=======
-  const { examId, programId, deadline } = payload
+  const { examId, programId, deadline, year_level } = payload
   const examProgramId = await fetchExamProgramId(client, examId)
   if (!examProgramId) {
     return { error: 'This exam has no designated degree program.' }
@@ -317,7 +294,6 @@ export async function assignProgramToExam(
   if (programId !== examProgramId) {
     return { error: 'Cannot assign this exam to a different degree program.' }
   }
->>>>>>> Stashed changes
 
   const { data: programRow, error: programErr } = await client
     .from('programs')

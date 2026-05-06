@@ -30,22 +30,23 @@ export interface AuthUser {
 
 // ── Role helpers ─────────────────────────────────────────
 
-export const isAdmin   = (role: UserRole) => role === 'admin' || role === 'faculty'
+export const isAdmin   = (role: UserRole) => role === 'admin'
 export const isStudent = (role: UserRole) => role === 'student'
+export const isFaculty = (role: UserRole) => role === 'faculty'
 
 export const canTakeExams      = (role: UserRole) => role === 'student'
-export const canManageContent  = (role: UserRole) => isAdmin(role)
+export const canManageContent  = (role: UserRole) => role === 'admin' || role === 'faculty'
 
-// ONLY two dashboard destinations
 export function getDashboardByRole(role: UserRole): string {
   if (role === 'student') {return '/student/dashboard'}
-  return '/admin/dashboard'   // covers both 'admin' and 'faculty'
+  if (role === 'faculty') {return '/faculty/dashboard'}
+  return '/admin/dashboard'
 }
 
 // ── Signup roles (UI only) ───────────────────────────────
 // Faculty is the signup label, but stored as 'admin' in DB
 
-export type SignupRole = 'student' | 'faculty'  // 'faculty' = what user picks in UI
+export type SignupRole = 'student' | 'faculty' | 'admin'
 
 export const SIGNUP_ROLES: {
   value:       SignupRole
@@ -59,7 +60,12 @@ export const SIGNUP_ROLES: {
   },
   {
     value:       'faculty',
-    label:       'Admin',
+    label:       'Faculty',
     description: 'Managing question banks and review materials',
+  },
+  {
+    value:       'admin',
+    label:       'Admin',
+    description: 'Managing school-level operations and user administration',
   },
 ]

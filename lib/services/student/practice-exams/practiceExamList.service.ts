@@ -71,25 +71,7 @@ export async function fetchReviewsForStudent(
       return { reviews: [], error: 'No degree program is assigned to your student account.' }
     }
 
-    const orFilter = programId
-      ? `student_id.eq.${studentId},program_id.eq.${programId}`
-      : `student_id.eq.${studentId}`
-
-    const { data: assignments, error: asnErr } = await supabase
-      .from('exam_assignments')
-      .select('exam_id')
-      .eq('is_active', true)
-      .or(orFilter)
-      .abortSignal(signal)
-
-    if (asnErr) {return { reviews: [], error: 'Could not load assignments.' }}
-
-    const assignedIds = new Set<string>(
-      (assignments ?? [])
-        .map((a: { exam_id: string | null }) => a.exam_id)
-        .filter((id): id is string => id !== null),
-    )
-
+    // ── 1. Fetch only exams that belong to this student's program ─────────
     const { data: examData, error: examErr } = await supabase
       .from('exams')
       .select(`
@@ -99,28 +81,47 @@ export async function fetchReviewsForStudent(
       `)
       .eq('is_published', true)
       .eq('exam_type', 'practice')
-      .eq('program_id', programId)
+      .eq('program_id', programId)          // ← strict: only this program
       .order('created_at', { ascending: false })
       .abortSignal(signal)
 
-    if (examErr) {return { reviews: [], error: 'Could not load practice exams.' }}
+    if (examErr) { return { reviews: [], error: 'Could not load practice exams.' } }
 
     const exams: ExamRaw[] = examData ?? []
+    if (exams.length === 0) { return { reviews: [], error: null } }
+
     const examIds = exams.map(e => e.id)
+
+    // ── 2. Check which of those exams are assigned to this student ────────
+    const { data: assignments, error: asnErr } = await supabase
+      .from('exam_assignments')
+      .select('exam_id')
+      .eq('is_active', true)
+      .in('exam_id', examIds)               // ← only check relevant exams
+      .or(`student_id.eq.${studentId},program_id.eq.${programId}`)
+      .abortSignal(signal)
+
+    if (asnErr) { return { reviews: [], error: 'Could not load assignments.' } }
+
+    const assignedIds = new Set<string>(
+      (assignments ?? [])
+        .map((a: { exam_id: string | null }) => a.exam_id)
+        .filter((id): id is string => id !== null),
+    )
+
+    // ── 3. Question counts ────────────────────────────────────────────────
     const qCountMap: Record<string, number> = {}
+    const { data: qRows } = await supabase
+      .from('questions')
+      .select('exam_id')
+      .in('exam_id', examIds)
+      .abortSignal(signal)
 
-    if (examIds.length > 0) {
-      const { data: qRows } = await supabase
-        .from('questions')
-        .select('exam_id')
-        .in('exam_id', examIds)
-        .abortSignal(signal)
+    ;(qRows ?? []).forEach((q: { exam_id: string | null }) => {
+      if (q.exam_id) { qCountMap[q.exam_id] = (qCountMap[q.exam_id] ?? 0) + 1 }
+    })
 
-      ;(qRows ?? []).forEach((q: { exam_id: string | null }) => {
-        if (q.exam_id) {qCountMap[q.exam_id] = (qCountMap[q.exam_id] ?? 0) + 1}
-      })
-    }
-
+    // ── 4. Build review items ─────────────────────────────────────────────
     const reviews: ReviewItem[] = exams.map(exam => {
       const cat  = unwrapCategory(exam.exam_categories)
       const prog = unwrapProgram(exam.programs)
@@ -138,7 +139,7 @@ export async function fetchReviewsForStudent(
     return { reviews, error: null }
 
   } catch (err) {
-    if ((err as Error).name === 'AbortError') {return { reviews: [], error: null }}
+    if ((err as Error).name === 'AbortError') { return { reviews: [], error: null } }
     return { reviews: [], error: 'Unexpected error loading reviews.' }
   }
 }

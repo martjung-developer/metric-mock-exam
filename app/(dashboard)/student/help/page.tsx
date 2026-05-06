@@ -43,7 +43,6 @@ export default function StudentHelpPage() {
     submitError,
     setField,
     submit,
-    sendNotificationToAdmin,
   } = useSubmitTicket(user?.id ?? null)
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
@@ -121,7 +120,6 @@ export default function StudentHelpPage() {
           submitError={submitError}
           setField={setField}
           onSubmit={submit}
-          onSendNotification={sendNotificationToAdmin}
         />
 
       </div>

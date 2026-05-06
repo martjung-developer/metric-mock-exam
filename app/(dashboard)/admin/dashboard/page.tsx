@@ -42,7 +42,7 @@ function Skeleton({ w = "100%", h = 13 }: { w?: string; h?: number }) {
 
 export default function AdminDashboardPage() {
   const router                        = useRouter();
-  const { user, loading: authLoading} = useUser();
+  const { user, profile, loading: authLoading} = useUser();
 
   // ── Role guard ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -50,13 +50,11 @@ export default function AdminDashboardPage() {
       return;
     }
     if (!user) { router.replace("/login"); return; }
-    const role =
-      (user.user_metadata?.role as string | undefined) ??
-      (user.app_metadata?.role  as string | undefined);
+    const role = profile?.role;
     if (role !== "admin" && role !== "faculty") {
       router.replace("/unauthorized");
     }
-  }, [user, authLoading, router]);
+  }, [user, profile, authLoading, router]);
 
   // ── Data ───────────────────────────────────────────────────────────────────
   const {
@@ -88,9 +86,7 @@ export default function AdminDashboardPage() {
     return null;
   }
 
-  const role =
-    (user.user_metadata?.role as string | undefined) ??
-    (user.app_metadata?.role  as string | undefined);
+  const role = profile?.role;
 
   if (role !== "admin" && role !== "faculty") {
     return null;
