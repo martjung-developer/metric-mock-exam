@@ -78,7 +78,7 @@ export function AvatarUploader({
         <div className={styles.avatarWrap}>
           {hasAvatar ? (
             <Image
-              src={liveAvatarUrl!}
+              src={liveAvatarUrl ?? ''}
               alt="Your profile photo"
               width={80}
               height={80}

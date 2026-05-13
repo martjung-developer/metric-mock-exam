@@ -24,7 +24,6 @@ import * as AnswerKeyService                from '@/lib/services/admin/exams/ans
 import {
   effectiveAnswer,
   isEntryDirty,
-  GROUP_ORDER,
   type AnswerKeyEntry,
   type ExamMeta,
   type QuestionType,
@@ -154,6 +153,7 @@ export function useAnswerKey(examId: string): UseAnswerKeyReturn {
 
   useEffect(() => {
     mountedRef.current = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refetch()
     return () => {
       mountedRef.current = false

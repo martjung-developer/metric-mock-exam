@@ -1,7 +1,6 @@
 // components/dashboard/student/mock-exams/MockExamsEmpty.tsx
 import { Search } from 'lucide-react'
 import styles from '@/app/(dashboard)/student/mock-exams/mock-exams.module.css'
-import { ALL_CATEGORIES } from '@/lib/constants/student/mock-exams/mock-exams'
 
 interface Props {
   onClear: () => void

@@ -7,7 +7,6 @@
 import type { Database } from '@/lib/types/database'
 
 // ── DB row aliases ────────────────────────────────────────────────────────────
-type SubmissionRow = Database['public']['Tables']['submissions']['Row']
 type AnalyticsRow  = Database['public']['Tables']['analytics']['Row']
 
 // ── ResultStatus — narrower than SubmissionStatus ────────────────────────────

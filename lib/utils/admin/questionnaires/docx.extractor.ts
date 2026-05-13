@@ -86,7 +86,7 @@ function collectParagraphs(doc: MammothElement): NonNullable<DocxExtractResult['
   function walk(el: MammothElement): void {
     if (el.type === 'paragraph') {
       result.push({
-        level:    el.numbering != null ? parseLevel(el.numbering.level) : null,
+        level:    el.numbering !== null ? parseLevel(el.numbering.level) : null,
         boldText: mammothGetBoldText(el).trim(),
         text:     mammothGetText(el).trim(),
       })

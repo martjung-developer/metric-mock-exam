@@ -16,7 +16,6 @@ type QuestionRow   = Database["public"]["Tables"]["questions"]["Row"];
 type ProfileRow    = Database["public"]["Tables"]["profiles"]["Row"];
  
 // Subset columns actually selected from `practice_exams`
-type PracticeExamCountResult = { count: number | null };
  
 // ── Return shape ──────────────────────────────────────────────────────────────
  

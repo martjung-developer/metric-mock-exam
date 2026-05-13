@@ -16,7 +16,9 @@ export async function POST(req: NextRequest) {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
     const content = await page.getTextContent()
-    text += content.items.map((item: any) => item.str).join(" ")
+    text += content.items
+      .map((item: unknown) => (typeof item === 'object' && item !== null && 'str' in item ? String((item as { str: string }).str) : ''))
+      .join(" ")
   }
 
   return NextResponse.json({ text })

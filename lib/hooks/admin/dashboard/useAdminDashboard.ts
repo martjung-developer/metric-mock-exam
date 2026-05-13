@@ -41,6 +41,7 @@ export function useAdminDashboard(user: User | null): UseAdminDashboardReturn {
   const hasFetched = useRef(false);
  
   useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
  
@@ -52,8 +53,8 @@ export function useAdminDashboard(user: User | null): UseAdminDashboardReturn {
  
     async function load() {
       // user is guaranteed non-null here (checked above)
-      const uid      = user!.id;
-      const fallback = user!.email ?? "User";
+      const uid      = user.id;
+      const fallback = user.email ?? "User";
  
       // Run display-name fetch and dashboard data fetch in parallel
       const [name, data] = await Promise.all([

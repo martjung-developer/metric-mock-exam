@@ -9,7 +9,7 @@ import { useState, useEffect }  from 'react'
 import { createClient }         from '@/lib/supabase/client'
 import { fetchCategories }      from '@/lib/services/admin/exams/create/exam.service'
 import type {
-  CategoryOption, ProgramType,
+  CategoryOption,
 }                               from '@/lib/types/admin/exams/create/exam.types'
 
 // ── ProgramOption (matches the admin exam.types ProgramOption shape) ──────────

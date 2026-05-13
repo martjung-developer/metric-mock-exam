@@ -1,29 +1,26 @@
 // lib/types/auth/index.ts
 
 // ── Roles ─────────────────────────────────────────────────────────────────────
-export type UserRole = 'student' | 'faculty' | 'admin'
-export type SignupRole = 'student'   // signup is student-only
+export type UserRole   = 'student' | 'faculty' | 'admin'
+export type SignupRole = 'student' // signup is student-only
 
-// ── ID prefixes ───────────────────────────────────────────────────────────────
-// Student IDs: YY-NNNN-NNN          (e.g. 23-0249-605)
-// Faculty IDs: <PREFIX>-<DIGITS>    (e.g. SARFAID-17839, SSLATE-14304)
-// Admin IDs:   <PREFIX>-<DIGITS>    (e.g. SBIT-16113)
+// ── ID format aliases (documentation only — runtime is regex-validated) ────────
 export type StudentId = `${string}-${string}-${string}`
 export type FacultyId = `${Uppercase<string>}-${string}`
 export type AdminId   = `${Uppercase<string>}-${string}`
 export type AnyUserId = StudentId | FacultyId | AdminId
 
-// ── Programs (9 supported) ────────────────────────────────────────────────────
+// ── 9 Programs ────────────────────────────────────────────────────
 export const PROGRAMS = [
-  { value: 'BS-PSYCH',  label: 'BS Psychology'                      },
-  { value: 'BS-ID',     label: 'BS Interior Design'                  },
-  { value: 'BLIS',      label: 'BS Library and Information Science'  },
-  { value: 'BS-ARCH',   label: 'BS Architecture'                     },
-  { value: 'BSEd-MATH', label: 'BSEd – Mathematics'                  },
-  { value: 'BSEd-SCI',  label: 'BSEd – Science'                      },
-  { value: 'BSEd-ENG',  label: 'BSEd – English'                      },
-  { value: 'BEEd',      label: 'Bachelor of Elementary Education'     },
-  { value: 'BSEd-FIL',  label: 'BSEd – Filipino'                     },
+  { value: 'BS-PSYCH',  label: 'BS Psychology'                     },
+  { value: 'BS-ID',     label: 'BS Interior Design'                 },
+  { value: 'BLIS',      label: 'BS Library and Information Science' },
+  { value: 'BS-ARCH',   label: 'BS Architecture'                    },
+  { value: 'BSEd-MATH', label: 'BSEd – Mathematics'                 },
+  { value: 'BSEd-SCI',  label: 'BSEd – Science'                     },
+  { value: 'BSEd-ENG',  label: 'BSEd – English'                     },
+  { value: 'BEEd',      label: 'Bachelor of Elementary Education'    },
+  { value: 'BSEd-FIL',  label: 'BSEd – Filipino'                    },
 ] as const
 
 export type ProgramCode = typeof PROGRAMS[number]['value']
@@ -37,7 +34,7 @@ export const YEAR_LEVEL_OPTIONS = [
   { value: 5, label: '5th' },
 ] as const
 
-export type YearLevel = typeof YEAR_LEVEL_OPTIONS[number]['value']  // 1 | 2 | 3 | 4 | 5
+export type YearLevel = typeof YEAR_LEVEL_OPTIONS[number]['value'] // 1|2|3|4|5
 
 // ── Signup steps (student only) ───────────────────────────────────────────────
 export type SignupStep = 'id' | 'credentials' | 'program' | 'review'
@@ -90,14 +87,14 @@ export interface ResolveUserSuccess {
   role:  UserRole
 }
 export interface ResolveUserFailure {
-  found: false
-  error: string
+  found:  false
+  error:  string
 }
 export type ResolveUserResult = ResolveUserSuccess | ResolveUserFailure
 
 // send-otp response
-export interface SendOtpSuccess  { sent: true }
-export interface SendOtpFailure  { sent: false; error: string }
+export interface SendOtpSuccess { sent: true }
+export interface SendOtpFailure { sent: false; error: string }
 export type SendOtpResult = SendOtpSuccess | SendOtpFailure
 
 // verify-otp response
@@ -105,10 +102,10 @@ export interface VerifyOtpSuccess { verified: true;  redirectTo: string }
 export interface VerifyOtpFailure { verified: false; error: string }
 export type VerifyOtpResult = VerifyOtpSuccess | VerifyOtpFailure
 
-// ── Role → dashboard (per role, not collapsed) ────────────────────────────────
+// ── Role → dashboard ──────────────────────────────────────────────────────────
 export const ROLE_DASHBOARDS: Record<UserRole, string> = {
   student: '/student/dashboard',
-  faculty: '/faculty/dashboard',   // ← faculty gets its own dashboard
+  faculty: '/faculty/dashboard',
   admin:   '/admin/dashboard',
 }
 
@@ -141,8 +138,16 @@ export interface StudentProfile extends Profile {
   school_id:   string | null
 }
 
-// ── Program utilities ────────────────────────────────────────────────────────
+export interface FacultyProfile extends Profile {
+  faculty_id: string | null
+  school:     string | null
+  program_id: string | null
+  school_id:  string | null
+}
 
+export type AuthProfile = Profile
+
+// ── Program utilities ─────────────────────────────────────────────────────────
 export function isProgramCode(value: unknown): value is ProgramCode {
   return PROGRAMS.some((p) => p.value === value)
 }

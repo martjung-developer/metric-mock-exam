@@ -142,10 +142,10 @@ export async function fetchResults(
           email:      profile?.email      ?? '',
           student_id: student?.student_id ?? null,
         },
-        score:              r.score!,
+        score:              r.score ?? 0,
         percentage:         r.percentage ?? 0,
         passed:             r.passed     ?? false,
-        submitted_at:       r.submitted_at!,
+        submitted_at:       r.submitted_at ?? new Date(0).toISOString(),
         time_spent_seconds: r.time_spent_seconds ?? 0,
         status:             toResultStatus(r.status),
       }
@@ -263,11 +263,11 @@ export async function getExamResultsWithAttempts(
       .map((r): Attempt => ({
         attempt_no:         r.attempt_no ?? 1,
         submission_id:      r.id,
-        score:              r.score!,
+        score:              r.score ?? 0,
         percentage:         r.percentage ?? 0,
         passed:             r.passed     ?? false,
         status:             toResultStatus(r.status),
-        submitted_at:       r.submitted_at!,
+        submitted_at:       r.submitted_at ?? new Date(0).toISOString(),
         time_spent_seconds: r.time_spent_seconds ?? 0,
       }))
 
@@ -280,12 +280,12 @@ export async function getExamResultsWithAttempts(
         ? cur : best,
     )
 
-    const latestAttempt: Attempt = attempts[attempts.length - 1]!
+    const latestAttempt: Attempt | undefined = attempts[attempts.length - 1]
 
     // Improvement delta: latest% − first%
-    const firstAttempt = attempts[0]!
+    const firstAttempt: Attempt | undefined = attempts[0]
     const improvementDelta =
-      attempts.length > 1
+      attempts.length > 1 && latestAttempt && firstAttempt
         ? latestAttempt.percentage - firstAttempt.percentage
         : null
 

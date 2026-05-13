@@ -92,7 +92,10 @@ export function useSubmissions(examId: string): UseSubmissionsReturn {
     setLoading(false)
   }, [supabase, examId])
 
-  useEffect(() => { void refetch() }, [refetch])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refetch()
+  }, [refetch])
 
   // ── forceSubmit ─────────────────────────────────────────────────────────────
 
@@ -115,8 +118,8 @@ export function useSubmissions(examId: string): UseSubmissionsReturn {
           ? {
               ...s,
               status:             'submitted' as SubmissionStatus,
-              submitted_at:       result.data!.submitted_at,
-              time_spent_seconds: result.data!.time_spent_seconds,
+              submitted_at:       result.data?.submitted_at ?? null,
+              time_spent_seconds: result.data?.time_spent_seconds ?? null,
             }
           : s,
       ),

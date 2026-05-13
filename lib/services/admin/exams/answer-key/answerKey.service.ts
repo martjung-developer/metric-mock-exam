@@ -8,6 +8,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database }       from '@/lib/types/database'
 import type { QuestionType }   from '@/lib/types/database'
+import type { Json }           from '@/lib/types/database'
 import { parseOptions }        from '@/lib/utils/admin/answer-key/parseOptions'
 import type {
   AnswerKeyEntry,
@@ -39,7 +40,7 @@ function mapRowToEntry(row: QuestionRaw): AnswerKeyEntry | null {
     question_type:         row.question_type,
     points:                row.points,
     order_number:          row.order_number,
-    options:               parseOptions(row.options as import('@/lib/types/database').Json | null),
+    options:               parseOptions(row.options as Json | null),
     correct_answer:        row.correct_answer,
     override:              null,
     explanation:           row.explanation,

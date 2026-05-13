@@ -39,6 +39,7 @@ export function useUnreadCount(userId: string | null): number {
   }, [userId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchCount()
   }, [fetchCount])
 
@@ -62,7 +63,7 @@ export function useUnreadCount(userId: string | null): number {
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
         },
-        (_payload: RealtimePostgresChangesPayload<NotificationRow>) => {
+        (_: RealtimePostgresChangesPayload<NotificationRow>) => {
           void fetchCount()
         }
       )

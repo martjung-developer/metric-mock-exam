@@ -7,7 +7,6 @@ import type {
   CreateFacultyPayload,
   FacultyDepartment,
   FacultyProgram,
-  FacultyRoleType,
   DepartmentPrograms,
 } from '@/lib/types/admin/faculty'
 import { DEPARTMENT_PROGRAMS } from '@/lib/types/admin/faculty'
@@ -72,7 +71,9 @@ export function hasErrors(errors: FacultyFormErrors): boolean {
 export function getProgramsForDepartment(
   department: FacultyDepartment | '',
 ): FacultyProgram[] {
-  if (!department) return []
+  if (!department) {
+    return []
+  }
   const entry = DEPARTMENT_PROGRAMS.find((d) => d.department === department)
   return entry ? [...entry.programs] : []
 }

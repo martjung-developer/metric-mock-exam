@@ -18,7 +18,6 @@ interface EditExamModalProps {
 }
 
 export function EditExamModal({
-  exam,
   form,
   errors,
   saving,

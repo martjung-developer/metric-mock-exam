@@ -1,8 +1,7 @@
 // app/(auth)/signup/page.tsx
 // ─────────────────────────────────────────────────────────────────────────────
-// Student-only signup wizard. Validates YY-NNNN-NNN ID format.
-// Non-student IDs (admin/faculty pattern) are rejected with an inline error.
-// Architecture (hooks → services → API) is unchanged.
+// Student-only signup wizard — 4 steps: id → credentials → program → review.
+// Non-student IDs are rejected with an inline error on step 1.
 // ─────────────────────────────────────────────────────────────────────────────
 'use client'
 
@@ -11,25 +10,50 @@ import Link                       from 'next/link'
 import { motion }                 from 'framer-motion'
 import {
   AlertCircle, ArrowRight, ArrowLeft,
-  CheckCircle, Eye, EyeOff, Phone, Zap,
+  CheckCircle, Eye, EyeOff, Phone, Zap, Loader2,
 } from 'lucide-react'
 import { useSignup, SIGNUP_STEPS } from '@/lib/hooks/auth/useSignup'
-import {
-  PROGRAMS,
-  YEAR_LEVEL_OPTIONS,
-  isProgramCode,
-  getProgramLabel,
-} from '@/lib/types/auth/'
-import type { ProgramCode } from '@/lib/types/auth/'
+type ProgramCode = 'BSCS' | 'BSIT' | 'BSIS' | 'BSEMC' | 'BSDA'
+
+const PROGRAMS: Array<{ value: ProgramCode }> = [
+  { value: 'BSCS' },
+  { value: 'BSIT' },
+  { value: 'BSIS' },
+  { value: 'BSEMC' },
+  { value: 'BSDA' },
+]
+
+const YEAR_LEVEL_OPTIONS = [
+  { value: 1, label: '1st' },
+  { value: 2, label: '2nd' },
+  { value: 3, label: '3rd' },
+  { value: 4, label: '4th' },
+  { value: 5, label: '5th' },
+]
+
+function isProgramCode(value: unknown): value is ProgramCode {
+  return PROGRAMS.some((p) => p.value === value)
+}
+
+function getProgramLabel(code: ProgramCode): string {
+  const labels: Record<ProgramCode, string> = {
+    BSCS: 'Bachelor of Science in Computer Science',
+    BSIT: 'Bachelor of Science in Information Technology',
+    BSIS: 'Bachelor of Science in Information Systems',
+    BSEMC: 'Bachelor of Science in Entertainment and Multimedia Computing',
+    BSDA: 'Bachelor of Science in Data Analytics',
+  }
+  return labels[code]
+}
 import { SignupSuccessModal }  from '@/components/auth/signup/SuccessModal'
 import styles from '../auth.module.css'
 
 // ── Step heading metadata ─────────────────────────────────────────────────────
 
 const STEP_META = {
-  id:          { title: "Let's get started",  subtitle: 'Enter your school-issued Student ID'             },
-  credentials: { title: 'Create your account', subtitle: 'Your name, contact info, and a secure password'  },
-  program:     { title: 'Choose your program',  subtitle: 'Select your program and current year level'      },
+  id:          { title: "Let's get started",   subtitle: 'Enter your school-issued Student ID'              },
+  credentials: { title: 'Create your account', subtitle: 'Your name, contact info, and a secure password'   },
+  program:     { title: 'Choose your program',  subtitle: 'Select your program and current year level'       },
   review:      { title: 'Confirm & create',     subtitle: 'Review your details before creating your account' },
 } as const
 
@@ -42,12 +66,13 @@ const STRENGTH_MAP: Record<StrengthKey, string> = {
   good:   'strengthGood',
   strong: 'strengthStrong',
 }
+
 function strengthCls(s: StrengthKey | null): string {
   if (!s) { return '' }
   return (styles as Record<string, string>)[STRENGTH_MAP[s]] ?? ''
 }
 
-// ── Shared back-button style ──────────────────────────────────────────────────
+// ── Shared back button style ──────────────────────────────────────────────────
 
 const BACK_BTN: React.CSSProperties = {
   flex:         '0 0 auto',
@@ -102,19 +127,18 @@ export default function SignupPage() {
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         >
-          {/* ── Logo + Back to site ── */}
+          {/* ── Logo icon ── */}
           <div className={styles.logoIcon}>
             <Zap size={22} color="#ffffff" strokeWidth={2.5} />
           </div>
 
-          {/* Back to site — visible on first step only */}
           {state.step === 'id' && (
             <div style={{ marginBottom: '0.25rem' }}>
               <Link href="/" className={styles.backToSite}>← Back to site</Link>
             </div>
           )}
 
-          {/* ── Step indicator dots ── */}
+          {/* ── Step dots ── */}
           <div className={styles.stepRow}>
             {SIGNUP_STEPS.map((s, i) => (
               <div
@@ -131,20 +155,14 @@ export default function SignupPage() {
           <h1 className={styles.heading}>{title}</h1>
           <p className={styles.subheading}>{subtitle}</p>
 
-          {/* Student-only notice */}
+          {/* Student-only notice — step 1 only */}
           {state.step === 'id' && (
             <div style={{
-              display:      'flex',
-              alignItems:   'center',
-              gap:          '0.4rem',
-              padding:      '0.55rem 0.8rem',
-              marginBottom: '1rem',
-              background:   '#f0fdf4',
-              border:       '1px solid #bbf7d0',
-              borderRadius: '9px',
-              fontSize:     '0.75rem',
-              color:        '#15803d',
-              fontWeight:   500,
+              display: 'flex', alignItems: 'center', gap: '0.4rem',
+              padding: '0.55rem 0.8rem', marginBottom: '1rem',
+              background: '#f0fdf4', border: '1px solid #bbf7d0',
+              borderRadius: '9px', fontSize: '0.75rem',
+              color: '#15803d', fontWeight: 500,
             }}>
               <CheckCircle size={13} style={{ flexShrink: 0 }} />
               Student registration only. Faculty &amp; admin accounts are managed by your institution.
@@ -175,7 +193,7 @@ export default function SignupPage() {
                   spellCheck={false}
                 />
                 <span className={styles.fieldHint}>
-                  Format: YY-NNNN-NNN — issued by your school (e.g. 23-0249-605)
+                  Format: YY-NNNN-NNN — issued by your school
                 </span>
               </div>
 
@@ -196,10 +214,9 @@ export default function SignupPage() {
             </div>
           )}
 
-          {/* ══ STEP 2: Full name + email + phone + password ══ */}
+          {/* ══ STEP 2: Name + email + phone + password ══ */}
           {state.step === 'credentials' && (
             <div className={styles.form}>
-
               <div className={styles.fieldGroup}>
                 <label className={styles.label} htmlFor="signup-fullname">Full Name</label>
                 <input
@@ -341,17 +358,14 @@ export default function SignupPage() {
                         type="button"
                         onClick={() => patch({ yearLevel: yr.value })}
                         style={{
-                          padding:      '0.5rem 0.25rem',
-                          borderRadius: '9px',
-                          border:       `1.5px solid ${active ? '#6366f1' : '#e2e8f0'}`,
-                          background:   active ? '#eef2ff' : '#fff',
-                          color:        active ? '#4338ca' : '#475569',
-                          fontFamily:   'inherit',
-                          fontSize:     '0.75rem',
-                          fontWeight:   active ? 700 : 500,
-                          cursor:       'pointer',
-                          transition:   'all 0.15s ease',
-                          textAlign:    'center' as const,
+                          padding: '0.5rem 0.25rem', borderRadius: '9px',
+                          border: `1.5px solid ${active ? '#6366f1' : '#e2e8f0'}`,
+                          background: active ? '#eef2ff' : '#fff',
+                          color: active ? '#4338ca' : '#475569',
+                          fontFamily: 'inherit', fontSize: '0.75rem',
+                          fontWeight: active ? 700 : 500,
+                          cursor: 'pointer', transition: 'all 0.15s ease',
+                          textAlign: 'center' as const,
                         }}
                       >
                         {yr.label}
@@ -430,11 +444,11 @@ export default function SignupPage() {
                   style={{ flex: 1, marginTop: 0 }}
                   disabled={loading}
                   onClick={handleSubmit}
-                  whileHover={{ y: -1 }}
-                  whileTap={{ scale: 0.985 }}
+                  whileHover={loading ? {} : { y: -1 }}
+                  whileTap={loading  ? {} : { scale: 0.985 }}
                 >
                   {loading
-                    ? 'Creating account…'
+                    ? <><Loader2 size={15} className={styles.spinnerIcon} /> Creating account…</>
                     : <> Create Account <ArrowRight size={15} strokeWidth={2.5} /></>}
                 </motion.button>
               </div>

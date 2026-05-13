@@ -16,8 +16,8 @@
 import { useState, useCallback, useMemo } from 'react'
 import { createClient }          from '@/lib/supabase/client'
 import * as SubmissionService    from '@/lib/services/admin/exams/submissions/submission.service'
-import { gradeAnswer, sumPoints, computeScore } from '@/lib/utils/admin/submissions/grading'
-import { AUTO_TYPES, GRADEABLE_STATUSES, RELEASABLE_STATUSES } from '@/lib/utils/admin/submissions/constants'
+import { gradeAnswer, computeScore } from '@/lib/utils/admin/submissions/grading'
+import { GRADEABLE_STATUSES, RELEASABLE_STATUSES } from '@/lib/utils/admin/submissions/constants'
 import type {
   Submission,
   GradingMode,

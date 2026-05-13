@@ -138,7 +138,10 @@ export default function QuestionsPage(): JSX.Element {
   )
 
   useEffect(() => {
-    if (page > totalPages) {setPage(totalPages)}
+    if (page > totalPages) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPage(totalPages)
+    }
   }, [page, totalPages])
 
   // ── Modal submit ───────────────────────────────────────────────────────────

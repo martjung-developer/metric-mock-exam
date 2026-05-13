@@ -116,7 +116,9 @@ export function useSubmitTicket(userId: string | null): UseSubmitTicketReturn {
   )
 
   const sendNotificationToAdmin = useCallback(async () => {
-    if (!userId || notifying) return
+    if (!userId || notifying) {
+      return
+    }
 
     const errors = validateTicketForm(form)
     setFormErrors(errors)

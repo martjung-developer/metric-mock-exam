@@ -1,11 +1,4 @@
-import type { UserRole } from '@/lib/types/auth/'
+// lib/auth/routing.ts
 
-export const ROLE_DASHBOARDS: Record<UserRole, string> = {
-  student: '/student/dashboard',
-  faculty: '/faculty/dashboard',
-  admin: '/admin/dashboard',
-}
-
-export function getDashboardByRole(role: UserRole): string {
-  return ROLE_DASHBOARDS[role]
-}
+import { getDashboardByRole as _getDashboardByRole } from '@/lib/types/auth'
+export { _getDashboardByRole as getDashboardByRole }

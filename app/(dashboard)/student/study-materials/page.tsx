@@ -22,7 +22,7 @@ export default function StudyMaterialsPage() {
     loading, error, totalCount,
     filters, setSearch, setCategory, setType, clearFilters,
     categoryNames, filtered,
-    page, setPage, totalPages, safePage, paginated, pageNums,
+    setPage, totalPages, safePage, paginated, pageNums,
     refresh, toggleFav,
     recordViewed,
   } = useStudyMaterials()

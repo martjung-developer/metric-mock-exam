@@ -22,8 +22,9 @@ function formatDate(iso: string): string {
 }
 
 function RoleBadge({ roleType }: { roleType: FacultyRoleType | null }) {
-  if (!roleType) return <span className={styles.badgeNone}>—</span>
-
+  if (!roleType) {
+    return <span className={styles.badgeNone}>—</span>
+  }
   const colorMap: Record<FacultyRoleType, string> = {
     professional: styles.badgeProfessional,
     major:        styles.badgeMajor,
@@ -64,7 +65,7 @@ export default function FacultyTable({ faculty, onRefresh }: FacultyTableProps) 
     return (
       <div className={styles.empty}>
         <p className={styles.emptyText}>No faculty members found.</p>
-        <p className={styles.emptySubtext}>Click "Add Faculty" to create the first account.</p>
+        <p className={styles.emptySubtext}>Click &quot;Add Faculty&quot; to create the first account.</p>
       </div>
     )
   }

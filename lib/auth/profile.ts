@@ -1,12 +1,28 @@
+// lib/auth/profile.ts
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 import type { Database } from '@/lib/types/database'
 import type { UserRole } from '@/lib/types/auth/'
 
+type DbClient = SupabaseClient<Database>
+
+type ProfileRow = {
+  id:         string
+  email:      string
+  full_name:  string | null
+  role:       string
+  avatar_url: string | null
+  created_at: string
+  updated_at: string
+}
+ 
 export interface AuthProfile {
   id: string
   email: string
   role: UserRole
   full_name: string | null
+  avatar_url: string | null
+  created_at: string
+  updated_at: string
   school_id: string | null
   program_id: string | null
 }
@@ -17,7 +33,7 @@ export async function fetchProfileByUserId(
 ): Promise<AuthProfile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, full_name, role')
+    .select('id, email, full_name, role, avatar_url, created_at, updated_at')
     .eq('id', userId)
     .single()
 
@@ -30,6 +46,9 @@ export async function fetchProfileByUserId(
     email: data.email,
     role: data.role,
     full_name: data.full_name,
+    avatar_url: data.avatar_url,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
   } as const
 
   if (data.role === 'student') {
@@ -60,25 +79,38 @@ export async function fetchProfileByUserId(
     }
   }
 
-  const { data: admin } = await supabase
-    .from('admins')
-    .select('school_id')
-    .eq('user_id', userId)
-    .single()
-
   return {
     ...base,
-    school_id: admin?.school_id ?? null,
+    school_id: null,
     program_id: null,
   }
 }
 
 export async function fetchProfileForUser(
-  supabase: SupabaseClient<Database>,
-  user: User | null,
+  supabase: DbClient,
+  user: User | null | undefined,
 ): Promise<AuthProfile | null> {
-  if (!user) {
-    return null
+  if (!user) { return null }
+ 
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email, full_name, role, avatar_url, created_at, updated_at')
+    .eq('id', user.id)
+    .single()
+ 
+  if (error || !data) { return null }
+ 
+  const row = data as ProfileRow
+ 
+  return {
+    id:         row.id,
+    email:      row.email,
+    full_name:  row.full_name,
+    role:       row.role as UserRole,
+    avatar_url: row.avatar_url,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    school_id:  null,
+    program_id: null,
   }
-  return fetchProfileByUserId(supabase, user.id)
 }

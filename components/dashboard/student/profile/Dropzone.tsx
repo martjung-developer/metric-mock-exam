@@ -59,7 +59,7 @@ export function Dropzone({ onFilesAccepted, disabled }: DropzoneProps) {
 
   const handleKey = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {open()}
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open])
 
   return (
     <div

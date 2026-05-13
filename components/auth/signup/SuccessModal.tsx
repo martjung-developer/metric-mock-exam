@@ -11,21 +11,19 @@ import { useEffect, useState, useCallback } from 'react'
 import Link                                 from 'next/link'
 import { useRouter }                        from 'next/navigation'
 import { motion, AnimatePresence }          from 'framer-motion'
-import { CheckCircle, Mail, ArrowRight }    from 'lucide-react'
-import styles from '@/app/(auth)/auth.module.css'
+import { CheckCircle, ArrowRight }    from 'lucide-react'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const REDIRECT_DELAY_MS = 5_000   
 const TICK_MS           = 1_000
 
 interface SignupSuccessModalProps {
-  email: string
   onClose?: () => void
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function SignupSuccessModal({ email, onClose }: SignupSuccessModalProps) {
+export function SignupSuccessModal({ onClose }: SignupSuccessModalProps) {
   const router                  = useRouter()
   const [seconds, setSeconds]   = useState(Math.round(REDIRECT_DELAY_MS / TICK_MS))
 

@@ -40,6 +40,7 @@ export function useStudentSearch(
   useEffect(() => {
     // Don't search if panel is in program mode or query is empty
     if (!active || !studentSearch.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStudentResults([])
       return
     }

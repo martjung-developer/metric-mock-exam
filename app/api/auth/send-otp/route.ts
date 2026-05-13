@@ -12,8 +12,8 @@ const DEV_BYPASS_RATE_LIMIT =
 async function getSupabaseServer() {
   const cookieStore = await cookies()
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
@@ -71,3 +71,5 @@ export async function POST(req: NextRequest): Promise<NextResponse<SendOtpResult
     )
   }
 }
+
+

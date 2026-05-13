@@ -150,9 +150,12 @@ export type Database = {
           id:          string
           user_id:     string | null   
           student_id:  string          
+          full_name:   string | null
           school:      string | null
           year_level:  number          
           target_exam: string | null
+          program_code: string
+          phone:       string | null
           program_id:  string         
           school_id:   string | null
           created_at:  string
@@ -161,19 +164,25 @@ export type Database = {
           id:            string
           user_id?:      string | null
           student_id?:   string
+          full_name?:   string | null
           school?:       string | null
           year_level?:   number
           target_exam?:  string | null
+          program_code?: string
+          phone?:       string | null
           program_id?:   string
           school_id?:    string | null
           created_at?:   string
         }
         Update: {
           user_id?:      string | null
+          full_name?:   string | null
           student_id?:   string
           school?:       string | null
           year_level?:   number
           target_exam?:  string | null
+          program_code?: string
+          phone?:       string | null
           program_id?:   string
           school_id?:    string | null
         }
@@ -752,6 +761,7 @@ export type Database = {
           school_id: string | null 
           program_id: string | null
           email:      string
+          department: string | null
           role_type:  'professional' | 'major' | 'minor' | null
           is_active:  boolean
           created_by: string | null
@@ -767,6 +777,7 @@ export type Database = {
           school_id?:   string | null
           program_id?:  string | null
           email:       string
+          department?:  string | null
           role_type?:  'professional' | 'major' | 'minor' | null
           is_active?:  boolean
           created_by?: string | null
@@ -781,6 +792,7 @@ export type Database = {
           school_id?:   string | null
           program_id?:  string | null
           email?:      string
+          department?:  string | null
           role_type?:  'professional' | 'major' | 'minor' | null
           is_active?:  boolean
           updated_at?: string

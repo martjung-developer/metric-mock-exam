@@ -6,33 +6,30 @@ import { redirect }        from 'next/navigation'
 import type { Profile, StudentProfile, UserRole } from '@/lib/types/auth'
 import { getDashboardByRole, canManageContent }   from '@/lib/types/auth'
 
+// ── Stale-token detection ─────────────────────────────────────────────────────
+
 function isInvalidRefreshTokenError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false
-  }
-  const message = error.message.toLowerCase()
-  return (
-    message.includes('invalid refresh token') &&
-    message.includes('refresh token not found')
-  )
+  if (!(error instanceof Error)) { return false }
+  const msg = error.message.toLowerCase()
+  return msg.includes('invalid refresh token') && msg.includes('refresh token not found')
 }
 
 // ── Get current user ──────────────────────────────────────────────────────────
+
 export async function getUser() {
   try {
     const supabase = await createClient()
     const { data: { user }, error } = await supabase.auth.getUser()
-    if (error || !user) {return null}
+    if (error || !user) { return null }
     return user
   } catch (error) {
-    if (isInvalidRefreshTokenError(error)) {
-      return null
-    }
+    if (isInvalidRefreshTokenError(error)) { return null }
     throw error
   }
 }
 
 // ── Get profile row ───────────────────────────────────────────────────────────
+
 export async function getProfile(userId: string): Promise<Profile | null> {
   const supabase = await createClient()
 
@@ -42,34 +39,23 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     .eq('id', userId)
     .single()
 
-  if (error || !data) {return null}
-  return data as Profile
+  if (error || !data) { return null }
+
+  return {
+    id:         data.id,
+    email:      data.email,
+    full_name:  data.full_name ?? null,
+    role:       data.role as UserRole,
+    avatar_url: data.avatar_url ?? null,
+    created_at: data.created_at ?? '',
+    updated_at: data.updated_at ?? '',
+  }
 }
 
-// ── Get student+profile joined row ────────────────────────────────────────────
-// Works for both 'student' and 'faculty' roles since both have students rows.
+// ── Get student + profile joined row ─────────────────────────────────────────
+
 export async function getStudentProfile(userId: string): Promise<StudentProfile | null> {
   const supabase = await createClient()
-
-  type StudentRow = {
-    student_id:  string | null
-    school:      string | null
-    year_level:  number | null
-    target_exam: string | null
-    program_id:  string | null
-    school_id:   string | null
-  }
-
-  type ProfileWithStudents = {
-    id:         string
-    email:      string
-    full_name:  string | null
-    role:       string
-    avatar_url: string | null
-    created_at: string
-    updated_at: string
-    students:   StudentRow | StudentRow[] | null
-  }
 
   const { data: rawData, error } = await supabase
     .from('profiles')
@@ -82,39 +68,52 @@ export async function getStudentProfile(userId: string): Promise<StudentProfile 
     .eq('id', userId)
     .single()
 
-  if (error || !rawData) {return null}
+  if (error || !rawData) { return null }
 
-  const data = rawData as unknown as ProfileWithStudents
+  // students can be returned as array (one-to-many join) or null
+  const studentsRaw = rawData.students
+  const studentRow = Array.isArray(studentsRaw)
+    ? (studentsRaw[0] ?? null)
+    : (studentsRaw ?? null)
 
-  const studentRow: StudentRow | null = Array.isArray(data.students)
-    ? (data.students[0] ?? null)
-    : data.students
+  type StudentRow = typeof studentRow & {
+    student_id:  string | null
+    school:      string | null
+    year_level:  number | null
+    target_exam: string | null
+    program_id:  string | null
+    school_id:   string | null
+  }
+
+  const s = studentRow as StudentRow | null
 
   return {
-    id:          data.id,
-    email:       data.email,
-    full_name:   data.full_name,
-    role:        data.role as UserRole,
-    avatar_url:  data.avatar_url,
-    created_at:  data.created_at,
-    updated_at:  data.updated_at,
-    student_id:  studentRow?.student_id  ?? null,
-    school:      studentRow?.school      ?? null,
-    year_level:  studentRow?.year_level  ?? null,
-    target_exam: studentRow?.target_exam ?? null,
-    program_id:  studentRow?.program_id  ?? null,
-    school_id:   studentRow?.school_id   ?? null,
+    id:          rawData.id,
+    email:       rawData.email,
+    full_name:   rawData.full_name ?? null,
+    role:        rawData.role as UserRole,
+    avatar_url:  rawData.avatar_url ?? null,
+    created_at:  rawData.created_at ?? '',
+    updated_at:  rawData.updated_at ?? '',
+    student_id:  s?.student_id  ?? null,
+    school:      s?.school      ?? null,
+    year_level:  s?.year_level  ?? null,
+    target_exam: s?.target_exam ?? null,
+    program_id:  s?.program_id  ?? null,
+    school_id:   s?.school_id   ?? null,
   }
 }
 
 // ── Require auth ──────────────────────────────────────────────────────────────
+
 export async function requireAuth() {
   const user = await getUser()
-  if (!user) {redirect('/login')}
+  if (!user) { redirect('/login') }
   return user
 }
 
 // ── Require role ──────────────────────────────────────────────────────────────
+
 export async function requireRole(allowedRoles: UserRole[]) {
   const user    = await requireAuth()
   const profile = await getProfile(user.id)
@@ -126,18 +125,20 @@ export async function requireRole(allowedRoles: UserRole[]) {
   return { user, profile }
 }
 
-// ── Require faculty ───────────────────────────────────────────────────────────
+// ── Require faculty (faculty + admin) ─────────────────────────────────────────
+
 export async function requireFaculty() {
   return requireRole(['faculty', 'admin'])
 }
 
 // ── Require admin ─────────────────────────────────────────────────────────────
+
 export async function requireAdmin() {
   return requireRole(['admin'])
 }
 
 // ── Require content management access ────────────────────────────────────────
-// faculty + admin can manage questions and exams
+
 export async function requireContentAccess() {
   const user    = await requireAuth()
   const profile = await getProfile(user.id)
@@ -150,9 +151,10 @@ export async function requireContentAccess() {
 }
 
 // ── Redirect already-authenticated users ─────────────────────────────────────
+
 export async function redirectIfAuthenticated() {
   const user = await getUser()
-  if (!user) {return}
+  if (!user) { return }
 
   const profile = await getProfile(user.id)
   redirect(getDashboardByRole(profile?.role ?? 'student'))

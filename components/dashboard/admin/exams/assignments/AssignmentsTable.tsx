@@ -132,7 +132,7 @@ function AssignmentRow({ assignment: a, onUnassign }: AssignmentRowProps) {
 
       {/* Score */}
       <td>
-        {a.percentage != null ? (
+        {a.percentage !== null ? (
           <span
             className={`${s.scoreChip} ${
               a.percentage >= 75 ? s.scorePass : s.scoreFail
@@ -140,7 +140,7 @@ function AssignmentRow({ assignment: a, onUnassign }: AssignmentRowProps) {
           >
             {a.percentage.toFixed(1)}%
           </span>
-        ) : a.score != null ? (
+        ) : a.score !== null ? (
           <span className={s.scoreChip}>{a.score} pts</span>
         ) : (
           <span className={s.scoreDash}>—</span>

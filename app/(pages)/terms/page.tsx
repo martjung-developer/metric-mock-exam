@@ -6,10 +6,6 @@ import { motion } from 'framer-motion'
 import {
   legalHeroPanelLeft,
   legalHeroPanelRight,
-  legalHeroRightContainer,
-  legalHeroRightItem,
-  legalChipsContainer,
-  legalChip,
   toc,
   tocContainer,
   tocItem,

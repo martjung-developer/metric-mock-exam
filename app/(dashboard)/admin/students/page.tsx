@@ -11,7 +11,6 @@ import {
   StudentsHeader, ProgramTabs, StudentsFilters,
   StudentsTable, Pagination, DeleteStudentModal, ErrorBanner,
 } from '@/components/dashboard/admin/students'
-import type { Students } from '@/lib/types/admin/students/student.types'
 import styles from './students.module.css'
 
 export default function StudentsPage() {
@@ -23,7 +22,7 @@ export default function StudentsPage() {
   const { safePage, totalPages, paginated, setPage } = usePagination(filtered)
 
   const removeStudent = useCallback(
-    (id: string) => refetch(),
+    () => refetch(),
     [refetch],
   )
 

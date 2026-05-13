@@ -9,8 +9,8 @@ import type { VerifyOtpResult, UserRole } from '@/lib/types/auth/'
 async function getSupabaseServer() {
   const cookieStore = await cookies()
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
@@ -85,3 +85,4 @@ function mapOtpError(message: string): string {
   if (lower.includes('too many')) {return 'Too many attempts. Try again later.'}
   return 'Verification failed.'
 }
+

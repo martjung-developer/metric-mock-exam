@@ -41,7 +41,10 @@ export function useStudents(): UseStudentsReturn {
   }, [supabase])
 
   // Initial load
-  useEffect(() => { void fetchStudents() }, [fetchStudents])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchStudents()
+  }, [fetchStudents])
 
   // Re-fetch on window focus (catches edits made in other tabs/pages)
   useEffect(() => {

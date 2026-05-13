@@ -24,7 +24,7 @@ export default function ExamStats({ exam }: ExamStatsProps) {
       { icon: Target,     label: 'Passing Score', value: `${exam.passing_score}%`,                                       color: 'amber'  },
       { icon: Users,      label: 'Assigned',      value: exam.assigned_count,                                            color: 'green'  },
       { icon: FileText,   label: 'Submissions',   value: exam.submission_count,                                          color: 'blue'   },
-      { icon: Award,      label: 'Avg Score',     value: exam.avg_score != null ? `${exam.avg_score.toFixed(1)}%` : '—', color: 'violet' },
+      { icon: Award,      label: 'Avg Score',     value: exam.avg_score !== null ? `${exam.avg_score.toFixed(1)}%` : '—', color: 'violet' },
     ],
     [exam],
   )

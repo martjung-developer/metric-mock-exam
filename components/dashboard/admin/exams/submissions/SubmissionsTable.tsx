@@ -90,7 +90,7 @@ export function SubmissionsTable({
                   {/* Time */}
                   <td>
                     <span className={s.timeCell}>
-                      {sub.time_spent_seconds != null
+                      {sub.time_spent_seconds !== null
                         ? fmtTime(sub.time_spent_seconds)
                         : <span className={s.na}>—</span>}
                     </span>
@@ -105,9 +105,9 @@ export function SubmissionsTable({
 
                   {/* Score */}
                   <td>
-                    {sub.score != null
+                    {sub.score !== null
                       ? <span className={`${s.scoreChip} ${sub.passed ? s.scorePass : s.scoreFail}`}>
-                          {sub.percentage != null
+                          {sub.percentage !== null
                             ? `${sub.percentage.toFixed(1)}%`
                             : `${sub.score} pts`}
                         </span>

@@ -43,28 +43,6 @@ export function AvatarCropper({ file, onComplete, onCancel }: AvatarCropperProps
   const zoomRef = useRef(1)
   useEffect(() => { zoomRef.current = zoom }, [zoom])
 
-  // ── Load image ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const url = URL.createObjectURL(file)
-    const img = new Image()
-
-    img.onload = () => {
-      imageRef.current = img
-      // baseScale makes zoom=1 fill the canvas exactly
-      const baseScale = Math.max(
-        OUTPUT_SIZE / img.naturalWidth,
-        OUTPUT_SIZE / img.naturalHeight,
-      )
-      ;(img as HTMLImageElement & { baseScale: number }).baseScale = baseScale
-      offset.current = { x: 0, y: 0 }
-      setZoom(1)
-      requestAnimationFrame(draw)
-    }
-    img.src = url
-
-    return () => URL.revokeObjectURL(url)
-  }, [file]) // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Draw ───────────────────────────────────────────────────────────────────
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -93,6 +71,28 @@ export function AvatarCropper({ file, onComplete, onCancel }: AvatarCropperProps
     ctx.drawImage(img, x, y, drawW, drawH)
     ctx.restore()
   }, [])
+
+  // ── Load image ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+
+    img.onload = () => {
+      imageRef.current = img
+      // baseScale makes zoom=1 fill the canvas exactly
+      const baseScale = Math.max(
+        OUTPUT_SIZE / img.naturalWidth,
+        OUTPUT_SIZE / img.naturalHeight,
+      )
+      ;(img as HTMLImageElement & { baseScale: number }).baseScale = baseScale
+      offset.current = { x: 0, y: 0 }
+      setZoom(1)
+      requestAnimationFrame(draw)
+    }
+    img.src = url
+
+    return () => URL.revokeObjectURL(url)
+  }, [file]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { draw() }, [zoom, draw])
 

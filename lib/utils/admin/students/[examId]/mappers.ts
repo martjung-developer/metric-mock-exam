@@ -7,7 +7,7 @@ import type { NotificationRaw, Notification } from '@/lib/types/admin/students/[
 
 // ── Generic FK unwrapper ──────────────────────────────────────────────────────
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
-  if (value == null) { return null }
+  if (value === null || value === undefined) { return null }
   if (Array.isArray(value)) { return value[0] ?? null }
   return value
 }

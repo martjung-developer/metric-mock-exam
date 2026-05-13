@@ -30,8 +30,10 @@ export default function VerifyEmailPage() {
     const saved = sessionStorage.getItem('verify_email')
 
     if (saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmail(saved)
     } else if (emailFromUrl) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmail(emailFromUrl)
       sessionStorage.setItem('verify_email', emailFromUrl)
     } else {
@@ -86,7 +88,7 @@ export default function VerifyEmailPage() {
     if (!email) {return}
 
     const token = code.join('')
-    console.log('Submitting OTP:', token)  
+    console.warn('Submitting OTP:', token)  
 
     setError(null)
     setLoading(true)

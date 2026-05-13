@@ -55,7 +55,7 @@ export function groupNotifications(list: Notification[]): NotificationGroup[] {
 
   return GROUP_ORDER
     .filter((label) => map.has(label))
-    .map((label) => ({ label, items: map.get(label)! }))
+    .map((label) => ({ label, items: map.get(label) ?? [] }))
 }
 
 // ── Tab filtering ──────────────────────────────────────────────────────────

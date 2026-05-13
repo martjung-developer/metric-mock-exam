@@ -23,7 +23,10 @@ export function useResultsFilters(): UseResultsFiltersReturn {
   const [page,           setPage]           = useState(1)
 
   // Reset to page 1 whenever any filter changes
-  useEffect(() => { setPage(1) }, [tab, search, statusFilter, categoryFilter])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1)
+  }, [tab, search, statusFilter, categoryFilter])
 
   const setTabCb            = useCallback((v: ExamTypeFilter) => setTab(v), [])
   const setSearchCb         = useCallback((v: string)         => setSearch(v), [])

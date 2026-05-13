@@ -9,7 +9,6 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useUser }              from '@/lib/context/AuthContext'
-import { createClient }         from '@/lib/supabase/client'
 import {
   fetchAssignedExamIds,
   fetchStudentProgramId,
@@ -72,14 +71,18 @@ export function useMockExams() {
       setProgramId(pid)
       setProgramReady(true)
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- user identity is keyed by user?.id in this effect
   }, [user?.id])
 
   // ── Fetch exams ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (user === null || user === undefined || !programReady) {return}
     if (!programId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAllExams([])
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDataLoading(false)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDataError('No degree program is assigned to your student account.')
       return
     }
@@ -91,7 +94,7 @@ export function useMockExams() {
 
       try {
         const [assignedIds, examData] = await Promise.all([
-          fetchAssignedExamIds(user!.id, programId),
+          fetchAssignedExamIds(user.id, programId),
           fetchPublishedMockExams(programId),
         ])
 
@@ -100,8 +103,8 @@ export function useMockExams() {
 
         const [qCountMap, submissionMap, attemptCountMap] = await Promise.all([
           fetchQuestionCounts(examIds),
-          fetchStudentSubmissionStatuses(user!.id, examIds),
-          fetchAttemptCounts(user!.id, examIds),
+          fetchStudentSubmissionStatuses(user.id, examIds),
+          fetchAttemptCounts(user.id, examIds),
         ])
 
         const mapped: MockExam[] = exams.map((exam) => {
@@ -153,6 +156,7 @@ export function useMockExams() {
 
     void load()
     return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- user identity is keyed by user?.id in this effect
   }, [user?.id, programId, programReady, refreshTick])
 
   // ── Derived ──────────────────────────────────────────────────────────────

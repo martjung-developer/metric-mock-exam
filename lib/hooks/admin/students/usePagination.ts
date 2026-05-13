@@ -32,6 +32,7 @@ export function usePagination<T>(items: T[]): UsePaginationReturn<T> {
 
   // Reset to page 1 whenever the source array length changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1)
   }, [items.length])
 

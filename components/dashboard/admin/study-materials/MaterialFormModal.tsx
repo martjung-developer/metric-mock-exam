@@ -14,7 +14,6 @@ import React, { type RefObject, type DragEvent } from 'react'
 import { X, Upload, ExternalLink, Video, Link } from 'lucide-react'
 import { motion, AnimatePresence }               from 'framer-motion'
 import type {
-  StudyMaterialForm,
   StudyMaterialFormErrors,
   ProgramOption,
   LinkType,

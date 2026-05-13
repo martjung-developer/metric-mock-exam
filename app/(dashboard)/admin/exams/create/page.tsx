@@ -6,7 +6,6 @@
 
 'use client'
 
-import { useRouter }       from 'next/navigation'
 import Link              from 'next/link'
 import { BookOpen, ArrowLeft } from 'lucide-react'
 import { useCreateExam }      from '@/lib/hooks/admin/exams/create/useCreateExam'

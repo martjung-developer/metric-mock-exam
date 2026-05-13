@@ -7,7 +7,6 @@ import {
   fetchQuestions,
   fetchStudentProgramId,
   verifyStudentExamAccess,
-  checkTerminalSubmission,
   fetchOrCreateSubmission,
   fetchSavedAnswers,
   saveAnswer as dbSaveAnswer,
@@ -21,7 +20,6 @@ import {
   TIMER_CRITICAL,
   MAX_TAB_VIOLATIONS,
 }                                  from '@/lib/constants/student/mock-exams/mock-exams'
-import { MAX_ATTEMPTS }            from '@/lib/types/student/mock-exams/mock-exams'
 import type {
   ExamMeta, Question, AnswerMap, StateMap, ExamAttempt,
 } from '@/lib/types/student/mock-exams/mock-exams'
@@ -181,14 +179,14 @@ export function useMockExamSession(examId: string): ExamSessionState {
         const [examRow, qs, attemptsData] = await Promise.all([
           fetchExamById(examId),
           fetchQuestions(examId),
-          fetchExamAttempts(user!.id, examId),
+          fetchExamAttempts(user.id, examId),
         ])
 
         if (cancelled) {return}
         setAttempts(attemptsData)
 
         // 3. Attempt to get or create a session (FIXED: discriminated union)
-        const sessionResult = await fetchOrCreateSubmission(user!.id, examId)
+        const sessionResult = await fetchOrCreateSubmission(user.id, examId)
 
         if (cancelled) {return}
 
@@ -240,6 +238,7 @@ export function useMockExamSession(examId: string): ExamSessionState {
 
     void load()
     return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- user is stable from auth context
   }, [authLoading, user?.id, examId])
 
   // ── Resume handlers ────────────────────────────────────────────────────────
@@ -280,6 +279,7 @@ export function useMockExamSession(examId: string): ExamSessionState {
     } finally {
       setLoading(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- user is stable from auth context
   }, [user?.id, examId])
 
   // ── Timer countdown ────────────────────────────────────────────────────────
@@ -289,7 +289,9 @@ export function useMockExamSession(examId: string): ExamSessionState {
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(timerRef.current!)
+          if (timerRef.current !== null) {
+            clearInterval(timerRef.current)
+          }
           void doSubmit()
           return 0
         }
@@ -298,6 +300,7 @@ export function useMockExamSession(examId: string): ExamSessionState {
     }, 1000)
 
     return () => { if (timerRef.current !== null) {clearInterval(timerRef.current)} }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally excludes timeLeft to avoid re-registering the interval on every tick
   }, [exam, submitted, loading, showResume, isLocked, doSubmit])
 
   // ── Anti-cheat: tab visibility ─────────────────────────────────────────────

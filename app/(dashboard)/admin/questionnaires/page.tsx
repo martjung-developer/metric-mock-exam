@@ -48,18 +48,17 @@ import styles from './questionnaires.module.css'
 
 export default function QuestionnairesPage() {
   const router = useRouter()
-  const { user, loading: authLoading } = useUser()
+  const { user, profile, loading: authLoading } = useUser()
   const q = useQuestionnaires()
 
   // ── Auth guard ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (authLoading) {return}
     if (!user) { router.replace('/login'); return }
-    const role =
-      (user.user_metadata?.['role'] as string | undefined) ??
-      (user.app_metadata?.['role']  as string | undefined)
-    if (role !== 'admin' && role !== 'faculty') {router.replace('/unauthorized')}
-  }, [user, authLoading, router])
+    if (profile?.role !== 'admin' && profile?.role !== 'faculty') {
+      router.replace('/unauthorized')
+    }
+  }, [user, profile, authLoading, router]) 
 
   if (authLoading) {return null}
 
@@ -75,7 +74,9 @@ export default function QuestionnairesPage() {
 
   // ── PROGRAM DETAIL VIEW ────────────────────────────────────────────────────
   if (q.viewMode === 'program-detail' && q.selectedProgram) {
-    const colorIdx       = q.programs.findIndex((p) => p.id === q.selectedProgram!.id)
+    const selectedProgram = q.selectedProgram
+    if (!selectedProgram) { return null }
+    const colorIdx       = q.programs.findIndex((p) => p.id === selectedProgram.id)
     const color          = PROGRAM_COLORS[colorIdx % PROGRAM_COLORS.length]
     const totalInProgram = q.programDetailQuestions.length
 
@@ -89,7 +90,7 @@ export default function QuestionnairesPage() {
           </button>
           <span className={styles.breadcrumbSep}>/</span>
           <span className={styles.breadcrumbCurrent} style={{ color: color.accent }}>
-            {q.selectedProgram.code}
+            {selectedProgram.code}
           </span>
         </motion.div>
 
@@ -100,9 +101,9 @@ export default function QuestionnairesPage() {
               <GraduationCap size={20} color="#fff" />
             </div>
             <div>
-              <h1 className={styles.heading}>{q.selectedProgram.code}</h1>
+              <h1 className={styles.heading}>{selectedProgram.code}</h1>
               <p className={styles.headingSub}>
-                {q.selectedProgram.name} — {totalInProgram} question{totalInProgram !== 1 ? 's' : ''} across{' '}
+                {selectedProgram.name} — {totalInProgram} question{totalInProgram !== 1 ? 's' : ''} across{' '}
                 {TYPE_ORDER.filter((t) => q.questionsByType[t].length > 0).length} type
                 {TYPE_ORDER.filter((t) => q.questionsByType[t].length > 0).length !== 1 ? 's' : ''}
               </p>
@@ -148,7 +149,7 @@ export default function QuestionnairesPage() {
             <Search size={15} className={styles.searchIcon} />
             <input
               className={styles.searchInput}
-              placeholder={`Search questions in ${q.selectedProgram.code}…`}
+              placeholder={`Search questions in ${selectedProgram.code}…`}
               value={q.search}
               onChange={(e) => q.setSearch(e.target.value)}
             />

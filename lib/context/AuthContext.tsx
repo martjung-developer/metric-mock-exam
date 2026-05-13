@@ -1,32 +1,42 @@
 // lib/context/AuthContext.tsx
 'use client'
+// ─────────────────────────────────────────────────────────────────────────────
+// AuthContext — single source of truth for client-side auth state.
+//
+// Design decisions:
+//   • Uses getUser() directly (preferred over the deprecated getSession pattern).
+//   • Recovers gracefully from stale / invalid refresh tokens.
+//   • fetchingRef prevents concurrent loadSession() calls.
+//   • onAuthStateChange re-fetches the profile on every auth event.
+// ─────────────────────────────────────────────────────────────────────────────
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
   type ReactNode,
 } from 'react'
-import { useRouter } from 'next/navigation'
-import type { User, Session } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase/client'
-import type { AuthProfile } from '@/lib/auth/profile'
+import { useRouter }     from 'next/navigation'
+import type { User }     from '@supabase/supabase-js'
+import { createClient }  from '@/lib/supabase/client'
 import { fetchProfileForUser } from '@/lib/auth/profile'
+
+type AuthProfile = Awaited<ReturnType<typeof fetchProfileForUser>>
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface AuthState {
-  user:    User    | null
-  session: Session | null
+  user:    User        | null
   profile: AuthProfile | null
   loading: boolean
-  error:   string  | null
+  error:   string      | null
 }
 
 interface AuthContextValue extends AuthState {
-  /** Call this to force a manual refresh (rare). */
+  /** Force a manual session refresh (use sparingly). */
   refresh: () => Promise<void>
 }
 
@@ -34,124 +44,104 @@ interface AuthContextValue extends AuthState {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+// ── Stale-token detection helper ───────────────────────────────────────────
+
+function isStaleTokenError(error: unknown): boolean {
+  if (!(error instanceof Error)) { return false }
+  const msg = error.message.toLowerCase()
+  return msg.includes('invalid refresh token') || msg.includes('refresh token not found')
+}
+
 // ── Provider ───────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const router = useRouter()
+  const router       = useRouter()
+  const fetchingRef  = useRef(false)
+  const supabase     = createClient()
+
   const [state, setState] = useState<AuthState>({
     user:    null,
-    session: null,
     profile: null,
     loading: true,
     error:   null,
   })
 
-  const fetchingRef = useRef(false)
+  const clearAuth = useCallback(
+    (err: string | null = null) => {
+      setState({ user: null, profile: null, loading: false, error: err })
+    },
+    [],
+  )
 
-  const supabase = createClient()
-
-  function isInvalidRefreshTokenError(error: unknown): boolean {
-    if (!(error instanceof Error)) {
-      return false
-    }
-    const message = error.message.toLowerCase()
-    return (
-      message.includes('invalid refresh token') &&
-      message.includes('refresh token not found')
-    )
-  }
-
-  async function recoverFromStaleToken() {
+  const recoverFromStaleToken = useCallback(async () => {
     await supabase.auth.signOut()
-    setState({ user: null, session: null, profile: null, loading: false, error: null })
+    clearAuth()
     router.replace('/login')
-  }
+  }, [supabase, clearAuth, router])
 
-  async function loadSession() {
-    if (fetchingRef.current) {
-      return
-    }
+  const loadSession = useCallback(async () => {
+    if (fetchingRef.current) { return }
     fetchingRef.current = true
 
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError) {
-        if (isInvalidRefreshTokenError(sessionError)) {
-          await recoverFromStaleToken()
-          return
-        }
-        setState({ user: null, session: null, profile: null, loading: false, error: sessionError.message })
-        return
-      }
-
-      if (!sessionData.session) {
-        setState({ user: null, session: null, profile: null, loading: false, error: null })
-        return
-      }
-
       const { data: { user }, error } = await supabase.auth.getUser()
 
       if (error) {
-        setState({ user: null, session: null, profile: null, loading: false, error: error.message })
+        if (isStaleTokenError(error)) {
+          await recoverFromStaleToken()
+          return
+        }
+        clearAuth(error.message)
+        return
+      }
+
+      if (!user) {
+        clearAuth()
         return
       }
 
       const profile = await fetchProfileForUser(supabase, user)
 
-      setState({
-        user,
-        session: sessionData.session,
-        profile,
-        loading: false,
-        error:   null,
-      })
+      setState({ user, profile, loading: false, error: null })
     } catch (err) {
-      if (isInvalidRefreshTokenError(err)) {
+      if (isStaleTokenError(err)) {
         await recoverFromStaleToken()
         return
       }
-      const message = err instanceof Error ? err.message : 'Unknown auth error'
-      setState({ user: null, session: null, profile: null, loading: false, error: message })
+      clearAuth(err instanceof Error ? err.message : 'Unknown auth error')
     } finally {
       fetchingRef.current = false
     }
-  }
+  }, [supabase, clearAuth, recoverFromStaleToken])
 
   useEffect(() => {
-    loadSession()
+    void loadSession()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        try {
-          const profile = await fetchProfileForUser(supabase, session?.user ?? null)
-          setState(prev => ({
-            ...prev,
-            user:    session?.user ?? null,
-            session: session ?? null,
-            profile,
-            loading: false,
-            error:   null,
-          }))
-        } catch (err) {
-          if (isInvalidRefreshTokenError(err)) {
-            await recoverFromStaleToken()
-            return
+      (_event, session) => {
+        void (async () => {
+          try {
+            const profile = await fetchProfileForUser(supabase, session?.user ?? null)
+            setState({
+              user:    session?.user ?? null,
+              profile,
+              loading: false,
+              error:   null,
+            })
+          } catch (err) {
+            if (isStaleTokenError(err)) {
+              await recoverFromStaleToken()
+              return
+            }
+            clearAuth(err instanceof Error ? err.message : 'Unknown auth error')
           }
-          const message = err instanceof Error ? err.message : 'Unknown auth error'
-          setState(prev => ({
-            ...prev,
-            user: null,
-            session: null,
-            profile: null,
-            loading: false,
-            error: message,
-          }))
-        }
+        })()
       },
     )
 
     return () => subscription.unsubscribe()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <AuthContext.Provider value={{ ...state, refresh: loadSession }}>

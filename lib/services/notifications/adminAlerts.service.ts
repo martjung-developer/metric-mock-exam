@@ -27,7 +27,9 @@ export async function notifyAdmins(
   payload: AdminAlertPayload,
 ): Promise<void> {
   const adminIds = await fetchAdminRecipientIds(db)
-  if (!adminIds.length) return
+  if (!adminIds.length) {
+    return
+  }
 
   const rows = adminIds.map((userId) => ({
     user_id: userId,

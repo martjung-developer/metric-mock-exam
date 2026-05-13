@@ -127,6 +127,7 @@ export function useNotifications(): UseNotificationsReturn {
   // ── Initial load (unchanged) ────────────────────────────────────────────────
   useEffect(() => {
     mountedRef.current = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refetch()
     return () => { mountedRef.current = false }
   }, [refetch])

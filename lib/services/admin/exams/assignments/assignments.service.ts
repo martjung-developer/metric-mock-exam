@@ -286,7 +286,7 @@ export async function assignProgramToExam(
   client:  AppClient,
   payload: AssignProgramPayload,
 ): Promise<MutationResult> {
-  const { examId, programId, deadline, year_level } = payload
+  const { examId, programId, deadline } = payload
   const examProgramId = await fetchExamProgramId(client, examId)
   if (!examProgramId) {
     return { error: 'This exam has no designated degree program.' }

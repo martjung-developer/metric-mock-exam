@@ -7,7 +7,7 @@ import { fmtDateTime } from './results.utils'
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
 function escapeCsvCell(value: string | number | boolean | null | undefined): string {
-  const str = value == null ? '' : String(value)
+  const str = value === null || value === undefined ? '' : String(value)
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {
     return `"${str.replace(/"/g, '""')}"`
   }

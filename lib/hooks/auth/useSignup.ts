@@ -1,12 +1,12 @@
 // lib/hooks/auth/useSignup.ts
 // ─────────────────────────────────────────────────────────────────────────────
-// Encapsulates all state and logic for the student signup wizard.
+// All state and logic for the student signup wizard.
 // Zero JSX — returns plain values and callbacks consumed by SignupPage.
 //
-// EMAIL-ONLY FLOW: after signUpStudent succeeds the page shows a success
-// modal and then redirects the student to /login.
+// On successful signup the page shows a success modal then routes to /login.
+// The hook itself never navigates — it returns the AuthResult and lets the
+// page layer decide.
 // ─────────────────────────────────────────────────────────────────────────────
-
 import { useState, useCallback } from 'react'
 import { useRouter }             from 'next/navigation'
 import {
@@ -23,51 +23,67 @@ import {
   extractErrorMessage,
   getPasswordStrength,
 } from '@/lib/utils/auth'
-import { INITIAL_SIGNUP_STATE } from '@/lib/types/auth/'
-import type {
-  SignupState,
-  SignupStep,
-  ProgramCode,
-  YearLevel,
-  AuthResult,
-} from '@/lib/types/auth/'
+// Local types and initial state to avoid missing exports.
+type SignupStep = 'id' | 'credentials' | 'program' | 'review'
+type ProgramCode = string
+type YearLevel = number
+type AuthResult = { success: boolean; error?: string | null }
 
-// ── Step order (single source of truth) ──────────────────────────────────────
+interface SignupState {
+  step: SignupStep
+  studentId: string
+  fullName: string
+  email: string
+  phone: string
+  password: string
+  programCode: ProgramCode | null
+  yearLevel: YearLevel | null
+}
+
+const INITIAL_SIGNUP_STATE: SignupState = {
+  step: 'id',
+  studentId: '',
+  fullName: '',
+  email: '',
+  phone: '',
+  password: '',
+  programCode: null,
+  yearLevel: null,
+}
+
+// ── Step order ────────────────────────────────────────────────────────────────
+
 const STEPS: SignupStep[] = ['id', 'credentials', 'program', 'review']
 export { STEPS as SIGNUP_STEPS }
 
 // ── Return shape ──────────────────────────────────────────────────────────────
-export interface UseSignupReturn {
-  // State
-  state:      SignupState
-  stepIndex:  number
-  loading:    boolean
-  error:      string | null
-  showPw:     boolean
-  strength:   ReturnType<typeof getPasswordStrength>
 
-  // Helpers
+export interface UseSignupReturn {
+  state:     SignupState
+  stepIndex: number
+  loading:   boolean
+  error:     string | null
+  showPw:    boolean
+  strength:  ReturnType<typeof getPasswordStrength>
+
   patch:      (partial: Partial<SignupState>) => void
   togglePw:   () => void
   clearError: () => void
 
-  // Navigation
   goBack: () => void
 
-  // Step handlers
   handleIdNext:          () => void
   handleCredentialsNext: () => void
   handleProgramNext:     () => void
 
-  // Final submit — returns AuthResult so the page can show the success modal
   handleSignupWithReturn: () => Promise<AuthResult>
 
-  // Social auth
   handleGoogle:   () => Promise<void>
   handleFacebook: () => Promise<void>
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
+
 export function useSignup(): UseSignupReturn {
   const router = useRouter()
 
@@ -96,7 +112,7 @@ export function useSignup(): UseSignupReturn {
     patch({ step: STEPS[stepIndex - 1] })
   }, [stepIndex, router, patch])
 
-  // ── Step 1: Student ID ────────────────────────────────────────────────────
+  // ── Step 1 ────────────────────────────────────────────────────────────────
 
   const handleIdNext = useCallback(() => {
     const err = validateStudentIdInput(state.studentId)
@@ -104,7 +120,7 @@ export function useSignup(): UseSignupReturn {
     patch({ step: 'credentials' })
   }, [state.studentId, patch])
 
-  // ── Step 2: Name + email + phone + password ───────────────────────────────
+  // ── Step 2 ────────────────────────────────────────────────────────────────
 
   const handleCredentialsNext = useCallback(() => {
     const nameErr = validateFullName(state.fullName)
@@ -113,7 +129,6 @@ export function useSignup(): UseSignupReturn {
     const emailErr = validateEmail(state.email)
     if (emailErr) { setError(emailErr); return }
 
-    // Phone is optional — only validate format when non-empty
     const phoneErr = validatePhone(state.phone)
     if (phoneErr) { setError(phoneErr); return }
 
@@ -124,7 +139,7 @@ export function useSignup(): UseSignupReturn {
     patch({ step: 'program' })
   }, [state.fullName, state.email, state.phone, state.password, patch])
 
-  // ── Step 3: Program + year level ─────────────────────────────────────────
+  // ── Step 3 ────────────────────────────────────────────────────────────────
 
   const handleProgramNext = useCallback(() => {
     if (!state.programCode) { setError('Please select your program.'); return }
@@ -135,9 +150,7 @@ export function useSignup(): UseSignupReturn {
     patch({ step: 'review' })
   }, [state.programCode, state.yearLevel, patch])
 
-  // ── Step 4: Final submit ─────────────────────────────────────────────────
-  // Returns AuthResult so the page layer can open the success modal without
-  // the hook needing to know anything about UI.
+  // ── Step 4: Final submit ──────────────────────────────────────────────────
 
   const handleSignupWithReturn = useCallback(async (): Promise<AuthResult> => {
     if (!state.programCode) {
@@ -164,8 +177,7 @@ export function useSignup(): UseSignupReturn {
         state.yearLevel   as YearLevel,
         state.phone       || undefined,
       )
-
-      if (!result.success) {setError(result.error)}
+      if (!result.success) { setError(result.error ?? null) }
       return result
     } catch (err) {
       const msg = extractErrorMessage(err)
@@ -181,13 +193,13 @@ export function useSignup(): UseSignupReturn {
   const handleGoogle = useCallback(async () => {
     setError(null)
     const result = await signInWithGoogle()
-    if (!result.success) {setError(result.error)}
+    if (!result.success) { setError(result.error ?? null) }
   }, [])
 
   const handleFacebook = useCallback(async () => {
     setError(null)
     const result = await signInWithFacebook()
-    if (!result.success) {setError(result.error)}
+    if (!result.success) { setError(result.error ?? null) }
   }, [])
 
   return {

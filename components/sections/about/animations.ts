@@ -15,10 +15,11 @@ export function initAnimations() {
     },
     { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
   )
-  els.forEach((el) => observer!.observe(el))
+  els.forEach((el) => { if (observer) { observer.observe(el) } })
 }
 
 export function cleanupAnimations() {
   observer?.disconnect()
   observer = null
 }
+

@@ -83,7 +83,7 @@ export function collectParagraphs(doc: MammothElement): DocxParagraph[] {
   function walk(el: MammothElement): void {
     if (el.type === 'paragraph') {
       result.push({
-        level:    el.numbering != null ? parseInt(el.numbering.level, 10) : null,
+        level:    el.numbering !== null ? parseInt(el.numbering.level, 10) : null,
         boldText: mammothGetBoldText(el).trim(),
         text:     mammothGetText(el).trim(),
       })

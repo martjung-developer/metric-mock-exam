@@ -9,7 +9,6 @@ import { useStudentDetail }    from '@/lib/hooks/admin/students/[examId]/useStud
 import { useStudentTabs }      from '@/lib/hooks/admin/students/[examId]/useStudentTabs'
 import { useStudentStats }     from '@/lib/hooks/admin/students/[examId]/useStudentStats'
 import { useSendNotification } from '@/lib/hooks/admin/students/[examId]/useSendNotification'
-import type { Notification }   from '@/lib/types/admin/students/[examId]/notification.types'
 import {
   LoadingState,
   ErrorState,
@@ -54,7 +53,7 @@ export default function StudentDetailPage({
   // the server). For true optimistic UI the hook would need a setter, but
   // since useSendNotification already calls onRefreshAfterSend, both paths
   // converge on the server state.
-  const handleOptimisticSent = useCallback((_optimistic: Notification) => {
+  const handleOptimisticSent = useCallback(() => {
     // Intentionally a no-op here: the modal closes immediately (handled
     // inside useSendNotification), and onRefreshAfterSend will update the
     // list. Override this if you want instant prepend before the server call.

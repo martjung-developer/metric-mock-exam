@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { Database, QuestionType, QuestionOption } from '@/lib/types/database'
+import type { ApprovalStatus } from '../../approval'
 
 // ── Raw DB row types (source of truth) ────────────────────────────────────────
 export type ProgramRow  = Database['public']['Tables']['programs']['Row']
@@ -32,6 +33,9 @@ export interface QuestionInsertPayload {
   explanation:    string | null
   exam_id:        string | null
   scenario:       string | null
+  approval_status?: ApprovalStatus
+  submitted_by?:    string | null
+  question_bank_id?: string | null
 }
 
 export interface ParsedQuestion {
@@ -55,12 +59,17 @@ export interface DisplayQuestion {
   exam_id:        string | null
   created_by:     string | null
   created_at:     string
-  // joined fields
   categoryName:   string
   examTitle:      string | null
   examProgramId:  string | null
-  // derived
   difficulty:     DifficultyLevel
+  approval_status: ApprovalStatus
+  submitted_by:    string | null
+  submitted_at:    string | null
+  approved_by:     string | null
+  approved_at:     string | null
+  review_notes:    string | null
+  question_bank_id: string | null
 }
 
 // ── App-level types ────────────────────────────────────────────────────────────

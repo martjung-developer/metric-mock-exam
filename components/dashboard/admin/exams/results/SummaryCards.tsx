@@ -58,7 +58,7 @@ export function SummaryCards({ summary, analytics, loading }: SummaryCardsProps)
       color: 'amber',
       value: loading
         ? '—'
-        : analytics?.average_score != null
+        : analytics?.average_score !== null
           ? `${analytics.average_score.toFixed(1)}%`
           : '—',
       label: 'Avg Score',
@@ -68,7 +68,7 @@ export function SummaryCards({ summary, analytics, loading }: SummaryCardsProps)
       color: 'violet',
       value: loading
         ? '—'
-        : analytics?.highest_score != null
+        : analytics?.highest_score !== null
           ? `${analytics.highest_score.toFixed(1)}%`
           : '—',
       label: 'Highest Score',
@@ -97,7 +97,7 @@ export function SummaryCards({ summary, analytics, loading }: SummaryCardsProps)
             </div>
             <div className={s.summaryValue}>{card.value}</div>
             <div className={s.summaryLabel}>{card.label}</div>
-            {card.progress != null && (
+            {card.progress !== null && (
               <div className={s.progressBar}>
                 <div
                   className={s.progressFill}
@@ -125,7 +125,7 @@ export function SummaryCards({ summary, analytics, loading }: SummaryCardsProps)
               <ArrowUpRight size={16} />
             </div>
             <div className={s.summaryValue}>
-              {summary.averageImprovement != null
+              {summary.averageImprovement !== null
                 ? `${summary.averageImprovement >= 0 ? '+' : ''}${summary.averageImprovement.toFixed(1)}pp`
                 : '—'}
             </div>
@@ -137,7 +137,7 @@ export function SummaryCards({ summary, analytics, loading }: SummaryCardsProps)
               <Star size={16} />
             </div>
             <div className={s.summaryValue}>
-              {summary.highestImprovement != null
+              {summary.highestImprovement !== null
                 ? `+${summary.highestImprovement.toFixed(1)}pp`
                 : '—'}
             </div>

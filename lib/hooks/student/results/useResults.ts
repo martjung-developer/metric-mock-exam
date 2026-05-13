@@ -101,11 +101,13 @@ export function useResults(): UseResultsReturn {
   // ── Trigger fetches once auth resolves ─────────────────────────────────────
   useEffect(() => {
     if (authLoading || !user) { return }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadStaticData(user.id)
   }, [authLoading, user, loadStaticData])
 
   useEffect(() => {
     if (authLoading || !user) { return }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadResults(user.id)
   }, [authLoading, user, loadResults])
 

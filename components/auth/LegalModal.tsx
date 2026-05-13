@@ -7,7 +7,7 @@ import { X, FileText, ShieldCheck, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import styles from './LegalModal.module.css'
 
-type DocType = 'terms' | 'privacy' | null
+export type DocType = 'terms' | 'privacy' | null
 
 interface LegalModalProps {
   open:    DocType
@@ -137,7 +137,7 @@ const PRIVACY_SECTIONS = [
   },
 ]
 
-export default function LegalModal({ open, onClose }: LegalModalProps) {
+export default function LegalModal({ open, onClose }: LegalModalProps): React.ReactElement | null {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   /* Close on Escape */

@@ -1,58 +1,42 @@
 // proxy.ts
 import { NextResponse, type NextRequest } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import type { Database } from '@/lib/types/database'
+import { createServerClient }            from '@supabase/ssr'
+import type { Database }                 from '@/lib/types/database'
 
 type Role = Database['public']['Enums']['user_role']
 
 type Scope = {
-  role: Role
-  schoolId: string | null
+  role:      Role
+  schoolId:  string | null
   programId: string | null
 }
 
-// ── Cache payload stored in the signed cookie ─────────────────────────────────
 type ScopeCachePayload = {
-  u: string        // user id
-  r: Role          // role
-  s: string | null // school_id
-  p: string | null // program_id
-  exp: number      // unix expiry
+  u:   string
+  r:   Role
+  s:   string | null
+  p:   string | null
+  exp: number
 }
 
 const SCOPE_REQUIRED_PREFIXES = ['/student', '/faculty']
 const SCOPE_COOKIE            = 'vp_scope'
 const SCOPE_TTL_SECONDS       = process.env.NODE_ENV === 'production' ? 60 : 600
 const DEV_BYPASS_AUTH         = process.env.NODE_ENV !== 'production' && process.env.DEV_BYPASS_AUTH === 'true'
+const DISABLE_PROXY           = process.env.DISABLE_PROXY === 'true'
 
-// ── Symposium bypass: set DISABLE_PROXY=true in your .env to skip all auth ───
-const DISABLE_PROXY = process.env.DISABLE_PROXY === 'true'
-
-// ── Static asset fast-path ────────────────────────────────────────────────────
-const STATIC_PREFIXES = [
-  '/_next/static',
-  '/_next/image',
-  '/_next/webpack',
-  '/icons/',
-]
-
-const STATIC_EXTENSIONS = [
-  '.png', '.jpg', '.jpeg', '.svg',
-  '.ico', '.webp', '.woff', '.woff2',
-]
+const STATIC_PREFIXES    = ['/_next/static', '/_next/image', '/_next/webpack', '/icons/']
+const STATIC_EXTENSIONS  = ['.png', '.jpg', '.jpeg', '.svg', '.ico', '.webp', '.woff', '.woff2']
 
 function shouldSkip(pathname: string): boolean {
-  if (pathname === '/favicon.ico') {
-    return true
-  }
-  if (STATIC_PREFIXES.some((p) => pathname.startsWith(p))) {
-    return true
-  }
+  if (pathname === '/favicon.ico') { return true }
+  if (STATIC_PREFIXES.some((p) => pathname.startsWith(p))) { return true }
   const lower = pathname.toLowerCase()
   return STATIC_EXTENSIONS.some((ext) => lower.endsWith(ext))
 }
 
-// ── Signed cookie helpers (Web Crypto — edge-compatible) ──────────────────────
+// ── Crypto helpers (unchanged) ────────────────────────────────────────────────
+
 function getSecret(): string {
   return (
     process.env.SCOPE_CACHE_SECRET ??
@@ -61,10 +45,13 @@ function getSecret(): string {
   )
 }
 
-function b64url(s: string) { return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') }
-function fromb64url(s: string) {
+function b64url(s: string): string {
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function fromb64url(s: string): string {
   const b = s.replace(/-/g, '+').replace(/_/g, '/')
-  return atob(b + '='.repeat((4 - b.length % 4) % 4))
+  return atob(b + '='.repeat((4 - (b.length % 4)) % 4))
 }
 
 async function hmac(data: string, secret: string): Promise<string> {
@@ -86,40 +73,31 @@ async function encodeCache(payload: ScopeCachePayload): Promise<string> {
 
 async function decodeCache(raw: string, userId: string): Promise<Scope | null> {
   const parts = raw.split('.')
-  if (parts.length !== 2) {
-    return null
-  }
+  if (parts.length !== 2) { return null }
   const [data, sig] = parts
-  if (sig !== await hmac(data, getSecret())) {
-    return null // tampered
-  }
+  if (sig !== await hmac(data, getSecret())) { return null }
 
   let p: ScopeCachePayload
   try {
-    p = JSON.parse(fromb64url(data))
+    p = JSON.parse(fromb64url(data)) as ScopeCachePayload
   } catch {
     return null
   }
 
-  if (p.u !== userId) {
-    return null // wrong user
-  }
-  if (p.exp <= Math.floor(Date.now() / 1000)) {
-    return null // expired
-  }
+  if (p.u !== userId)                        { return null }
+  if (p.exp <= Math.floor(Date.now() / 1000)) { return null }
 
   return { role: p.r, schoolId: p.s, programId: p.p }
 }
 
-// ── Role-aware single-round-trip DB lookup ────────────────────────────────────
+// ── Scope resolution (unchanged) ─────────────────────────────────────────────
+
 async function resolveScope(
   request: NextRequest,
 ): Promise<{ scope: Scope | null; userId: string | null; fresh: boolean }> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) {
-    return { scope: null, userId: null, fresh: false }
-  }
+  if (!url || !key) { return { scope: null, userId: null, fresh: false } }
 
   const supabase = createServerClient<Database>(url, key, {
     cookies: {
@@ -128,7 +106,6 @@ async function resolveScope(
     },
   })
 
-  // ── 1. Verify session ──────────────────────────────────────────────────────
   let session: { user: { id: string } } | null = null
   try {
     const { data } = await supabase.auth.getSession()
@@ -136,32 +113,24 @@ async function resolveScope(
   } catch {
     return { scope: null, userId: null, fresh: false }
   }
-  const user = session?.user ?? null
-  if (!user) {
-    return { scope: null, userId: null, fresh: false }
-  }
 
-  // ── 2. Try cache ───────────────────────────────────────────────────────────
+  const user = session?.user ?? null
+  if (!user) { return { scope: null, userId: null, fresh: false } }
+
   const cachedRaw = request.cookies.get(SCOPE_COOKIE)?.value
   if (cachedRaw) {
     const cached = await decodeCache(cachedRaw, user.id)
-    if (cached) {
-      return { scope: cached, userId: user.id, fresh: false }
-    }
+    if (cached) { return { scope: cached, userId: user.id, fresh: false } }
   }
 
-  // ── 3. Fetch profile role ──────────────────────────────────────────────────
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single() as { data: { role: Role } | null }
 
-  if (!profile) {
-    return { scope: null, userId: user.id, fresh: true }
-  }
+  if (!profile) { return { scope: null, userId: user.id, fresh: true } }
 
-  // ── 4. Fetch scope columns for THIS role only ──────────────────────────────
   let schoolId:  string | null = null
   let programId: string | null = null
 
@@ -173,7 +142,6 @@ async function resolveScope(
       .maybeSingle() as { data: { school_id: string | null; program_id: string | null } | null }
     schoolId  = data?.school_id  ?? null
     programId = data?.program_id ?? null
-
   } else if (profile.role === 'faculty') {
     const { data } = await supabase
       .from('faculty')
@@ -182,7 +150,6 @@ async function resolveScope(
       .maybeSingle() as { data: { school_id: string | null; program_id: string | null } | null }
     schoolId  = data?.school_id  ?? null
     programId = data?.program_id ?? null
-
   } else {
     const { data } = await supabase
       .from('admins')
@@ -192,16 +159,16 @@ async function resolveScope(
     schoolId = data?.school_id ?? null
   }
 
-  const scope: Scope = { role: profile.role, schoolId, programId }
-  return { scope, userId: user.id, fresh: true }
+  return { scope: { role: profile.role, schoolId, programId }, userId: user.id, fresh: true }
 }
 
-// ── Cookie writer helper ───────────────────────────────────────────────────────
+// ── Cache writer (unchanged) ──────────────────────────────────────────────────
+
 async function withScopeCache(
-  response: NextResponse,
-  userId: string | null,
-  scope: Scope | null,
-  fresh: boolean,
+  response:   NextResponse,
+  userId:     string | null,
+  scope:      Scope | null,
+  fresh:      boolean,
   clearCache: boolean,
 ): Promise<NextResponse> {
   const secure = process.env.NODE_ENV === 'production'
@@ -214,10 +181,10 @@ async function withScopeCache(
 
   if (fresh) {
     const payload: ScopeCachePayload = {
-      u: userId,
-      r: scope.role,
-      s: scope.schoolId,
-      p: scope.programId,
+      u:   userId,
+      r:   scope.role,
+      s:   scope.schoolId,
+      p:   scope.programId,
       exp: Math.floor(Date.now() / 1000) + SCOPE_TTL_SECONDS,
     }
     const encoded = await encodeCache(payload)
@@ -227,70 +194,67 @@ async function withScopeCache(
   return response
 }
 
-// ── Main proxy function ────────────────────────────────────────────────────────
-export async function proxy(request: NextRequest) {
+// ── Redirect helper — FIX: preserve `next` param on role mismatch ─────────────
+
+function redirectToLogin(request: NextRequest, next?: string): NextResponse {
+  const loginUrl = new URL('/login', request.url)
+  const dest     = next ?? `${request.nextUrl.pathname}${request.nextUrl.search}`
+  loginUrl.searchParams.set('next', dest)
+  return NextResponse.redirect(loginUrl)
+}
+
+// ── Main proxy ────────────────────────────────────────────────────────────────
+
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname, search } = request.nextUrl
 
-  // ── Symposium mode: bypass all auth and scope checks ──────────────────────
-  if (DISABLE_PROXY) {
-    return NextResponse.next()
-  }
-
-  // Development-only full bypass for rapid UI iteration/refactors.
-  if (DEV_BYPASS_AUTH) {
-    return NextResponse.next()
-  }
-
-  // Fast-path: never hit the DB for static assets
-  if (shouldSkip(pathname)) {
-    return NextResponse.next()
-  }
+  if (DISABLE_PROXY)    { return NextResponse.next() }
+  if (DEV_BYPASS_AUTH)  { return NextResponse.next() }
+  if (shouldSkip(pathname)) { return NextResponse.next() }
 
   const { scope, userId, fresh } = await resolveScope(request)
 
-  // ── Not authenticated ──────────────────────────────────────────────────────
+  // ── Not authenticated ─────────────────────────────────────────────────────
   if (!scope) {
-    const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('next', `${pathname}${search}`)
-    const res = NextResponse.redirect(loginUrl)
+    const res = redirectToLogin(request, `${pathname}${search}`)
     return withScopeCache(res, userId, null, false, true)
   }
 
-  // ── Role-to-path guards ────────────────────────────────────────────────────
+  // ── Role guards — now preserve ?next= ─────────────────────────────────────
   if (pathname.startsWith('/student') && scope.role !== 'student') {
-    return withScopeCache(redirectLogin(request), userId, scope, fresh, false)
+    const res = redirectToLogin(request)
+    return withScopeCache(res, userId, scope, fresh, false)
   }
 
   if (pathname.startsWith('/faculty') && scope.role !== 'faculty') {
-    return withScopeCache(redirectLogin(request), userId, scope, fresh, false)
+    const res = redirectToLogin(request)
+    return withScopeCache(res, userId, scope, fresh, false)
   }
 
   if (pathname.startsWith('/admin') && scope.role === 'student') {
-    return withScopeCache(redirectLogin(request), userId, scope, fresh, false)
+    const res = redirectToLogin(request)
+    return withScopeCache(res, userId, scope, fresh, false)
   }
 
-  // Faculty blocked from specific admin sub-routes
   if (scope.role === 'faculty' && pathname.startsWith('/admin')) {
     const blocked = ['/admin/programs', '/admin/analytics', '/admin/faculty']
     if (blocked.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-      return withScopeCache(redirectLogin(request), userId, scope, fresh, false)
+      const res = redirectToLogin(request)
+      return withScopeCache(res, userId, scope, fresh, false)
     }
   }
 
-  // ── Scope completeness check (students + faculty only) ────────────────────
+  // ── Scope completeness ────────────────────────────────────────────────────
   const requiresScope = SCOPE_REQUIRED_PREFIXES.some((p) => pathname.startsWith(p))
-  if (requiresScope) {
-    if (!scope.schoolId || !scope.programId) {
-      return withScopeCache(redirectLogin(request), userId, scope, fresh, false)
-    }
+  if (requiresScope && (!scope.schoolId || !scope.programId)) {
+    // Send to onboarding rather than login — user is authenticated, just incomplete
+    const onboardUrl = new URL('/onboarding', request.url)
+    onboardUrl.searchParams.set('next', `${pathname}${search}`)
+    const res = NextResponse.redirect(onboardUrl)
+    return withScopeCache(res, userId, scope, fresh, false)
   }
 
-  // ── Allow through, write cache if freshly resolved ────────────────────────
   return withScopeCache(NextResponse.next(), userId, scope, fresh, false)
-}
-
-function redirectLogin(request: NextRequest): NextResponse {
-  return NextResponse.redirect(new URL('/login', request.url))
 }
 
 export const config = {

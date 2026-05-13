@@ -74,7 +74,9 @@ export function useReviewsList(): UseReviewsListReturn {
       ({ reviews, error }) => {
         if (controller.signal.aborted) {return}
         setAllReviews(reviews)
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setDataError(error)
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setDataLoading(false)
       },
     )

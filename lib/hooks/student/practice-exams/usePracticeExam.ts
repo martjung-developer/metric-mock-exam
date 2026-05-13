@@ -90,6 +90,7 @@ export function usePracticeExam(examId: string): UsePracticeExamReturn {
 
   useEffect(() => {
     if (authLoading) {return}
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!user) { setError('Not authenticated.'); setPhase('error'); return }
 
     const controller = new AbortController()
@@ -106,7 +107,7 @@ export function usePracticeExam(examId: string): UsePracticeExamReturn {
       const [metaResult, questionsResult, past] = await Promise.all([
         fetchPracticeExamMeta(examId, user.id, studentProgramId, controller.signal),
         fetchPracticeQuestions(examId, controller.signal),
-        fetchPastAttempts(examId, user!.id, controller.signal),
+        fetchPastAttempts(examId, user.id, controller.signal),
       ])
 
       if (controller.signal.aborted) {return}
@@ -253,7 +254,7 @@ export function usePracticeExam(examId: string): UsePracticeExamReturn {
   const finishReview = useCallback(async () => {
     if (!submissionId || !exam) {return}
 
-    const { score, correctCount } = computeScore(questions, answers, feedbacks)
+    const { score } = computeScore(questions, answers, feedbacks)
     const percentage  = exam.total_points > 0
       ? Math.round((score / exam.total_points) * 100)
       : 0

@@ -10,7 +10,7 @@ import { useEffect }             from 'react'
 import Link                      from 'next/link'
 import { useParams }             from 'next/navigation'
 import {
-  BarChart2, ArrowLeft, Download, RefreshCw,
+  BarChart2, ArrowLeft, RefreshCw,
   AlertCircle, X, CheckSquare, Send, Clock, FileText,
 } from 'lucide-react'
 import { useExamResults }                      from '@/lib/hooks/admin/exams/results/useExamResults'
@@ -32,7 +32,7 @@ export default function ResultsPage() {
     loading, error, analytics, summary,
     filters, setSearch, setPass, setStatus,
     page, setPage, totalPages, paginated, totalFiltered,
-    refresh, filteredResults, allResults,
+    refresh,
     historiesByStudentId, histories,
   } = useExamResults(examId)
 
@@ -40,11 +40,6 @@ export default function ResultsPage() {
     void refresh()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [examId])
-
-  const isFiltered =
-    filters.search !== '' ||
-    filters.passFilter !== 'all' ||
-    filters.statusFilter !== 'all'
 
   return (
     <div className={s.page}>
@@ -147,11 +142,11 @@ export default function ResultsPage() {
         <div className={`${s.statusPill} ${s.statusPillReleased}`}>
           <Send size={12} /> {summary.released} Released
         </div>
-        {analytics && analytics.last_attempt_at != null && (
+        {analytics && analytics.last_attempt_at !== null && (
           <div className={s.analyticsNote}>
             <Clock size={11} />
             Last attempt: {fmtDate(analytics.last_attempt_at)}
-            {analytics.lowest_score != null && (
+            {analytics.lowest_score !== null && (
               <> · Lowest: {analytics.lowest_score.toFixed(1)}%</>
             )}
           </div>

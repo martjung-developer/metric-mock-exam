@@ -3,7 +3,6 @@
 // Uses Supabase-generated Database types as the source of truth.
 
 import type { Database } from '@/lib/types/database'
-import type { ExamType } from '@/lib/types/database'
 
 // ── Supabase Row Aliases ────────────────────────────────────────────────────
 

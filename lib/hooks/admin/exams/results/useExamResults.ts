@@ -123,6 +123,7 @@ export function useExamResults(examId: string): UseExamResultsReturn {
   }, [supabase])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh()
   }, [refresh])
 

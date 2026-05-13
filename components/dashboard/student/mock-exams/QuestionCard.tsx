@@ -1,6 +1,6 @@
 // components/dashboard/student/mock-exams/QuestionCard.tsx
 import { BookOpen, Flag } from 'lucide-react'
-import type { Question, AnswerMap, StateMap } from '@/lib/types/student/mock-exams/mock-exams'
+import type { Question } from '@/lib/types/student/mock-exams/mock-exams'
 import styles from '@/app/(dashboard)/student/mock-exams/[examId]/mock.module.css'
 
 interface Props {

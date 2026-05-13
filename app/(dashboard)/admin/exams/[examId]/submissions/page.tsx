@@ -78,7 +78,7 @@ function handleGradeSubmission() {
     key.keyMap,
     subs.examInfo,
     details.setAnswers,
-    patch => patchSubmission(details.viewTarget!.id, patch),
+    patch => patchSubmission(details.viewTarget?.id ?? '', patch),
     async () => { details.closeModal() },
   )
 }

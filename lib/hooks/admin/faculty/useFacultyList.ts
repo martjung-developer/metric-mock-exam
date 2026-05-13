@@ -43,9 +43,13 @@ export function useFacultyList(): UseFacultyListResult {
           }
         }
       } catch {
-        if (!cancelled) setError('Unexpected error loading faculty.')
+        if (!cancelled) {
+          setError('Unexpected error loading faculty.')
+        }
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
     }
 

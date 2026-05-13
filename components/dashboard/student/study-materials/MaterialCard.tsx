@@ -181,7 +181,7 @@ export function MaterialCard({ item, onView, onToggleFav }: MaterialCardProps) {
         {/* ── Open Resource button (new — non-YouTube external_url) ── */}
         {hasExternalBtn && (
           <a
-            href={item.external_url!}
+            href={item.external_url ?? ''}
             target="_blank"
             rel="noreferrer"
             style={{

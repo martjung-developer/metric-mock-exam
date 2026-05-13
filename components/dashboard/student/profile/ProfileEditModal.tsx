@@ -57,9 +57,13 @@ export function ProfileEditModal({
   useEffect(() => {
     if (open) {
       const names = splitName(initialName)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFirstName(names.first)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLastName(names.last)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSaving(false)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(null)
       setSuccess(false)
     }

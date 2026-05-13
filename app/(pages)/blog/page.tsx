@@ -21,56 +21,6 @@ import styles from './blog.module.css'
 ───────────────────────────────────────── */
 const CATEGORIES = ['All', 'Study Tips', 'Exam Updates', 'Success Stories', 'Wellness']
 
-const POSTS = [
-  {
-    photo: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80',
-    photoAlt: 'Nursing professional reviewing materials',
-    category: 'Exam Updates', date: 'Feb 14, 2025', readTime: '4 min read',
-    title: 'PRC NLE 2025 Schedule & Coverage: What Nursing Reviewees Need to Know',
-    excerpt: 'Updated test blueprint, changes to the passing score, and which nursing specializations carry the most weight this year.',
-    href: '/blog/nle-2025-updates',
-  },
-  {
-    photo: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&q=80',
-    photoAlt: 'Engineering circuit board',
-    category: 'Success Stories', date: 'Feb 10, 2025', readTime: '5 min read',
-    title: "From Failing Twice to Passing with Flying Colors: Mark's Story",
-    excerpt: 'ECE graduate Mark Reyes shares how he restructured his review strategy after two failed attempts and finally passed.',
-    href: '/blog/mark-success-story',
-  },
-  {
-    photo: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=600&q=80',
-    photoAlt: 'Books stacked on desk',
-    category: 'Study Tips', date: 'Feb 5, 2025', readTime: '7 min read',
-    title: 'Active Recall vs. Passive Reading: Which Works Better for Board Exams?',
-    excerpt: 'The cognitive science behind effective studying — and why simply re-reading your notes might be hurting your retention.',
-    href: '/blog/active-recall-board-exams',
-  },
-  {
-    photo: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=600&q=80',
-    photoAlt: 'Person resting at desk',
-    category: 'Wellness', date: 'Jan 28, 2025', readTime: '4 min read',
-    title: 'Sleep, Stress & Exam Performance: A Guide for the Final Week',
-    excerpt: "What to do — and what absolutely not to do — in the 7 days before your board exam.",
-    href: '/blog/sleep-stress-exam',
-  },
-  {
-    photo: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&q=80',
-    photoAlt: 'Accountant reviewing documents',
-    category: 'Exam Updates', date: 'Jan 20, 2025', readTime: '5 min read',
-    title: 'PRC CPA Board Exam 2025: Coverage Changes You Should Not Ignore',
-    excerpt: "The Professional Regulation Commission updated the CPA exam coverage. Here's a full breakdown with affected topics.",
-    href: '/blog/cpa-2025-coverage',
-  },
-  {
-    photo: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&q=80',
-    photoAlt: 'Students studying together',
-    category: 'Study Tips', date: 'Jan 15, 2025', readTime: '6 min read',
-    title: '5 Things Top Board Passers Do Differently During Their Review',
-    excerpt: 'We surveyed 500+ first-time passers to find the habits that set them apart — the results might surprise you.',
-    href: '/blog/top-passers-habits',
-  },
-]
 
 /* ─────────────────────────────────────────
    WALL OF TRUST DATA

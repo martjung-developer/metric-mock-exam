@@ -16,7 +16,6 @@ import {
   XCircle,
   Package,
   Scale,
-  MessageCircle,
   FileText,
   Cookie,
   Mail,

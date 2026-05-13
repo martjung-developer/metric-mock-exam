@@ -15,7 +15,6 @@ import { mapFormToPayload }    from '@/lib/utils/admin/students/mappers'
 import type {
   StudentFormData,
   StudentFormErrors,
-  EMPTY_STUDENT_FORM as _EMPTY,
 } from '@/lib/types/admin/students/student.types'
 import { EMPTY_STUDENT_FORM }  from '@/lib/types/admin/students/student.types'
 

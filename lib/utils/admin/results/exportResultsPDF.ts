@@ -25,7 +25,7 @@ async function loadLogo(doc: jsPDF): Promise<void> {
 }
 
 // Header
-function drawHeader(doc: jsPDF, datePart: string) {
+function drawHeader(doc: jsPDF) {
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(14)
   doc.text('VERIPRAXIS Assessment System', 36, 16)
@@ -63,7 +63,7 @@ export async function exportAttemptHistoryPDF(
   const datePart = new Date().toISOString().slice(0, 10)
 
   await loadLogo(doc)
-  drawHeader(doc, datePart)
+  drawHeader(doc)
 
   let yOffset = 36
   let pageNumber = 1
@@ -127,7 +127,8 @@ export async function exportAttemptHistoryPDF(
       margin: { left: 14, right: 14 },
     })
 
-    yOffset = (doc as any).lastAutoTable.finalY + 10
+    yOffset = (doc as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? yOffset
+    yOffset += 10
 
     // ── Page Break ──────────────────────────────
     if (yOffset > 260 && index < histories.length - 1) {
@@ -135,7 +136,7 @@ export async function exportAttemptHistoryPDF(
       doc.addPage()
       pageNumber++
 
-      drawHeader(doc, datePart)
+      drawHeader(doc)
       yOffset = 36
     }
   })
@@ -154,7 +155,7 @@ export async function exportSingleAttemptPDF(
   const datePart = new Date().toISOString().slice(0, 10)
 
   await loadLogo(doc)
-  drawHeader(doc, datePart)
+  drawHeader(doc)
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(11)

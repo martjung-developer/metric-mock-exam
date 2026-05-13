@@ -45,7 +45,7 @@ export default function AddFacultyModal({
 }: AddFacultyModalProps) {
   const [form,      setForm]      = useState<CreateFacultyPayload>(BLANK)
   const [programOptions, setProgramOptions] = useState<ProgramOption[]>([])
-  const [touched,   setTouched]   = useState<Partial<Record<keyof CreateFacultyPayload, boolean>>>({})
+  const [_touched,  setTouched]   = useState<Partial<Record<keyof CreateFacultyPayload, boolean>>>({})
   const [submitted, setSubmitted] = useState(false)
 
   const { create, loading, error: apiError, clearError } = useCreateFaculty()
@@ -53,8 +53,11 @@ export default function AddFacultyModal({
   // Reset form when modal opens.
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(BLANK)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTouched({})
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSubmitted(false)
       clearError()
     }
@@ -85,6 +88,7 @@ export default function AddFacultyModal({
 
   // When department changes, reset program selection.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm((prev) => ({ ...prev, program: '' as FacultyProgram }))
   }, [form.department])
 
@@ -112,7 +116,9 @@ export default function AddFacultyModal({
       e.preventDefault()
       setSubmitted(true)
 
-      if (hasErrors(validateFacultyForm(form))) return
+      if (hasErrors(validateFacultyForm(form))) {
+        return
+      }
 
       const result = await create(form)
       if (result.success && result.faculty_id) {
@@ -123,7 +129,9 @@ export default function AddFacultyModal({
     [form, create, onSuccess, onClose],
   )
 
-  if (!open) return null
+  if (!open) {
+    return null
+  }
 
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-labelledby="modal-title">

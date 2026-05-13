@@ -12,8 +12,10 @@
 // Department prefix names (SBIT, SSLATE, ADM, …) never determine role.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { UserRole, ProgramCode, YearLevel } from '@/lib/types/auth/'
-import { PROGRAMS, YEAR_LEVEL_OPTIONS } from '@/lib/types/auth/'
+import type { UserRole } from '@/lib/types/auth'
+export * from '@/lib/types/auth'
+
+type YearLevel = string | number
 
 // ── ID patterns ───────────────────────────────────────────────────────────────
 
@@ -23,13 +25,11 @@ const STUDENT_ID_RE = /^\d{2}-\d{4}-\d{3}$/
 /** Staff (admin or faculty): one or more uppercase letters, hyphen, then digits */
 const STAFF_ID_RE = /^([A-Z]+)-(\d+)$/
 
-// ── Internal helper ───────────────────────────────────────────────────────────
+// ── Internal helpers ──────────────────────────────────────────────────────────
 
-/**
- * Parses a normalised (trimmed, uppercased) string as a staff ID.
- * Returns { prefix, digits } when it matches, or null otherwise.
- */
-function parseStaffId(norm: string): { prefix: string; digits: string } | null {
+interface StaffIdParts { prefix: string; digits: string }
+
+function parseStaffId(norm: string): StaffIdParts | null {
   const match = STAFF_ID_RE.exec(norm)
   if (!match) { return null }
   return { prefix: match[1], digits: match[2] }
@@ -45,10 +45,6 @@ function parseStaffId(norm: string): { prefix: string; digits: string } | null {
  *   Staff with exactly 5 trailing digits   → 'admin'
  *   Staff with exactly 6 trailing digits   → 'faculty'
  *   Anything else                          → null
- *
- * NOTE: Department prefix names are intentionally ignored.  SBIT-16113 and
- * SSLATE-16113 are both admin IDs; SBIT-582391 and SSLATE-582391 are both
- * faculty IDs.  The database (resolveUserById) is the final authority.
  */
 export function detectRoleFromId(id: string): UserRole | null {
   const norm = id.trim().toUpperCase()
@@ -62,17 +58,15 @@ export function detectRoleFromId(id: string): UserRole | null {
   if (staff.digits.length === 5) { return 'admin' }
   if (staff.digits.length === 6) { return 'faculty' }
 
-  return null   // e.g. 4 digits, 7 digits — not a valid staff ID
+  return null
 }
 
 /**
- * Returns just the department prefix for a staff ID (e.g. "SSLATE"),
- * or null when the ID is not a staff ID.
- * Used by the login UI to show "Detected: Staff (SSLATE)" before the server
- * resolves the actual role.
+ * Returns the department prefix for a staff ID (e.g. "SSLATE"), or null.
+ * Used by the login UI badge before the server resolves the actual role.
  */
 export function getStaffPrefix(id: string): string | null {
-  const norm = id.trim().toUpperCase()
+  const norm  = id.trim().toUpperCase()
   const staff = parseStaffId(norm)
   return staff ? staff.prefix : null
 }
@@ -83,13 +77,13 @@ export function normaliseId(raw: string): string {
   return raw.trim().toUpperCase()
 }
 
-// ── Role detection (legacy alias — delegates to detectRoleFromId) ─────────────
+// ── Role detection alias ──────────────────────────────────────────────────────
 
 export function getRoleFromId(rawId: string): UserRole | null {
   return detectRoleFromId(normaliseId(rawId))
 }
 
-// ── Student ID validation (signup — strict format) ────────────────────────────
+// ── Student ID validation (signup — strict) ───────────────────────────────────
 
 export function validateStudentIdInput(id: string): string | null {
   const norm = id.trim()
@@ -105,34 +99,33 @@ export function validateStudentIdInput(id: string): string | null {
   return null
 }
 
-// ── Login ID validation ───────────────────────────────────────────────────────
-/**
- * Lenient check: must match a recognised pattern.
- * For staff IDs, digit count must be exactly 5 (admin) or 6 (faculty).
- */
+// ── Login ID validation (lenient — any recognised pattern) ───────────────────
+
 export function validateLoginId(id: string): string | null {
   if (!id.trim()) { return 'Please enter your ID.' }
 
   const norm = id.trim()
-
-  if (STUDENT_ID_RE.test(norm)) { return null }   // valid student ID
+  if (STUDENT_ID_RE.test(norm)) { return null }
 
   const staff = parseStaffId(norm.toUpperCase())
   if (staff) {
     if (staff.digits.length === 5 || staff.digits.length === 6) {
-      return null   // valid admin (5) or faculty (6) ID
+      return null
     }
-    return `Staff IDs must have 5 digits (admin) or 6 digits (faculty). "${norm}" has ${staff.digits.length}.`
+    return (
+      `Staff IDs must have 5 digits (admin) or 6 digits (faculty). ` +
+      `"${norm}" has ${staff.digits.length}.`
+    )
   }
 
   return 'Enter a valid Student ID (e.g. 23-0249-605) or Staff ID (e.g. SBIT-16113 or SSLATE-582391).'
 }
 
-// ── Staff ID format validators (admin dashboard use) ─────────────────────────
+// ── Staff ID format validators ────────────────────────────────────────────────
 
 export function validateAdminId(id: string): string | null {
   const staff = parseStaffId(id.trim().toUpperCase())
-  if (!staff) { return 'Invalid admin ID format.' }
+  if (!staff)                    { return 'Invalid admin ID format.' }
   if (staff.digits.length !== 5) {
     return `Admin IDs require exactly 5 digits. Got ${staff.digits.length}.`
   }
@@ -141,7 +134,7 @@ export function validateAdminId(id: string): string | null {
 
 export function validateFacultyId(id: string): string | null {
   const staff = parseStaffId(id.trim().toUpperCase())
-  if (!staff) { return 'Invalid faculty ID format.' }
+  if (!staff)                    { return 'Invalid faculty ID format.' }
   if (staff.digits.length !== 6) {
     return `Faculty IDs require exactly 6 digits. Got ${staff.digits.length}.`
   }
@@ -163,8 +156,8 @@ export function validatePhone(phone: string): string | null {
 
 export function validateFullName(name: string): string | null {
   const trimmed = name.trim()
-  if (!trimmed)           { return 'Full name is required.' }
-  if (trimmed.length < 2) { return 'Full name must be at least 2 characters.' }
+  if (!trimmed)                    { return 'Full name is required.' }
+  if (trimmed.length < 2)          { return 'Full name must be at least 2 characters.' }
   if (!/\S+\s+\S+/.test(trimmed)) { return 'Please enter your first and last name.' }
   return null
 }
@@ -173,7 +166,9 @@ export function validateFullName(name: string): string | null {
 
 export function validateEmail(email: string): string | null {
   if (!email.trim()) { return 'Email is required.' }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { return 'Enter a valid email address.' }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return 'Enter a valid email address.'
+  }
   return null
 }
 
@@ -189,28 +184,18 @@ export function validateYearLevel(level: YearLevel | null): string | null {
 export type PasswordStrength = 'weak' | 'fair' | 'good' | 'strong'
 
 export function getPasswordStrength(pw: string): PasswordStrength | null {
-  if (!pw)           { return null }
-  if (pw.length < 6) { return 'weak' }
+  if (!pw)            { return null }
+  if (pw.length < 6)  { return 'weak' }
   if (pw.length < 10) { return 'fair' }
   if (/[A-Z]/.test(pw) && /[0-9]/.test(pw)) { return 'strong' }
   return 'good'
 }
 
-// ── Program helpers ───────────────────────────────────────────────────────────
-
-export function isProgramCode(value: string): value is ProgramCode {
-  return PROGRAMS.some((p) => p.value === value)
-}
-
-export function getProgramLabel(code: ProgramCode): string {
-  return PROGRAMS.find((p) => p.value === code)?.label ?? code
-}
-
 // ── Year level helpers ────────────────────────────────────────────────────────
 
-export function getYearLabel(level: YearLevel | null): string {
+export function getYearLabel(level: unknown | null): string {
   if (level === null) { return '—' }
-  return YEAR_LEVEL_OPTIONS.find((y) => y.value === level)?.label ?? String(level)
+  return String(level)
 }
 
 // ── OTP formatting ────────────────────────────────────────────────────────────

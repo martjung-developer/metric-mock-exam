@@ -78,7 +78,7 @@ export function useProfile(): UseProfileReturn {
       setError(null)
 
       try {
-        const userId = user!.id
+        const userId = user.id
 
         const [profileData, studentData] = await Promise.all([
           getProfile(supabase, userId),

@@ -29,7 +29,9 @@ export function useCreateFaculty(): UseCreateFacultyResult {
 
       try {
         const result = await createFaculty(payload)
-        if (!result.success) setError(result.error ?? 'Failed to create faculty.')
+        if (!result.success) {
+          setError(result.error ?? 'Failed to create faculty.')
+        }
         return result
       } catch {
         const msg = 'Unexpected error creating faculty.'

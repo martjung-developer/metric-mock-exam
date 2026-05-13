@@ -1,5 +1,4 @@
 // lib/utils/student/results/getPctFillClass.ts
-import type styles from '@/app/(dashboard)/student/results/results.module.css'
 
 // Accept the CSS module object so this util stays decoupled from a hard import
 export function getPctFillClass(

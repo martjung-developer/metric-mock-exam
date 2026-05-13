@@ -25,24 +25,20 @@ interface TicketFormProps {
   form:          TicketFormState
   formErrors:    TicketFormErrors
   submitting:    boolean
-  notifying:     boolean
   submitSuccess: boolean
   submitError:   TicketSubmitError | null
   setField:      <K extends keyof TicketFormState>(field: K, value: TicketFormState[K]) => void
   onSubmit:      (e: React.FormEvent) => Promise<void>
-  onSendNotification: () => Promise<void>
 }
 
 export default function TicketForm({
   form,
   formErrors,
   submitting,
-  notifying,
   submitSuccess,
   submitError,
   setField,
   onSubmit,
-  onSendNotification,
 }: TicketFormProps) {
   return (
     <section className={styles.section}>

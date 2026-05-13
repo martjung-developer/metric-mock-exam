@@ -142,7 +142,10 @@ export function useAssignments(examId: string): UseAssignmentsReturn {
     setLoading(false)
   }, [supabase, examId])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load()
+  }, [load])
 
   // ── Derived: filtered ─────────────────────────────────────────────────────
   const filtered = useMemo<Assignment[]>(() => {

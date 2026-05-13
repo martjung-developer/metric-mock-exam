@@ -48,7 +48,7 @@ export function mapStudentToForm(data: StudentData): EditStudentForm {
     full_name:   data.full_name   ?? '',
     student_id:  data.student_id  ?? '',
     program_id:  data.program_id  ?? '',
-    year_level:  data.year_level != null ? String(data.year_level) : '',
+    year_level:  data.year_level !== null ? String(data.year_level) : '',
     school:      data.school      ?? '',
     target_exam: data.target_exam ?? '',
   }

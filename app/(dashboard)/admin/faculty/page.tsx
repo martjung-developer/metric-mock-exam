@@ -1,18 +1,43 @@
 // app/(dashboard)/admin/faculty/page.tsx
 'use client'
 
-import { useState, useCallback } from 'react'
-import { UserPlus, RefreshCw, Users } from 'lucide-react'
+import { useState, useCallback, useMemo } from 'react'
+import { UserPlus, RefreshCw, Users, Search, X } from 'lucide-react'
 import { useFacultyList }   from '@/lib/hooks/admin/faculty/useFacultyList'
 import FacultyTable          from '@/components/dashboard/admin/faculty/FacultyTable'
 import FacultyStatsBar       from '@/components/dashboard/admin/faculty/FacultyStatsBar'
 import AddFacultyModal       from '@/components/dashboard/admin/faculty/AddFacultyModal'
 import styles                from './faculty.module.css'
 
+type AnyRecord = Record<string, unknown>
+
+function getStringField(row: AnyRecord, key: string): string | undefined {
+  const value = row[key]
+  return typeof value === 'string' ? value : undefined
+}
+
+// Derive unique departments from the faculty list for tab filters
+function getDepartments(faculty: AnyRecord[]) {
+  const seen = new Set<string>()
+  const depts: string[] = []
+  for (const f of faculty) {
+    const department = getStringField(f, 'department')
+    if (department && !seen.has(department)) {
+      seen.add(department)
+      depts.push(department)
+    }
+  }
+  return depts.sort()
+}
+
 export default function FacultyPage() {
   const { faculty, loading, error, refetch } = useFacultyList()
-  const [modalOpen, setModalOpen] = useState(false)
-  const [toast,     setToast]     = useState<string | null>(null)
+
+  const [modalOpen,      setModalOpen]      = useState(false)
+  const [toast,          setToast]          = useState<string | null>(null)
+  const [search,         setSearch]         = useState('')
+  const [activeDept,     setActiveDept]     = useState('All')
+  const [roleFilter,     setRoleFilter]     = useState('All')
 
   const showToast = useCallback((msg: string) => {
     setToast(msg)
@@ -24,89 +49,158 @@ export default function FacultyPage() {
     refetch()
   }
 
+  const departments = useMemo(() => getDepartments(faculty), [faculty])
+
+  // Client-side filtering (mirrors students page pattern)
+  const filtered = useMemo(() => {
+    return faculty.filter((f: AnyRecord) => {
+      const department = getStringField(f, 'department')
+      const role = getStringField(f, 'role')
+      const matchesDept = activeDept === 'All' || department === activeDept
+      const matchesRole = roleFilter === 'All' || role === roleFilter
+      const q = search.toLowerCase()
+      const name = getStringField(f, 'name')
+      const email = getStringField(f, 'email')
+      const facultyId =
+        getStringField(f, 'facultyId') ?? getStringField(f, 'faculty_id')
+      const matchesSearch =
+        !q ||
+        name?.toLowerCase().includes(q) ||
+        email?.toLowerCase().includes(q) ||
+        facultyId?.toLowerCase().includes(q)
+      return matchesDept && matchesRole && matchesSearch
+    })
+  }, [faculty, activeDept, roleFilter, search])
+
+  const isFirstLoad = loading && faculty.length === 0
+
   return (
     <div className={styles.page}>
 
-      {/* ── Outer container with left-accent border ── */}
-      <div className={styles.container}>
-
-        {/* ── Header — mirrors Students page header exactly ── */}
-        <div className={styles.header}>
-          <div className={styles.headerLeft}>
-            <div className={styles.headerIcon} aria-hidden="true">
-              <Users size={22} strokeWidth={1.8} />
-            </div>
-            <div>
-              <h1 className={styles.title}>Faculty Members</h1>
-              <p className={styles.subtitle}>
-                {loading && faculty.length === 0
-                  ? 'Loading…'
-                  : `${faculty.length} faculty member${faculty.length !== 1 ? 's' : ''}`}
-              </p>
-            </div>
+      {/* ── Header — flat, mirrors Students page exactly ── */}
+      <div className={styles.header}>
+        <div className={styles.headerLeft}>
+          <div className={styles.headerIcon} aria-hidden="true">
+            <Users size={22} strokeWidth={1.8} />
           </div>
-
-          <div className={styles.headerActions}>
-            <button
-              type="button"
-              className={styles.refreshBtn}
-              onClick={refetch}
-              disabled={loading}
-              aria-label="Refresh faculty list"
-            >
-              <RefreshCw size={14} className={loading ? styles.spinning : ''} />
-            </button>
-
-            <button
-              type="button"
-              className={styles.addBtn}
-              onClick={() => setModalOpen(true)}
-            >
-              <UserPlus size={15} />
-              Add Faculty
-            </button>
+          <div>
+            <h1 className={styles.title}>Faculty Members</h1>
+            <p className={styles.subtitle}>
+              {isFirstLoad
+                ? 'Loading…'
+                : `${faculty.length} faculty member${faculty.length !== 1 ? 's' : ''}`}
+            </p>
           </div>
         </div>
 
-        {/* ── Body ── */}
-        <div className={styles.content}>
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={styles.refreshBtn}
+            onClick={refetch}
+            disabled={loading}
+            aria-label="Refresh faculty list"
+          >
+            <RefreshCw size={14} className={loading ? styles.spinning : ''} />
+          </button>
 
-          {/* Stats — only once data is available */}
-          {!error && faculty.length > 0 && (
-            <FacultyStatsBar faculty={faculty} />
-          )}
-
-          {/* Error */}
-          {error && (
-            <div className={styles.errorBox} role="alert">{error}</div>
-          )}
-
-          {/* Skeleton — first load only */}
-          {loading && faculty.length === 0 && !error && (
-            <div className={styles.skeleton}>
-              <div className={styles.skeletonHeader} />
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className={styles.skeletonRow} />
-              ))}
-            </div>
-          )}
-
-          {/* Table — show with stale data during refetch too */}
-          {!error && faculty.length > 0 && (
-            <div className={styles.tableWrap}>
-              <FacultyTable faculty={faculty} onRefresh={refetch} />
-            </div>
-          )}
-
-          {/* Empty state after load */}
-          {!loading && !error && faculty.length === 0 && (
-            <div className={styles.tableWrap}>
-              <FacultyTable faculty={[]} onRefresh={refetch} />
-            </div>
-          )}
-
+          <button
+            type="button"
+            className={styles.addBtn}
+            onClick={() => setModalOpen(true)}
+          >
+            <UserPlus size={15} />
+            Add Faculty
+          </button>
         </div>
       </div>
+
+      {/* ── Stats bar — only once data is available ── */}
+      {!error && faculty.length > 0 && (
+        <FacultyStatsBar faculty={faculty} />
+      )}
+
+      {/* ── Department tabs — mirrors Students program tabs ── */}
+      {!error && faculty.length > 0 && (
+        <div className={styles.tabsRow}>
+          {['All', ...departments].map(dept => (
+            <button
+              key={dept}
+              type="button"
+              className={`${styles.tab} ${activeDept === dept ? styles.tabActive : ''}`}
+              onClick={() => setActiveDept(dept)}
+            >
+              {dept}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Controls — search + role filter, mirrors Students controls ── */}
+      {!error && faculty.length > 0 && (
+        <div className={styles.controls}>
+          <div className={styles.searchWrap}>
+            <Search size={14} className={styles.searchIcon} />
+            <input
+              type="text"
+              className={styles.searchInput}
+              placeholder="Search by name, email, or ID…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                className={styles.searchClear}
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          <select
+            className={styles.roleSelect}
+            value={roleFilter}
+            onChange={e => setRoleFilter(e.target.value)}
+            aria-label="Filter by role"
+          >
+            <option value="All">All Roles</option>
+            <option value="Full-time">Full-time</option>
+            <option value="Part-time">Part-time</option>
+            <option value="Adjunct">Adjunct</option>
+            <option value="Emeritus">Emeritus</option>
+          </select>
+        </div>
+      )}
+
+      {/* ── Error ── */}
+      {error && (
+        <div className={styles.errorBanner} role="alert">{error}</div>
+      )}
+
+      {/* ── Skeleton — first load only ── */}
+      {isFirstLoad && !error && (
+        <div className={styles.tableWrap}>
+          <div className={styles.skeleton}>
+            <div className={styles.skeletonHeader} />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className={styles.skeletonRow} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Table — show with stale data during refetch too ── */}
+      {!error && (faculty.length > 0 || (!loading && faculty.length === 0)) && (
+        <div className={styles.tableWrap}>
+          <FacultyTable
+            faculty={filtered}
+            onRefresh={refetch}
+          />
+        </div>
+      )}
 
       {/* ── Modal ── */}
       <AddFacultyModal

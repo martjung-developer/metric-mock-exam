@@ -51,7 +51,7 @@ export function QuestionList({
           <HelpCircle size={24} color="var(--text-muted)" />
         </div>
         <p className={s.emptyTitle}>No questions yet</p>
-        <p className={s.emptySub}>Click "Add Question" to create your first question.</p>
+        <p className={s.emptySub}>Click &quot;Add Question&quot; to create your first question.</p>
         <button
           className={`${s.btnPrimary} ${s.addFirstBtn}`}
           onClick={onAddFirst}

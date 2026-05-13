@@ -83,7 +83,7 @@ export default function ExamSectionsNav({ examId, exam }: ExamSectionsNavProps) 
               <div className={s.navLabel}>{sp.label}</div>
               <div className={s.navDesc}>{sp.desc}</div>
             </div>
-            {sp.count != null && (
+            {sp.count !== null && (
               <span className={s.navCount}>{sp.count}</span>
             )}
             <ChevronRight size={14} className={s.navChevron} />

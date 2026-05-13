@@ -1,22 +1,39 @@
 // lib/services/auth/index.ts
 // ─────────────────────────────────────────────────────────────────────────────
-// Client-side auth service.
-// signInWithId now uses detectRoleFromId as a local fast-path for the redirect
-// URL, while the server-resolved role from the DB remains the source of truth
-// for Supabase auth. The two should always agree.
+// Client-side auth service layer.
+//
+// signInWithId flow:
+//   1. POST /api/auth/resolve-user-by-id  → get email from ID
+//   2. supabase.auth.signInWithPassword   → create session
+//   3. profiles.role                      → canonical role
+//   4. getDashboardByRole                 → redirect path
+//
+// signUpStudent flow:
+//   1. supabase.auth.signUp               → create auth user
+//   2. POST /api/auth/create-profile      → insert students row (service role)
+//
+// Social auth delegates entirely to Supabase OAuth.
 // ─────────────────────────────────────────────────────────────────────────────
-
-import { createClient } from '@/lib/supabase/client'
-import { normaliseId } from '@/lib/utils/auth/'
+import { createClient }       from '@/lib/supabase/client'
+import { normaliseId }        from '@/lib/utils/auth'
 import { getDashboardByRole } from '@/lib/auth/routing'
-import type {
-  AuthResult,
-  ResolveUserResult,
-  SendOtpResult,
-  VerifyOtpResult,
-  ProgramCode,
-  YearLevel,
-} from '@/lib/types/auth/'
+type AuthResult = {
+  success: boolean
+  error?: string
+  redirectTo?: string
+}
+
+type ResolveUserResult = {
+  found: boolean
+  email?: string
+  error?: string
+}
+
+type ProgramCode = string
+type YearLevel = number | string
+import type { Database } from '@/lib/types/database'
+
+type ProfileRow = Database['public']['Tables']['profiles']['Row']
 
 // ── resolveUserById ───────────────────────────────────────────────────────────
 
@@ -27,6 +44,11 @@ export async function resolveUserById(rawId: string): Promise<ResolveUserResult>
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ id: normaliseId(rawId) }),
     })
+
+    if (!res.ok) {
+      return { found: false, error: `Server error: ${res.status}` }
+    }
+
     return (await res.json()) as ResolveUserResult
   } catch {
     return { found: false, error: 'Network error. Please try again.' }
@@ -34,24 +56,22 @@ export async function resolveUserById(rawId: string): Promise<ResolveUserResult>
 }
 
 // ── signInWithId ──────────────────────────────────────────────────────────────
-/**
- * 1. Resolve the ID → email via the server API (uses service role key safely).
- * 2. Sign in with email + password via Supabase.
- * 3. Resolve canonical role from profiles.role and redirect.
- */
-export async function signInWithId(rawId: string, password: string): Promise<AuthResult> {
+
+export async function signInWithId(
+  rawId:    string,
+  password: string,
+): Promise<AuthResult> {
   const normalizedId = normaliseId(rawId)
+  const resolved     = await resolveUserById(normalizedId)
 
-  const resolved = await resolveUserById(normalizedId)
-
-  if (!resolved.found) {
-    return { success: false, error: resolved.error }
+  if (!resolved.found || !resolved.email) {
+    return { success: false, error: resolved.error ?? 'ID not found.' }
   }
 
   const supabase = createClient()
 
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: resolved.email,
+    email:    resolved.email,
     password,
   })
 
@@ -65,19 +85,18 @@ export async function signInWithId(rawId: string, password: string): Promise<Aut
     }
   }
 
+  // Single minimal query — no select("*")
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', data.user.id)
-    .single()
+    .single() as { data: Pick<ProfileRow, 'role'> | null; error: unknown }
 
   if (profileError || !profile) {
     return { success: false, error: 'Could not resolve your account role.' }
   }
 
-  const redirectTo = getDashboardByRole(profile.role)
-
-  return { success: true, redirectTo }
+  return { success: true, redirectTo: getDashboardByRole(profile.role) }
 }
 
 // ── signUpStudent ─────────────────────────────────────────────────────────────
@@ -112,6 +131,9 @@ export async function signUpStudent(
   if (error)      { return { success: false, error: error.message } }
   if (!data.user) { return { success: false, error: 'Account creation failed. Please try again.' } }
 
+  // Create student profile row via service-role API route
+  // Errors here are non-fatal — the user can still log in and we retry on
+  // first dashboard load. Warn but do not surface to the user.
   try {
     const res = await fetch('/api/auth/create-profile', {
       method:  'POST',
@@ -125,16 +147,15 @@ export async function signUpStudent(
       }),
     })
 
-    const result = (await res.json()) as { success: boolean; error?: string }
-
-    if (!result.success) {
-      console.warn('[signUpStudent] create-profile warning:', result.error)
+    if (!res.ok) {
+      const payload = (await res.json()) as { error?: string }
+      console.warn('[signUpStudent] create-profile non-ok:', payload.error)
     }
   } catch (err) {
     console.warn('[signUpStudent] create-profile network error:', err)
   }
 
-  return { success: true, redirectTo: '/signup-success' }
+  return { success: true }
 }
 
 // ── signInWithGoogle ──────────────────────────────────────────────────────────
@@ -143,7 +164,7 @@ export async function signInWithGoogle(): Promise<AuthResult> {
   const supabase = createClient()
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options:  {
+    options: {
       redirectTo: typeof window !== 'undefined'
         ? `${window.location.origin}/auth/callback`
         : '/auth/callback',
@@ -159,7 +180,7 @@ export async function signInWithFacebook(): Promise<AuthResult> {
   const supabase = createClient()
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'facebook',
-    options:  {
+    options: {
       redirectTo: typeof window !== 'undefined'
         ? `${window.location.origin}/auth/callback`
         : '/auth/callback',
@@ -174,33 +195,4 @@ export async function signInWithFacebook(): Promise<AuthResult> {
 export async function signOut(): Promise<void> {
   const supabase = createClient()
   await supabase.auth.signOut()
-}
-
-// ── sendOtp / verifyOtp ───────────────────────────────────────────────────────
-// Kept for future use. NOT called in the current email-only flow.
-
-export async function sendOtp(email: string): Promise<SendOtpResult> {
-  try {
-    const res = await fetch('/api/auth/send-otp', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ email }),
-    })
-    return (await res.json()) as SendOtpResult
-  } catch {
-    return { sent: false, error: 'Network error. Please try again.' }
-  }
-}
-
-export async function verifyOtp(email: string, token: string): Promise<VerifyOtpResult> {
-  try {
-    const res = await fetch('/api/auth/verify-otp', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ email, token }),
-    })
-    return (await res.json()) as VerifyOtpResult
-  } catch {
-    return { verified: false, error: 'Network error. Please try again.' }
-  }
 }

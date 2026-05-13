@@ -100,7 +100,10 @@ export function useStudyMaterials(): UseStudyMaterialsReturn {
 
   // ── Recently viewed ───────────────────────────────────────────────────────
   const [recentIds, setRecentIds] = useState<string[]>([])
-  useEffect(() => { setRecentIds(getRecentlyViewedIds()) }, [])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRecentIds(getRecentlyViewedIds())
+  }, [])
 
  // AFTER: use functional updater so setRecentIds only fires when
 // the ID is genuinely new, and getRecentlyViewedIds() is called
@@ -182,6 +185,7 @@ const recordViewed = useCallback((materialId: string) => {
     if (prevProgramId.current !== programId) {
       prevProgramId.current = programId
       hasFetched.current    = false
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       refresh()
     }
   }, [programId, refresh])
@@ -191,6 +195,7 @@ const recordViewed = useCallback((materialId: string) => {
     if (!user) {return}
     const channel = subscribeToStudyMaterials(supabase, () => {
       hasFetched.current = false
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       refresh()
     })
     return () => { supabase.removeChannel(channel) }

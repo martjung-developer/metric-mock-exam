@@ -1,7 +1,7 @@
 // lib/hooks/admin/students/edit/useUpdateStudent.ts
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter }               from 'next/navigation'
 import { createClient }            from '@/lib/supabase/client'
 import {
@@ -38,7 +38,7 @@ export function useUpdateStudent(
 
   // Sync when initialForm resolves from the fetch hook
   // (initialForm starts null while loading)
-  useMemo(() => {
+  useEffect(() => {
     if (initialForm !== null) {setForm(initialForm)}
   }, [initialForm])
 
