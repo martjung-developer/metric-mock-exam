@@ -1,11 +1,5 @@
+'use client'
 // lib/hooks/admin/questionnaires/useQuestionnaires.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// CHANGES FROM PREVIOUS VERSION:
-//   + BLANK_FORM now includes scenario: ''
-//   + openEdit populates form.scenario from DisplayQuestion
-//   + handleImportSave maps importRow.scenario into payload
-//   + handleSave passes form.scenario in payload
-// ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient }     from '@/lib/supabase/client'
@@ -43,7 +37,7 @@ import {
   VALID_DIFF,
 } from '@/lib/constants/admin/questionnaires/questionnaires.constants'
 
-// ── BLANK_FORM with scenario ───────────────────────────────────────────────────
+// ── BLANK_FORM ────────────────────────────────────────────────────────────────
 
 const BLANK_FORM: FormState = {
   question_text:  '',
@@ -60,7 +54,7 @@ const BLANK_FORM: FormState = {
     { label: 'D', text: '' },
   ],
   program_id: '',
-  scenario:   '',   // NEW
+  scenario:   '',
 }
 
 export type ViewMode  = 'programs' | 'program-detail'
@@ -275,7 +269,7 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
       difficulty:     q.difficulty,
       program_id:     exam?.program_id ?? '',
       choices:        (q.options && q.options.length > 0) ? q.options : BLANK_FORM.choices,
-      scenario:       q.scenario ?? '',   // NEW
+      scenario:       q.scenario ?? '',
     })
     setFormMode('edit')
     setEditId(q.id)
@@ -333,7 +327,7 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
       correct_answer: form.correct_answer || null,
       explanation:    encodeDifficulty(form.difficulty, form.explanation),
       exam_id:        form.exam_id || null,
-      scenario:       form.scenario.trim() || null,   
+      scenario:       form.scenario.trim() || null,
     }
 
     setSaving(true)
@@ -397,13 +391,60 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
     setImportRows([])
     setImportParsing(true)
     setImportedFileName(file.name)
+
     try {
-      const rawRows = await parseFile(file)
-      if (rawRows.length === 0) {
-        setImportError('The file appears empty or no question blocks were detected.')
-        return
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+
+      if (ext === 'docx' || ext === 'doc') {
+        // ── DOCX / DOC: parse server-side ──────────────────────────────────
+        // mammoth is CPU-heavy and runs synchronously. Running it in the browser
+        // blocks the main thread for seconds on large files → "page not responding".
+        // We POST the raw file to the API route which runs mammoth in Node.js.
+        // The route returns already-validated ImportRow[] so no further processing
+        // is needed on the client.
+
+        const body = new FormData()
+        body.append('file', file)
+
+        let res: Response
+        try {
+          res = await fetch('/api/admin/questionnaires/parse-docx', {
+            method: 'POST',
+            body,
+          })
+        } catch {
+          throw new Error('Network error — could not reach the server. Check your connection.')
+        }
+
+        let json: { rows?: ImportRow[]; error?: string }
+        try {
+          json = await res.json() as { rows?: ImportRow[]; error?: string }
+        } catch {
+          throw new Error(`Unexpected server response (HTTP ${res.status}).`)
+        }
+
+        if (!res.ok) {
+          throw new Error(json.error ?? `Server error (HTTP ${res.status}).`)
+        }
+
+        const rows = json.rows ?? []
+        if (rows.length === 0) {
+          setImportError('No questions were detected. Check the formatting guide.')
+          return
+        }
+
+        setImportRows(rows)
+
+      } else {
+        // ── CSV / XLSX / PDF: existing local parser (unchanged) ─────────────
+        const rawRows = await parseFile(file)
+        if (rawRows.length === 0) {
+          setImportError('The file appears empty or no question blocks were detected.')
+          return
+        }
+        setImportRows(rawRows.map((row, idx) => validateImportRow(row, idx)))
       }
-      setImportRows(rawRows.map((row, idx) => validateImportRow(row, idx)))
+
     } catch (err) {
       setImportError(`Failed to parse file: ${(err as Error).message}`)
     } finally {
@@ -481,7 +522,7 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
           correct_answer: r.correct_answer || null,
           explanation:    encodeDifficulty(diff, r.explanation),
           exam_id:        importExamId,
-          scenario:       r.scenario.trim() || null,   // NEW
+          scenario:       r.scenario.trim() || null,
         }
       })
 

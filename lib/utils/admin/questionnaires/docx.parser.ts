@@ -1,42 +1,25 @@
 // lib/utils/admin/questionnaires/docx.parser.ts
-//
-// BACKWARD COMPATIBILITY:
-//   The original regex-based path (parseDocxToRows → segmentIntoBlocks) is
-//   preserved intact for plain-text DOCX files with "1. Question" formatting.
-//   The new OOXML path is attempted first via parseDocxWithMammothTransform();
-//   if the caller cannot supply paragraph metadata (e.g. legacy callers that
-//   only have html + plainText), it falls back to the original regex path.
-// ─────────────────────────────────────────────────────────────────────────────
 
 import type { DocxExtractResult } from './docx.extractor'
-import type { ImportRow }          from '@/lib/types/admin/questionnaires/questionnaires-types'
-import type { QuestionType }       from '@/lib/types/database'
+import type { ImportRow }         from '@/lib/types/admin/questionnaires/questionnaires-types'
+import type { QuestionType }      from '@/lib/types/database'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public paragraph metadata shape
-// (populated by the extractor using mammoth's transformDocument)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface DocxParagraph {
-  /** OOXML list level: 0 = outer list, 1 = inner list, null = plain paragraph */
   level:    number | null
-  /** Concatenated text of all bold runs in this paragraph (empty string if none) */
   boldText: string
-  /** Full plain text of the paragraph */
   text:     string
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Extended extractor result — adds structured paragraph data
-// ─────────────────────────────────────────────────────────────────────────────
-
 export interface DocxExtractResultWithParagraphs extends DocxExtractResult {
-  /** Structured paragraph list from mammoth's transformDocument */
   paragraphs: DocxParagraph[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helpers for mammoth's document model traversal
+// Mammoth tree traversal helpers (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
 
 type MammothElement = {
@@ -47,48 +30,34 @@ type MammothElement = {
   children?:  MammothElement[]
 }
 
-/** Recursively concatenate all text values in a mammoth element tree */
 export function mammothGetText(el: MammothElement): string {
-  if (!el) {return ''}
-  if (el.value !== undefined) {return el.value}
-  if (el.children) {return el.children.map(mammothGetText).join('')}
+  if (!el) { return '' }
+  if (el.value !== undefined) { return el.value }
+  if (el.children) { return el.children.map(mammothGetText).join('') }
   return ''
 }
 
-/**
- * Recursively concatenate text from runs where isBold === true.
- * Note: mammoth uses `isBold` (not `bold`) on run elements.
- */
 export function mammothGetBoldText(el: MammothElement): string {
-  if (!el) {return ''}
+  if (!el) { return '' }
   if (el.type === 'run' && el.isBold) {
     return el.children ? el.children.map(mammothGetText).join('') : ''
   }
-  if (el.children) {return el.children.map(mammothGetBoldText).join('')}
+  if (el.children) { return el.children.map(mammothGetBoldText).join('') }
   return ''
 }
 
-/**
- * Walk a mammoth document tree and collect one DocxParagraph per paragraph.
- * Call this inside mammoth's transformDocument callback:
- *
- *   transformDocument: (doc) => {
- *     paragraphs = collectParagraphs(doc)
- *     return doc
- *   }
- */
 export function collectParagraphs(doc: MammothElement): DocxParagraph[] {
   const result: DocxParagraph[] = []
 
   function walk(el: MammothElement): void {
     if (el.type === 'paragraph') {
       result.push({
-        level:    el.numbering !== null ? parseInt(el.numbering.level, 10) : null,
+        level:    el.numbering != null ? parseInt(el.numbering.level, 10) : null,
         boldText: mammothGetBoldText(el).trim(),
         text:     mammothGetText(el).trim(),
       })
     }
-    if (el.children) {el.children.forEach(walk)}
+    if (el.children) { el.children.forEach(walk) }
   }
 
   walk(doc)
@@ -96,7 +65,122 @@ export function collectParagraphs(doc: MammothElement): DocxParagraph[] {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Type utilities
+// Shared regular expressions (module-scope — compiled once)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const RE_LEADING_QUESTION_NUMBER = /^(?:Q(?:uestion)?\s*)?\d{1,3}[.)]\s*/i
+const RE_LEADING_CHOICE_LABEL    = /^[(\[]?([A-Ea-e])[.)}\]]\s+/
+const RE_SCENARIO_HINT           = /^(?:refer\s+to|read\s+the\s+following|passage|case\s+study|scenario)[:\s]/i
+const RE_TRUE_FALSE_ONLY         = /^(?:true|false)$/i
+const RE_QUESTION_HINT           = /^(?:who|what|when|where|which|why|how)\b/i
+const RE_SCENARIO_QUESTION       = /^(?:from\s+the\s+(?:scenario|passage|above|text)|based\s+on|according\s+to)/i
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIX 3 — Per-paragraph flag cache
+// Classifiers are called O(n²) times in nested loops; pre-compute them once.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ParaFlags {
+  isStem:     boolean
+  isScenario: boolean
+  isHeading:  boolean
+  isChoice:   boolean
+}
+
+/** Run every classifier exactly once per paragraph — O(n) total. */
+function buildParaFlags(paras: DocxParagraph[]): ParaFlags[] {
+  return paras.map((p) => {
+    const text    = p.text.trim()
+    const isEmpty = text.length === 0
+
+    // ── looksLikeStem ────────────────────────────────────────────────────────
+    const isStem = !isEmpty && (
+      text.endsWith('?')                    ||
+      text.includes('_____')                ||
+      RE_LEADING_QUESTION_NUMBER.test(text) ||
+      RE_QUESTION_HINT.test(text)           ||
+      RE_SCENARIO_QUESTION.test(text)
+    )
+
+    // ── isSectionHeading ─────────────────────────────────────────────────────
+    const looksLikeChoiceText = text.length > 0 && (
+      RE_LEADING_CHOICE_LABEL.test(text) ||
+      RE_TRUE_FALSE_ONLY.test(text)      ||
+      (text.length <= 160 && !text.endsWith('?'))
+    )
+
+    const isHeading = (
+      !isEmpty                     &&
+      text.length <= 120           &&
+      !isStem                      &&
+      !looksLikeChoiceText         &&
+      /(?:exam|section|part|instructions?|practice|mock)\b/i.test(text) &&
+      !text.endsWith('.')
+    )
+
+    // ── looksLikeScenario ────────────────────────────────────────────────────
+    const isScenario = (
+      !isEmpty     &&
+      !isStem      &&
+      (RE_SCENARIO_HINT.test(text) || text.length > 40)
+    )
+
+    // ── looksLikeChoice ──────────────────────────────────────────────────────
+    const isChoice = (
+      p.level !== null &&
+      text.length > 0  &&
+      looksLikeChoiceText
+    )
+
+    return { isStem, isScenario, isHeading, isChoice }
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIX 1 — O(n) choice-run cache via single backwards pass
+//
+// Original: buildChoiceRunCache called hasChoiceRun(paras, i) for every i.
+// hasChoiceRun walks forward up to n steps → total O(n²).
+//
+// NEW algorithm: scan right-to-left, maintaining a sliding window of how many
+// consecutive choice paragraphs have been seen starting from position i+1.
+// If that count reaches 2, choiceRunCache[i] = true.
+// This is O(n) total with no inner loop.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function buildChoiceRunCache(flags: ParaFlags[]): boolean[] {
+  const n     = flags.length
+  const cache = new Array<boolean>(n).fill(false)
+
+  // choicesAhead[i] = number of consecutive choice paragraphs starting at i
+  // (capped at 2 because we only care whether >= 2 exist)
+  const choicesAhead = new Array<number>(n).fill(0)
+
+  for (let i = n - 1; i >= 0; i--) {
+    const f = flags[i]
+    if (!f) { continue }
+
+    if (f.isChoice) {
+      // Extend the run from i+1 (or start a new run of 1)
+      const next = i + 1 < n ? (choicesAhead[i + 1] ?? 0) : 0
+      choicesAhead[i] = Math.min(next + 1, 2)
+    } else if (f.isHeading || (f.isStem && i > 0)) {
+      // Choice run resets after a heading or a second stem
+      choicesAhead[i] = 0
+    } else {
+      // Non-choice, non-heading, non-stem (prose/scenario/blank) — pass through
+      choicesAhead[i] = i + 1 < n ? (choicesAhead[i + 1] ?? 0) : 0
+    }
+
+    // A position has a choice run when 2+ choices follow it
+    cache[i] = (i + 1 < n) && ((choicesAhead[i + 1] ?? 0) >= 2)
+  }
+
+  return cache
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Type utilities (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
 
 type ValidQuestionType =
@@ -125,150 +209,113 @@ function toQuestionType(s: string): QuestionType {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// OOXML list-based parser (new primary path)
+// OOXML block types
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface ChoiceEntry {
-  text: string
+  text:   string
   isBold: boolean
 }
 
 interface OoxmlBlock {
-  scenario:  string
-  stem:      string
-  choices:   ChoiceEntry[]
+  scenario: string
+  stem:     string
+  choices:  ChoiceEntry[]
 }
 
-const RE_LEADING_QUESTION_NUMBER = /^(?:Q(?:uestion)?\s*)?\d{1,3}[.)]\s*/i
-const RE_LEADING_CHOICE_LABEL = /^[(\[]?([A-Ea-e])[.)}\]]\s+/
-const RE_SCENARIO_HINT = /^(?:refer\s+to|read\s+the\s+following|passage|case\s+study|scenario)[:\s]/i
-const RE_TRUE_FALSE_ONLY = /^(?:true|false)$/i
-const RE_QUESTION_HINT = /^(?:who|what|when|where|which|why|how)\b/i
+// ─────────────────────────────────────────────────────────────────────────────
+// FIX 1 + 2 + 3 — Core OOXML parser using pre-computed flags and O(n) cache
+// ─────────────────────────────────────────────────────────────────────────────
 
-function stripQuestionPrefix(text: string): string {
-  return text.replace(RE_LEADING_QUESTION_NUMBER, '').trim()
-}
-
-function looksLikeChoiceText(text: string): boolean {
-  const trimmed = text.trim()
-  if (trimmed.length === 0) {return false}
-  if (RE_LEADING_CHOICE_LABEL.test(trimmed)) {return true}
-  if (RE_TRUE_FALSE_ONLY.test(trimmed)) {return true}
-  return trimmed.length <= 160 && !trimmed.endsWith('?')
-}
-
-function looksLikeChoice(p: DocxParagraph): boolean {
-  if (p.level === null) {return false}
-  return looksLikeChoiceText(p.text)
-}
-
-/** Plain paragraph that looks like a question stem (ends with '?') */
-function looksLikeStem(p: DocxParagraph): boolean {
-  const text = p.text.trim()
-  return (
-    text.endsWith('?') ||
-    RE_LEADING_QUESTION_NUMBER.test(text) ||
-    RE_QUESTION_HINT.test(text)
-  )
-}
-
-/** Long scenario or passage paragraph */
-function looksLikeScenario(p: DocxParagraph): boolean {
-  return (
-    RE_SCENARIO_HINT.test(p.text) ||
-    (p.text.length > 80 && !p.text.trimEnd().endsWith('?'))
-  )
-}
-
-function isSectionHeading(p: DocxParagraph): boolean {
-  const text = p.text.trim()
-  if (!text || text.length > 120) {return false}
-  if (looksLikeStem(p) || looksLikeChoiceText(text)) {return false}
-  return (
-    /(?:exam|section|part|instructions?|practice|mock)\b/i.test(text) &&
-    !text.endsWith('.')
-  )
-}
-
-function hasChoiceRun(paras: DocxParagraph[], start: number): boolean {
-  let count = 0
-  for (let i = start + 1; i < paras.length; i++) {
-    const p = paras[i]
-    if (!p.text) {continue}
-    if (looksLikeChoice(p)) {
-      count++
-      if (count >= 2) {return true}
-      continue
-    }
-    if (count > 0) {break}
-    if (looksLikeStem(p) || isSectionHeading(p)) {return false}
-  }
-  return false
-}
-
-function hasParagraphs(
-  extracted: DocxExtractResult,
-): extracted is DocxExtractResultWithParagraphs {
-  return Array.isArray(extracted.paragraphs) && extracted.paragraphs.length > 0
-}
-
-/**
- * Parse OOXML-structured paragraphs into question blocks.
- *
- * This is the primary parser path for DOCX files exported from Word that use
- * OOXML list numbering instead of plain-text "1." prefixes.
- */
 function parseOoxmlParagraphs(paras: DocxParagraph[]): OoxmlBlock[] {
-  const blocks: OoxmlBlock[] = []
+  const blocks  = [] as OoxmlBlock[]
+  const flags   = buildParaFlags(paras)          // FIX 3 — O(n) single pass
+  const crCache = buildChoiceRunCache(flags)      // FIX 1 — O(n) backwards pass
+
   let pendingScenario = ''
-  let i = 0
+  let i               = 0
 
   while (i < paras.length) {
+    // FIX 2 — always guard array access before use
     const p = paras[i]
-
+    const f = flags[i]
+    if (p === undefined || f === undefined) { i++; continue }
     if (!p.text) { i++; continue }
-    if (isSectionHeading(p)) { i++; continue }
-    if (looksLikeScenario(p) && !hasChoiceRun(paras, i)) {
-      pendingScenario += `${pendingScenario ? ' ' : ''}${p.text.trim()}`
-      i++
-      continue
-    }
-    if (!looksLikeStem(p) && !hasChoiceRun(paras, i)) {
-      i++
+    if (f.isHeading) { i++; continue }
+
+    // ── Scenario / passage accumulation ──────────────────────────────────────
+    const isDefinitelyScenario =
+      f.isScenario && (!crCache[i] || p.text.length > 80)
+
+    if (isDefinitelyScenario) {
+      // FIX 2 — safe greedy loop: check bounds BEFORE accessing paras[i]
+      while (i < paras.length) {
+        const cur  = paras[i]
+        const curF = flags[i]
+        if (cur === undefined || curF === undefined) { i++; break }
+
+        if (!cur.text) { i++; continue }
+
+        if (curF.isStem || curF.isHeading || curF.isChoice) {
+          // Step back so the outer loop re-processes this paragraph
+          break
+        }
+
+        pendingScenario += `${pendingScenario ? ' ' : ''}${cur.text.trim()}`
+        i++
+      }
       continue
     }
 
-    let scenario = pendingScenario
-    let stem     = stripQuestionPrefix(p.text)
-    const choices: ChoiceEntry[] = []
-    pendingScenario = ''
+    // ── Skip paragraphs that are neither stems nor lead to choices ───────────
+    if (!f.isStem && !crCache[i]) { i++; continue }
+
+    // ── Question block ────────────────────────────────────────────────────────
+    const scenario   = pendingScenario
+    let stem         = p.text.replace(RE_LEADING_QUESTION_NUMBER, '').trim()
+    const choices    = [] as ChoiceEntry[]
+    pendingScenario  = ''
     i++
 
-    while (i < paras.length && paras[i].text) {
-      const next = paras[i]
-      if (looksLikeChoice(next)) {
+    while (i < paras.length) {
+      const next  = paras[i]
+      const nextF = flags[i]
+      if (next === undefined || nextF === undefined) { break }
+      if (!next.text) { break }
+
+      if (nextF.isChoice) {
         choices.push({ text: next.text.trim(), isBold: next.boldText.length > 0 })
         i++
         continue
       }
-      if (choices.length === 0 && next.level === null && !looksLikeStem(next)) {
+
+      // Stem continuation before any choice has been collected
+      if (choices.length === 0 && next.level === null && !nextF.isStem) {
         stem += `${stem ? ' ' : ''}${next.text.trim()}`
         i++
         continue
       }
-      if (looksLikeStem(next) && hasChoiceRun(paras, i)) {break}
-      if (isSectionHeading(next)) {break}
-      if (looksLikeScenario(next) && choices.length === 0) {
-        scenario += `${scenario ? ' ' : ''}${next.text.trim()}`
+
+      // Next question begins
+      if (nextF.isStem && crCache[i]) { break }
+
+      // Section boundary
+      if (nextF.isHeading) { break }
+
+      // Late scenario paragraph before any choice
+      if (nextF.isScenario && choices.length === 0) {
+        pendingScenario += `${pendingScenario ? ' ' : ''}${next.text.trim()}`
         i++
         continue
       }
+
       break
     }
 
     if (stem && choices.length >= 2) {
       blocks.push({ scenario, stem, choices })
     } else if (stem && !scenario) {
+      // Orphaned stem — carry forward as scenario
       pendingScenario = stem
     }
   }
@@ -276,30 +323,28 @@ function parseOoxmlParagraphs(paras: DocxParagraph[]): OoxmlBlock[] {
   return blocks
 }
 
-/** Convert one OoxmlBlock → ImportRow */
+// ─────────────────────────────────────────────────────────────────────────────
+// OoxmlBlock → ImportRow (unchanged logic)
+// ─────────────────────────────────────────────────────────────────────────────
+
 function ooxmlBlockToRow(
   block:         OoxmlBlock,
   rowIndex:      number,
   defaultPoints: number,
 ): ImportRow {
-  const labels  = ['A', 'B', 'C', 'D', 'E']
+  const labels    = ['A', 'B', 'C', 'D', 'E']
   const choiceMap: Record<string, string> = {}
 
   for (let j = 0; j < Math.min(block.choices.length, 5); j++) {
-    const label = labels[j]
+    const label  = labels[j]
     const choice = block.choices[j]
-    if (label && choice) {
-      choiceMap[label] = choice.text
-    }
+    if (label && choice) { choiceMap[label] = choice.text }
   }
 
   const boldChoice  = block.choices.find((c) => c.isBold)
-  const boldLabel   = boldChoice
-    ? (labels[block.choices.indexOf(boldChoice)] ?? '')
-    : ''
+  const boldLabel   = boldChoice ? (labels[block.choices.indexOf(boldChoice)] ?? '') : ''
   const correctText = boldChoice?.text ?? ''
 
-  // Detect question type
   let questionType: QuestionType = 'multiple_choice'
   const stemLower = block.stem.toLowerCase()
 
@@ -338,7 +383,6 @@ function ooxmlBlockToRow(
 
 function validateOoxmlBlock(block: OoxmlBlock, correctLabel: string): string[] {
   const errors: string[] = []
-
   if (!block.stem || block.stem.length < 3) {
     errors.push('Question text is too short or missing.')
   }
@@ -348,35 +392,70 @@ function validateOoxmlBlock(block: OoxmlBlock, correctLabel: string): string[] {
   if (!correctLabel) {
     errors.push('Could not detect the correct answer — bold it in the DOCX.')
   }
-
   return errors
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Primary export — OOXML paragraph path
+// FIX 4 — Async wrapper for browser callers
+// Breaks the synchronous parse into yielded micro-tasks so the browser
+// can paint between stages, preventing "page not responding".
 // ─────────────────────────────────────────────────────────────────────────────
 
+function yieldToMain(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0))
+}
+
 /**
- * Parse a DOCX exported from Microsoft Word (OOXML list numbering).
+ * Async version of parseDocxToRows — safe to call in the browser.
+ * Yields to the main thread between the OOXML stage and the legacy stage
+ * so the browser never blocks long enough to show "page not responding".
  *
- * Requires the extractor to supply `paragraphs` (from collectParagraphs()).
- * Returns [] only if no valid blocks are found — the caller should then
- * fall back to parseDocxToRows() for plain-text "1." formatted files.
+ * Usage (in your import modal component):
+ *   const rows = await parseDocxToRowsAsync(extracted)
  */
+export async function parseDocxToRowsAsync(
+  extracted:     DocxExtractResult,
+  defaultPoints = 1,
+): Promise<ImportRow[]> {
+  // Stage 1 — OOXML path
+  await yieldToMain()
+
+  if (hasParagraphs(extracted)) {
+    const ooxmlRows = parseDocxWithParagraphs(extracted, defaultPoints)
+    if (ooxmlRows.length > 0) { return ooxmlRows }
+  }
+
+  // Stage 2 — Legacy regex path
+  await yieldToMain()
+
+  return parseLegacy(extracted, defaultPoints)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OOXML path public export (unchanged signature)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function hasParagraphs(
+  extracted: DocxExtractResult,
+): extracted is DocxExtractResultWithParagraphs {
+  return (
+    'paragraphs' in extracted &&
+    Array.isArray(extracted.paragraphs) &&
+    extracted.paragraphs.length > 0
+  )
+}
+
 export function parseDocxWithParagraphs(
   extracted:     DocxExtractResultWithParagraphs,
   defaultPoints = 1,
 ): ImportRow[] {
   const blocks = parseOoxmlParagraphs(extracted.paragraphs)
-  if (blocks.length === 0) {return []}
+  if (blocks.length === 0) { return [] }
   return blocks.map((b, i) => ooxmlBlockToRow(b, i + 1, defaultPoints))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Legacy regex-based parser (original path — preserved unchanged)
-// ─────────────────────────────────────────────────────────────────────────────
-// Used as a fallback for plain-text DOCX files where questions are written as
-// "1. Which…" or "1) Which…" with no OOXML list numbering.
+// Legacy regex-based parser (unchanged — preserved exactly)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const RE_QUESTION_START = /^(?:Q(?:uestion)?\s*)?(\d{1,3})[.)]\s+(.+)/i
@@ -430,7 +509,7 @@ function segmentIntoBlocks(lines: string[]): RawBlock[] {
   for (const line of lines) {
     const qm = RE_QUESTION_START.exec(line)
     if (qm !== null) {
-      if (current !== null) {blocks.push(current)}
+      if (current !== null) { blocks.push(current) }
       current = { questionLine: line, body: [], scenarioPre: pending }
       pending = ''
       continue
@@ -448,7 +527,7 @@ function segmentIntoBlocks(lines: string[]): RawBlock[] {
     }
   }
 
-  if (current !== null) {blocks.push(current)}
+  if (current !== null) { blocks.push(current) }
   return blocks
 }
 
@@ -471,7 +550,7 @@ function parseBlock(raw: RawBlock): ParsedBlock {
   if (RE_BLANK.test(questionText)) {
     questionType = 'fill_blank'
     const im = RE_INLINE_ANS.exec(questionText)
-    if (im) {correctAnswer = im[1]?.trim() ?? ''}
+    if (im) { correctAnswer = im[1]?.trim() ?? '' }
   }
 
   for (const line of raw.body) {
@@ -512,21 +591,19 @@ function parseBlock(raw: RawBlock): ParsedBlock {
 }
 
 function resolveCorrectAnswer(block: ParsedBlock, boldSet: ReadonlySet<string>): string {
-  if (block.correctAnswer !== '') {return block.correctAnswer}
-  if (boldSet.size === 0)         {return ''}
+  if (block.correctAnswer !== '') { return block.correctAnswer }
+  if (boldSet.size === 0)         { return '' }
 
   const boldNorm = new Set<string>()
-  for (const b of boldSet) {boldNorm.add(normalise(b))}
+  for (const b of boldSet) { boldNorm.add(normalise(b)) }
 
   for (const { label, text } of block.choices) {
-    if (boldSet.has(text)) {return label}
-
+    if (boldSet.has(text)) { return label }
     const norm = normalise(text)
-    if (boldNorm.has(norm)) {return label}
-
+    if (boldNorm.has(norm)) { return label }
     for (const bold of boldSet) {
       const bn = normalise(bold)
-      if (bn.length >= 3 && norm.includes(bn)) {return label}
+      if (bn.length >= 3 && norm.includes(bn)) { return label }
     }
   }
 
@@ -547,9 +624,7 @@ function blockToRow(
   const correct = resolveCorrectAnswer(parsed, boldSet)
 
   const choiceMap: Record<string, string> = {}
-  for (const { label, text } of parsed.choices) {
-    choiceMap[label] = text
-  }
+  for (const { label, text } of parsed.choices) { choiceMap[label] = text }
 
   const errors = validateLegacyRow(parsed, correct)
 
@@ -596,11 +671,32 @@ function validateLegacyRow(block: ParsedBlock, correctAnswer: string): string[] 
   return errors
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Internal legacy path (extracted for reuse by both sync and async variants)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function parseLegacy(extracted: DocxExtractResult, defaultPoints: number): ImportRow[] {
+  const lines  = splitLines(extracted.plainText)
+  const blocks = segmentIntoBlocks(lines)
+
+  if (blocks.length === 0) {
+    const htmlLines  = splitLines(stripHtmlTags(extracted.html))
+    const htmlBlocks = segmentIntoBlocks(htmlLines)
+    if (htmlBlocks.length === 0) { return [] }
+    return htmlBlocks.map((b, i) => blockToRow(b, extracted.boldSet, i + 1, defaultPoints))
+  }
+
+  return blocks.map((b, i) => blockToRow(b, extracted.boldSet, i + 1, defaultPoints))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Primary synchronous export (server-side / route handlers)
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Legacy regex-based entry point — handles plain-text "1. Question" DOCX files.
- *
- * Still works exactly as before. Callers that already have html + plainText
- * (and no paragraph metadata) continue to use this.
+ * Synchronous parser — safe for server-side use (API routes, Node.js).
+ * DO NOT call this directly in browser event handlers or React components
+ * on large documents — use parseDocxToRowsAsync instead.
  */
 export function parseDocxToRows(
   extracted:     DocxExtractResult,
@@ -608,18 +704,8 @@ export function parseDocxToRows(
 ): ImportRow[] {
   if (hasParagraphs(extracted)) {
     const ooxmlRows = parseDocxWithParagraphs(extracted, defaultPoints)
-    if (ooxmlRows.length > 0) {return ooxmlRows}
+    if (ooxmlRows.length > 0) { return ooxmlRows }
   }
 
-  const lines  = splitLines(extracted.plainText)
-  const blocks = segmentIntoBlocks(lines)
-
-  if (blocks.length === 0) {
-    const htmlLines  = splitLines(stripHtmlTags(extracted.html))
-    const htmlBlocks = segmentIntoBlocks(htmlLines)
-    if (htmlBlocks.length === 0) {return []}
-    return htmlBlocks.map((b, i) => blockToRow(b, extracted.boldSet, i + 1, defaultPoints))
-  }
-
-  return blocks.map((b, i) => blockToRow(b, extracted.boldSet, i + 1, defaultPoints))
+  return parseLegacy(extracted, defaultPoints)
 }

@@ -42,7 +42,7 @@ interface ImportModalProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function ImportModal({ q }: ImportModalProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   return (
     <AnimatePresence>
@@ -178,7 +178,7 @@ function FileTab({
   fileInputRef,
 }: {
   q: Q
-  fileInputRef: React.RefObject<HTMLInputElement>
+  fileInputRef: React.RefObject<HTMLInputElement | null>
 }) {
   return (
     <>
