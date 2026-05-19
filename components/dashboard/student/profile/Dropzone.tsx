@@ -34,7 +34,11 @@ export function Dropzone({ onFilesAccepted, disabled }: DropzoneProps) {
   const inputRef  = useRef<HTMLInputElement>(null)
   const [active, setActive] = useState(false)
 
-  const open = () => { if (!disabled) {inputRef.current?.click()} }
+  const open = useCallback(() => {
+    if (!disabled) {
+      inputRef.current?.click()
+    }
+  }, [disabled])
 
   const handleDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()

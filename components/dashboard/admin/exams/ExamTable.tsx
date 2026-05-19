@@ -101,6 +101,11 @@ function ExamRow({ exam, onEdit, onDeleteClick }: ExamRowProps) {
         {exam.is_published
           ? <span className={s.badgePublished}><CheckCircle size={11} /> Published</span>
           : <span className={s.badgeDraft}><XCircle size={11} /> Draft</span>}
+        {!exam.is_published && exam.approval_status && exam.approval_status !== 'draft' && (
+          <div style={{ marginTop: 6 }}>
+            <span className={s.categoryBadge}>Approval: {exam.approval_status.replace(/_/g, ' ')}</span>
+          </div>
+        )}
       </td>
       <td>
         <div className={s.actions}>

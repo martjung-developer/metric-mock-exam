@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient }     from '@/lib/supabase/client'
+import { useUser } from '@/lib/context/AuthContext'
 import type { QuestionType, QuestionOption } from '@/lib/types/database'
 import type {
   DisplayQuestion,
@@ -129,6 +130,7 @@ export interface UseQuestionnairesReturn {
 
 export function useQuestionnaires(): UseQuestionnairesReturn {
   const supabase = useMemo(() => createClient(), [])
+  const { profile } = useUser()
 
   const [questions,  setQuestions]  = useState<DisplayQuestion[]>([])
   const [exams,      setExams]      = useState<ExamOption[]>([])
@@ -190,6 +192,27 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
   }, [supabase])
 
   useEffect(() => { void fetchAll() }, [fetchAll])
+  useEffect(() => {
+    if (profile?.role !== 'faculty') {
+      return
+    }
+    const es = new EventSource('/api/admin/approvals/stream')
+    es.addEventListener('approval', (evt) => {
+      const e = evt as MessageEvent<string>
+      try {
+        const payload = JSON.parse(e.data) as { entityType?: string; status?: string }
+        if (payload.entityType === 'exam' && (payload.status === 'published' || payload.status === 'rejected')) {
+          setError(payload.status === 'published' ? 'One of your exam submissions was approved and published.' : 'One of your exam submissions was rejected. Check review notes.')
+          void fetchAll(true)
+        }
+      } catch {
+        // ignore malformed events
+      }
+    })
+    return () => {
+      es.close()
+    }
+  }, [profile?.role, fetchAll])
 
   const handleRefresh = useCallback(() => { void fetchAll(true) }, [fetchAll])
 
@@ -527,6 +550,22 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
       })
 
       await bulkInsertQuestions(supabase, payloads)
+      if (profile?.role === 'faculty') {
+        const submitRes = await fetch('/api/admin/approvals/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entityType: 'exam', entityId: importExamId }),
+        })
+        let submitJson: { error?: string } | null = null
+        try {
+          submitJson = await submitRes.json() as { error?: string }
+        } catch {
+          submitJson = null
+        }
+        if (!submitRes.ok) {
+          throw new Error(submitJson?.error ?? 'Questions imported, but submission for approval failed.')
+        }
+      }
       setImportDone(true)
       setImportCounts({
         inserted: validRows.length,

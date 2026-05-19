@@ -14,6 +14,46 @@ import type {
 
 type AppClient = SupabaseClient<Database>
 
+interface ProgramScope {
+  schoolId: string | null
+  programId: string | null
+}
+
+async function getProgramScope(client: AppClient): Promise<ProgramScope> {
+  const { data: userRes } = await client.auth.getUser()
+  const userId = userRes.user?.id ?? null
+  if (!userId) {
+    return { schoolId: null, programId: null }
+  }
+
+  const { data: profile } = await client
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (profile?.role === 'faculty') {
+    const { data: facultyRow } = await client
+      .from('faculty')
+      .select('school_id, program_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    return {
+      schoolId: facultyRow?.school_id ?? null,
+      programId: facultyRow?.program_id ?? null,
+    }
+  }
+
+  const { data: adminRow } = await client
+    .from('admins')
+    .select('school_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  return { schoolId: adminRow?.school_id ?? null, programId: null }
+}
+
 /**
  * Fetches all programs ordered by code ascending.
  * Returns only the columns needed by the students page.
@@ -21,10 +61,19 @@ type AppClient = SupabaseClient<Database>
 export async function getPrograms(
   client: AppClient,
 ): Promise<FetchProgramsResult> {
-  const { data, error } = await client
+  const scope = await getProgramScope(client)
+  let query = client
     .from('programs')
     .select('id, code, name')
-    .order('code', { ascending: true })
+
+  if (scope.schoolId) {
+    query = query.eq('school_id', scope.schoolId)
+  }
+  if (scope.programId) {
+    query = query.eq('id', scope.programId)
+  }
+
+  const { data, error } = await query.order('code', { ascending: true })
 
   if (error) {
     return { programs: [], error: error.message }

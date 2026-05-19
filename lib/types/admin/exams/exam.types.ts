@@ -44,6 +44,7 @@ export interface RawExamRow {
   total_points:     number
   passing_score:    number
   is_published:     boolean
+  approval_status:  string | null
   exam_type:        string | null
   created_at:       string
   exam_categories:  RawCategoryJoin
@@ -62,6 +63,7 @@ export interface Exam {
   total_points:     number
   passing_score:    number
   is_published:     boolean
+  approval_status:  string | null
   question_count:   number
   assigned_count:   number
   created_at:       string

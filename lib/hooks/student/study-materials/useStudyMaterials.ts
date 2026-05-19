@@ -172,6 +172,7 @@ const recordViewed = useCallback((materialId: string) => {
   useEffect(() => {
     if (!user || hasFetched.current) {return}
     hasFetched.current = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh()
   }, [user, refresh])
 
@@ -185,7 +186,6 @@ const recordViewed = useCallback((materialId: string) => {
     if (prevProgramId.current !== programId) {
       prevProgramId.current = programId
       hasFetched.current    = false
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       refresh()
     }
   }, [programId, refresh])
@@ -195,7 +195,6 @@ const recordViewed = useCallback((materialId: string) => {
     if (!user) {return}
     const channel = subscribeToStudyMaterials(supabase, () => {
       hasFetched.current = false
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       refresh()
     })
     return () => { supabase.removeChannel(channel) }

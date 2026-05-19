@@ -54,9 +54,9 @@ export function RoleSelectBackground() {
 
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas) { return }
     const ctx = canvas.getContext('2d')
-    if (!ctx)  return
+    if (!ctx)  { return }
 
     // ── Sizing ───────────────────────────────────────────────────────────────
     let W = 0, H = 0
@@ -64,8 +64,8 @@ export function RoleSelectBackground() {
     function resize() {
       W = window.innerWidth
       H = window.innerHeight
-      canvas!.width  = W
-      canvas!.height = H
+      canvas.width  = W
+      canvas.height = H
     }
     resize()
     window.addEventListener('resize', resize)
@@ -88,7 +88,7 @@ export function RoleSelectBackground() {
     function makeArc(): Arc {
       const a = Math.floor(Math.random() * ANCHOR_COUNT)
       let   b = Math.floor(Math.random() * ANCHOR_COUNT)
-      while (b === a) b = Math.floor(Math.random() * ANCHOR_COUNT)
+      while (b === a) { b = Math.floor(Math.random() * ANCHOR_COUNT) }
 
       const mx   = (anchors[a].x + anchors[b].x) / 2
       const my   = (anchors[a].y + anchors[b].y) / 2
@@ -122,8 +122,8 @@ export function RoleSelectBackground() {
       t  += 1
 
       // ── Background ──────────────────────────────────────────────────────────
-      ctx!.fillStyle = '#f8fafc'
-      ctx!.fillRect(0, 0, W, H)
+      ctx.fillStyle = '#f8fafc'
+      ctx.fillRect(0, 0, W, H)
 
       // ── Layer 1: Dot grid ──────────────────────────────────────────────────
       // Grid origin is centred so dots are always symmetrical
@@ -142,10 +142,10 @@ export function RoleSelectBackground() {
           const alpha  = DOT_BASE_A + (wave * 0.5 + 0.5) * (DOT_PEAK_A - DOT_BASE_A)
           const radius = DOT_R + (wave * 0.5 + 0.5) * 0.55
 
-          ctx!.beginPath()
-          ctx!.arc(gx, gy, radius, 0, Math.PI * 2)
-          ctx!.fillStyle = `rgba(28, 84, 164, ${alpha})`
-          ctx!.fill()
+          ctx.beginPath()
+          ctx.arc(gx, gy, radius, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(28, 84, 164, ${alpha})`
+          ctx.fill()
         }
       }
 
@@ -154,10 +154,10 @@ export function RoleSelectBackground() {
         an.x += an.vx + Math.sin(t * 0.005 + an.phase) * 0.15
         an.y += an.vy + Math.cos(t * 0.004 + an.phase) * 0.15
         // Wrap
-        if (an.x < -60)    an.x = W + 60
-        if (an.x > W + 60) an.x = -60
-        if (an.y < -60)    an.y = H + 60
-        if (an.y > H + 60) an.y = -60
+        if (an.x < -60) { an.x = W + 60 }
+        if (an.x > W + 60) { an.x = -60 }
+        if (an.y < -60) { an.y = H + 60 }
+        if (an.y > H + 60) { an.y = -60 }
       }
 
       // ── Layer 2: Arc lines ─────────────────────────────────────────────────
@@ -177,19 +177,19 @@ export function RoleSelectBackground() {
         const an    = anchors[arc.a]
         const bn    = anchors[arc.b]
 
-        ctx!.beginPath()
-        ctx!.moveTo(an.x, an.y)
-        ctx!.bezierCurveTo(arc.cp1x, arc.cp1y, arc.cp2x, arc.cp2y, bn.x, bn.y)
-        ctx!.strokeStyle = `rgba(48, 133, 216, ${alpha})`
-        ctx!.lineWidth   = 1
-        ctx!.stroke()
+        ctx.beginPath()
+        ctx.moveTo(an.x, an.y)
+        ctx.bezierCurveTo(arc.cp1x, arc.cp1y, arc.cp2x, arc.cp2y, bn.x, bn.y)
+        ctx.strokeStyle = `rgba(48, 133, 216, ${alpha})`
+        ctx.lineWidth   = 1
+        ctx.stroke()
 
         // Small dot at each anchor end
         for (const pt of [an, bn]) {
-          ctx!.beginPath()
-          ctx!.arc(pt.x, pt.y, 2.2, 0, Math.PI * 2)
-          ctx!.fillStyle = `rgba(28, 84, 164, ${alpha * 1.8})`
-          ctx!.fill()
+          ctx.beginPath()
+          ctx.arc(pt.x, pt.y, 2.2, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(28, 84, 164, ${alpha * 1.8})`
+          ctx.fill()
         }
       }
     }

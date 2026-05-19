@@ -14,6 +14,8 @@ import { Bell, Search }      from 'lucide-react'
 import { createClient }      from '@/lib/supabase/client'
 import { useUnreadCount }    from '@/lib/hooks/notifications/useUnreadCount'
 import { useRealtimeProfile } from '@/lib/hooks/shared/useRealtimeProfile'
+import { useRealtimeNotificationAlerts } from '@/lib/hooks/notifications/useRealtimeNotificationAlerts'
+import ThemeToggleButton from '@/components/shared/dashboard/ThemeToggleButton'
 import type { Profile }      from '@/lib/types/auth'
 import styles                from './StudentTopbar.module.css'
 
@@ -24,7 +26,6 @@ interface Props {
 
 export default function StudentTopbar({ profile, userId }: Props) {
   const supabase = useMemo(() => createClient(), [])
-
   // Start with whatever the server-rendered profile has; realtime will update.
   const [avatarUrl,   setAvatarUrl]   = useState<string | null>(profile.avatar_url ?? null)
   const [displayName, setDisplayName] = useState<string>(profile.full_name ?? 'Student')
@@ -40,6 +41,7 @@ export default function StudentTopbar({ profile, userId }: Props) {
   })
 
   const unreadCount = useUnreadCount(userId)
+  useRealtimeNotificationAlerts(userId)
 
   const initials = displayName
     .split(' ')
@@ -48,7 +50,6 @@ export default function StudentTopbar({ profile, userId }: Props) {
     .slice(0, 2)
     .join('')
     .toUpperCase() || 'S'
-
   return (
     <header className={styles.topbar}>
 
@@ -65,6 +66,7 @@ export default function StudentTopbar({ profile, userId }: Props) {
 
       {/* Right */}
       <div className={styles.right}>
+        <ThemeToggleButton className={styles.refreshBtn} />
 
         <Link
           href="/student/notifications"

@@ -1,7 +1,7 @@
 // app/(dashboard)/admin/dashboard/page.tsx
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -10,6 +10,7 @@ import {
   Activity, UserCheck, Award,
   Upload, Send,
   AlertCircle, ChevronRight,
+  RefreshCw,
 } from "lucide-react";
 import { useUser } from "@/lib/context/AuthContext";
 import { useAdminDashboard } from "@/lib/hooks/admin/dashboard/useAdminDashboard";
@@ -42,6 +43,7 @@ function Skeleton({ w = "100%", h = 13 }: { w?: string; h?: number }) {
 
 export default function AdminDashboardPage() {
   const router                        = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
   const { user, profile, loading: authLoading} = useUser();
 
   // ── Role guard ─────────────────────────────────────────────────────────────
@@ -66,6 +68,15 @@ export default function AdminDashboardPage() {
     loading,
     mounted,
   } = useAdminDashboard(user);
+
+  async function handleRefresh() {
+    if (refreshing) {
+      return;
+    }
+    setRefreshing(true);
+    router.refresh();
+    setTimeout(() => setRefreshing(false), 500);
+  }
 
   // ── Auth-loading fallback ──────────────────────────────────────────────────
   if (authLoading) {
@@ -148,6 +159,15 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={styles.btnSecondary}
+            onClick={() => { void handleRefresh(); }}
+            disabled={refreshing}
+            aria-label="Refresh dashboard data"
+          >
+            <RefreshCw size={13} className={refreshing ? styles.spinning : ''} /> Refresh
+          </button>
           <Link href="/admin/exams"        className={styles.btnSecondary}>
             <PenLine size={13} /> Grade Submissions
           </Link>

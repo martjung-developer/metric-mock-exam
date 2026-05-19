@@ -11,10 +11,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Image                   from 'next/image'
 import Link                    from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Search, Bell, Settings, ChevronDown, GraduationCap } from 'lucide-react'
 import { createClient }        from '@/lib/supabase/client'
 import { useUnreadCount }      from '@/lib/hooks/notifications/useUnreadCount'
 import { useRealtimeProfile }  from '@/lib/hooks/shared/useRealtimeProfile'
+import { useRealtimeNotificationAlerts } from '@/lib/hooks/notifications/useRealtimeNotificationAlerts'
+import ThemeToggleButton from '@/components/shared/dashboard/ThemeToggleButton'
 import styles                  from './AdminTopbar.module.css'
 
 type ProfileRow = {
@@ -34,11 +37,11 @@ function getInitials(name: string | null): string {
 
 export default function AdminTopbar() {
   const supabase = useMemo(() => createClient(), [])
-
   const [facultyName, setFacultyName] = useState<string | null>(null)
   const [avatarUrl,   setAvatarUrl]   = useState<string | null>(null)
   const [userId,      setUserId]      = useState<string | null>(null)
   const [search,      setSearch]      = useState('')
+    const pathname = usePathname()
 
   // ── Resolve current user + profile ───────────────────────────────────────
   useEffect(() => {
@@ -72,7 +75,12 @@ export default function AdminTopbar() {
   })
 
   const unreadCount = useUnreadCount(userId)
+  useRealtimeNotificationAlerts(userId)
   const initials    = getInitials(facultyName)
+  const inFaculty = pathname.startsWith('/faculty')
+  const notificationHref = inFaculty ? '/faculty/notifications' : '/admin/notifications'
+  const settingsHref = inFaculty ? '/faculty/settings' : '/admin/settings'
+  const roleLabel = inFaculty ? 'Faculty' : 'Admin'
 
   return (
     <header className={styles.topbar}>
@@ -96,11 +104,13 @@ export default function AdminTopbar() {
 
         <span className={styles.rolePill}>
           <GraduationCap size={11} />
-          Faculty
+          {roleLabel}
         </span>
 
+        <ThemeToggleButton className={styles.iconBtn} />
+
         <Link
-          href="/admin/notifications"
+          href={notificationHref}
           prefetch={false}
           className={styles.iconBtn}
           title={unreadCount > 0 ? `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` : 'Notifications'}
@@ -114,7 +124,7 @@ export default function AdminTopbar() {
           )}
         </Link>
 
-        <Link href="/admin/settings" prefetch={false} className={styles.iconBtn} title="Settings">
+        <Link href={settingsHref} prefetch={false} className={styles.iconBtn} title="Settings">
           <Settings size={15} />
         </Link>
 

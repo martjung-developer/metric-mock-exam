@@ -21,6 +21,8 @@ type TypedClient = SupabaseClient<Database>
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+type ApprovalTableName = 'exams' | 'questions' | 'question_banks'
+
 function assertNever(x: never): never {
   throw new Error(`Unhandled case: ${String(x)}`)
 }
@@ -58,7 +60,7 @@ export async function submitForReview(
   const now   = new Date().toISOString()
 
   // Ownership check
-  const { data: row, error: fetchErr } = await (client as any)
+  const { data: row, error: fetchErr } = await client
     .from(table)
     .select('submitted_by, approval_status')
     .eq('id', entityId)
@@ -73,17 +75,34 @@ export async function submitForReview(
   if (row.submitted_by !== null && row.submitted_by !== actorId) {
     throw new Error('You do not own this content.')
   }
-  if (row.approval_status !== 'draft' && row.approval_status !== 'rejected') {
+  if (
+    row.approval_status !== 'draft' &&
+    row.approval_status !== 'rejected' &&
+    row.approval_status !== 'approved' &&
+    row.approval_status !== 'published'
+  ) {
     throw new Error(`Cannot submit content in '${row.approval_status}' state.`)
+  }
+
+  const updatePayload: {
+    approval_status: 'pending_review'
+    submitted_by: string
+    submitted_at: string
+    is_published?: boolean
+    published_at?: null
+  } = {
+    approval_status: 'pending_review',
+    submitted_by: actorId,
+    submitted_at: now,
+  }
+  if (entityType === 'exam' && row.approval_status === 'published') {
+    updatePayload.is_published = false
+    updatePayload.published_at = null
   }
 
   const { error: updateErr } = await client
     .from(table)
-    .update({
-      approval_status: 'pending_review',
-      submitted_by:    actorId,
-      submitted_at:    now,
-    } as never)
+    .update(updatePayload as never)
     .eq('id', entityId)
 
   if (updateErr !== null) {
@@ -112,7 +131,7 @@ export async function reviewAction(
   const toStatus = actionToStatus(action)
   const now      = new Date().toISOString()
 
-  const { data: row, error: fetchErr } = await (client as any)
+  const { data: row, error: fetchErr } = await client
     .from(table)
     .select('approval_status')
     .eq('id', entityId)
@@ -144,7 +163,7 @@ export async function reviewAction(
     updates['is_published']  = true   // keep existing exams.is_published in sync
   }
 
-  const { error: updateErr } = await (client as any)
+  const { error: updateErr } = await client
     .from(table)
     .update(updates as never)
     .eq('id', entityId)
@@ -172,7 +191,7 @@ export async function fetchPendingReviewItems(
   client: TypedClient,
 ): Promise<PendingReviewItem[]> {
   const [examsRes, banksRes] = await Promise.all([
-    (client as any)
+    client
       .from('exams')
       .select(`
         id, title, submitted_by, submitted_at, review_notes, approval_status,
@@ -188,7 +207,7 @@ export async function fetchPendingReviewItems(
         }> | null
         error: unknown
       },
-    (client as any)
+    client
       .from('question_banks')
       .select(`
         id, title, submitted_by, submitted_at, review_notes, approval_status,
@@ -251,7 +270,7 @@ export async function fetchFacultySubmissionSummary(
   client:   TypedClient,
   facultyId: string,
 ): Promise<FacultySubmissionSummary> {
-  const { data, error } = await (client as any)
+  const { data, error } = await client
     .from('exams')
     .select('approval_status')
     .eq('submitted_by', facultyId) as {
@@ -281,7 +300,7 @@ export async function fetchApprovalHistory(
   entityType: ApprovalEntityType,
   entityId:   string,
 ): Promise<ApprovalEvent[]> {
-  const { data, error } = await (client as any)
+  const { data, error } = await client
     .from('approval_events')
     .select('*, profiles ( full_name )')
     .eq('entity_type', entityType)
@@ -322,7 +341,7 @@ export async function fetchFacultyQuestionBanks(
   client:    TypedClient,
   facultyId: string,
 ): Promise<QuestionBank[]> {
-  const { data, error } = await (client as any)
+  const { data, error } = await client
     .from('question_banks')
     .select(`
       *,
@@ -376,7 +395,7 @@ export async function fetchFacultyQuestionBanks(
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-function entityTypeToTable(type: ApprovalEntityType): string {
+function entityTypeToTable(type: ApprovalEntityType): ApprovalTableName {
   switch (type) {
     case 'exam':          return 'exams'
     case 'question':      return 'questions'
@@ -413,7 +432,7 @@ async function logApprovalEvent(
   },
 ): Promise<void> {
   // Best-effort — don't throw if logging fails
-  await (client as any).from('approval_events').insert({
+  await client.from('approval_events').insert({
     entity_type:  event.entity_type,
     entity_id:    event.entity_id,
     from_status:  event.from_status ?? null,

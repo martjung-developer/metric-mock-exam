@@ -8,9 +8,9 @@
 
 'use client'
 
-import { useState }    from 'react'
+import { useEffect, useState }    from 'react'
 import { motion }      from 'framer-motion'
-import { Pencil }      from 'lucide-react'
+import { Pencil, RefreshCw }      from 'lucide-react'
 import { useProfile }  from '@/lib/hooks/student/profile/useProfile'
 import { getInitials } from '@/lib/utils/student/profile/profile'
 import { pageVariants, staggerContainer, fadeUp } from '@/animations/profile/profile'
@@ -61,17 +61,35 @@ export default function ProfilePage() {
     liveAvatarUrl, setLiveAvatarUrl,
     loading, error,
     authLoading, authError,
+    refetch,
   } = useProfile()
 
   // ── Edit modal state ───────────────────────────────────────────────────────
   const [editOpen, setEditOpen] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   // Optimistically update display name after modal saves
   const [liveDisplayName, setLiveDisplayName] = useState<string | null>(null)
 
   // ── Progress bar animation ─────────────────────────────────────────────────
   const [animate, setAnimate] = useState(false)
-  if (!animate && !loading && !authLoading && submissions.length > 0) {
-    setTimeout(() => setAnimate(true), 420)
+  useEffect(() => {
+    if (loading || authLoading || submissions.length === 0) {
+      return
+    }
+    const timer = window.setTimeout(() => setAnimate(true), 420)
+    return () => window.clearTimeout(timer)
+  }, [authLoading, loading, submissions.length])
+
+  async function handleRefresh() {
+    if (refreshing) {
+      return
+    }
+    setRefreshing(true)
+    try {
+      await refetch()
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   // ── Guards ─────────────────────────────────────────────────────────────────
@@ -85,7 +103,7 @@ export default function ProfilePage() {
           <button
             className={styles.editBtn}
             style={{ marginTop: '1rem' }}
-            onClick={() => window.location.reload()}
+            onClick={() => { void refetch() }}
           >
             Retry
           </button>
@@ -112,9 +130,14 @@ export default function ProfilePage() {
             <h1 className={styles.title}>My Profile</h1>
             <p className={styles.subtitle}>Your personal information and exam performance summary.</p>
           </div>
-          <button className={styles.editBtn} onClick={() => setEditOpen(true)}>
-            <Pencil size={14} /> Edit Profile
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className={styles.editBtn} onClick={handleRefresh} disabled={refreshing}>
+              <RefreshCw size={14} className={refreshing ? styles.spinning : ''} /> Refresh
+            </button>
+            <button className={styles.editBtn} onClick={() => setEditOpen(true)}>
+              <Pencil size={14} /> Edit Profile
+            </button>
+          </div>
         </motion.div>
 
         {/* Hero */}

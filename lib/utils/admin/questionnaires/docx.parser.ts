@@ -1,5 +1,6 @@
 // lib/utils/admin/questionnaires/docx.parser.ts
 
+import mammoth                       from 'mammoth'
 import type { DocxExtractResult } from './docx.extractor'
 import type { ImportRow }         from '@/lib/types/admin/questionnaires/questionnaires-types'
 import type { QuestionType }      from '@/lib/types/database'
@@ -16,6 +17,20 @@ export interface DocxParagraph {
 
 export interface DocxExtractResultWithParagraphs extends DocxExtractResult {
   paragraphs: DocxParagraph[]
+}
+
+export async function extractHtml(buffer: Buffer): Promise<string> {
+  const result = await mammoth.convertToHtml({ buffer })
+  return result.value
+}
+
+export async function extractRawText(buffer: Buffer): Promise<string> {
+  const result = await mammoth.extractRawText({ buffer })
+  return result.value
+}
+
+export function parseQuestionsFromHtml(html: string): string {
+  return stripHtmlTags(html)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,7 +67,7 @@ export function collectParagraphs(doc: MammothElement): DocxParagraph[] {
   function walk(el: MammothElement): void {
     if (el.type === 'paragraph') {
       result.push({
-        level:    el.numbering != null ? parseInt(el.numbering.level, 10) : null,
+        level:    el.numbering !== null && el.numbering !== undefined ? parseInt(el.numbering.level, 10) : null,
         boldText: mammothGetBoldText(el).trim(),
         text:     mammothGetText(el).trim(),
       })
@@ -467,6 +482,8 @@ const RE_BLANK          = /_{2,}|\[_{2,}\]/
 const RE_INLINE_ANS     = /[(\[]([\w\s,'-]{1,80})[)\]]/
 const RE_EXPLANATION    = /^(?:explanation|rationale|reason)[:\s]+(.+)/i
 const RE_SCENARIO       = /^(?:refer\s+to|read\s+the\s+following|passage|case\s+study|scenario)[:\s]/i
+const RE_INLINE_CHOICES = /(?:^|\s)([A-Ea-e])[.)]\s*([^]+?)(?=(?:\s+[A-Ea-e][.)]\s*)|$)/g
+const RE_QUESTION_NUMBER_ONLY = /^\d{1,3}[.)]\s*/
 
 interface ParsedBlock {
   questionText:  string
@@ -682,8 +699,16 @@ function parseLegacy(extracted: DocxExtractResult, defaultPoints: number): Impor
   if (blocks.length === 0) {
     const htmlLines  = splitLines(stripHtmlTags(extracted.html))
     const htmlBlocks = segmentIntoBlocks(htmlLines)
-    if (htmlBlocks.length === 0) { return [] }
-    return htmlBlocks.map((b, i) => blockToRow(b, extracted.boldSet, i + 1, defaultPoints))
+    if (htmlBlocks.length > 0) {
+      return htmlBlocks.map((b, i) => blockToRow(b, extracted.boldSet, i + 1, defaultPoints))
+    }
+
+    // Fallback for scenario-style MCQ docs that omit explicit numbering.
+    const scenarioRows = parseScenarioMcqLines(htmlLines.length > 0 ? htmlLines : lines, extracted.boldSet, defaultPoints)
+    if (scenarioRows.length > 0) {
+      return scenarioRows
+    }
+    return []
   }
 
   return blocks.map((b, i) => blockToRow(b, extracted.boldSet, i + 1, defaultPoints))
@@ -708,4 +733,150 @@ export function parseDocxToRows(
   }
 
   return parseLegacy(extracted, defaultPoints)
+}
+
+function parseScenarioMcqLines(
+  lines: readonly string[],
+  boldSet: ReadonlySet<string>,
+  defaultPoints: number,
+): ImportRow[] {
+  const rows: ImportRow[] = []
+  const normalizedBold = new Set<string>(Array.from(boldSet, normalise))
+  let i = 0
+  let pendingScenario = ''
+
+  const isLikelyQuestion = (line: string): boolean => {
+    if (line.length < 10) { return false }
+    if (/\?\s*$/.test(line)) { return true }
+    return RE_QUESTION_NUMBER_ONLY.test(line) && line.length > 20
+  }
+
+  const isLikelyChoice = (line: string): boolean => {
+    if (line.length === 0) { return false }
+    if (isLikelyQuestion(line)) { return false }
+    if (RE_ANSWER_LINE.test(line) || RE_EXPLANATION.test(line)) { return false }
+    return RE_LEADING_CHOICE_LABEL.test(line) || /^[A-Ea-e][.)]\s*/.test(line) || line.length <= 220
+  }
+
+  const splitInlineChoices = (line: string): Array<{ label: string; text: string }> => {
+    const out: Array<{ label: string; text: string }> = []
+    const matches = Array.from(line.matchAll(RE_INLINE_CHOICES))
+    for (const m of matches) {
+      const label = (m[1] ?? '').toUpperCase()
+      const text = (m[2] ?? '').trim()
+      if (label && text) {
+        out.push({ label, text })
+      }
+    }
+    return out
+  }
+
+  while (i < lines.length) {
+    const current = lines[i]?.trim() ?? ''
+    if (!current) { i++; continue }
+
+    if (!isLikelyQuestion(current)) {
+      if (!isLikelyChoice(current)) {
+        pendingScenario += `${pendingScenario ? ' ' : ''}${current}`
+      }
+      i++
+      continue
+    }
+
+    const stem = current.replace(RE_QUESTION_NUMBER_ONLY, '').trim()
+    const scenario = pendingScenario
+    pendingScenario = ''
+    i++
+
+    const collected: string[] = []
+    while (i < lines.length) {
+      const next = lines[i]?.trim() ?? ''
+      if (!next) { i++; continue }
+      if (isLikelyQuestion(next)) { break }
+      if (!isLikelyChoice(next)) {
+        pendingScenario += `${pendingScenario ? ' ' : ''}${next}`
+        i++
+        continue
+      }
+      collected.push(next)
+      i++
+      if (collected.length >= 8) { break }
+    }
+
+    if (collected.length < 2) { continue }
+
+    const choices: Array<{ label: string; text: string; isBold: boolean }> = []
+    const labels = ['A', 'B', 'C', 'D', 'E']
+
+    for (const line of collected) {
+      const inline = splitInlineChoices(line)
+      if (inline.length > 0) {
+        for (const c of inline) {
+          const n = normalise(c.text)
+          choices.push({ label: c.label, text: c.text, isBold: normalizedBold.has(n) })
+        }
+        continue
+      }
+
+      const m = RE_LEADING_CHOICE_LABEL.exec(line)
+      if (m !== null) {
+        const label = (m[1] ?? '').toUpperCase()
+        const text = line.replace(RE_LEADING_CHOICE_LABEL, '').trim()
+        const n = normalise(text)
+        choices.push({ label, text, isBold: normalizedBold.has(n) })
+        continue
+      }
+
+      const text = line.trim()
+      const idx = choices.length
+      const label = labels[idx] ?? 'E'
+      const n = normalise(text)
+      choices.push({ label, text, isBold: normalizedBold.has(n) })
+    }
+
+    if (choices.length < 2) { continue }
+
+    let correct = ''
+    const boldChoice = choices.find((c) => c.isBold)
+    if (boldChoice) {
+      correct = boldChoice.label
+    }
+
+    const choiceMap: Record<string, string> = {}
+    for (const c of choices.slice(0, 5)) {
+      choiceMap[c.label] = c.text
+    }
+
+    const parsedForValidation: ParsedBlock = {
+      questionText: stem,
+      questionType: 'multiple_choice',
+      choices: choices.map((c) => ({ label: c.label, text: c.text })),
+      correctAnswer: correct,
+      explanation: '',
+      scenario,
+      choiceTexts: new Map<string, string>(),
+    }
+
+    const errors = validateLegacyRow(parsedForValidation, correct)
+    rows.push({
+      _rowIndex: rows.length + 1,
+      _valid: errors.length === 0,
+      _errors: errors,
+      question_text: stem,
+      question_type: 'multiple_choice',
+      correct_answer: correct,
+      option_a: choiceMap['A'] ?? '',
+      option_b: choiceMap['B'] ?? '',
+      option_c: choiceMap['C'] ?? '',
+      option_d: choiceMap['D'] ?? '',
+      explanation: '',
+      scenario,
+      difficulty: 'medium',
+      points: defaultPoints,
+      exam_id: '',
+      program_id: '',
+    } satisfies ImportRow)
+  }
+
+  return rows
 }

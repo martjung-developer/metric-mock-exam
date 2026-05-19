@@ -1,4 +1,3 @@
-// libs/docs/veripraxis.sql
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
@@ -49,6 +48,18 @@ CREATE TABLE public.answers (
   CONSTRAINT answers_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.questions(id),
   CONSTRAINT answers_graded_by_fkey FOREIGN KEY (graded_by) REFERENCES public.profiles(id)
 );
+CREATE TABLE public.approval_events (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  entity_type text NOT NULL CHECK (entity_type = ANY (ARRAY['exam'::text, 'question'::text, 'question_bank'::text])),
+  entity_id uuid NOT NULL,
+  from_status USER-DEFINED,
+  to_status USER-DEFINED NOT NULL,
+  actor_id uuid NOT NULL,
+  notes text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT approval_events_pkey PRIMARY KEY (id),
+  CONSTRAINT approval_events_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.profiles(id)
+);
 CREATE TABLE public.exam_assignments (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   exam_id uuid,
@@ -90,10 +101,20 @@ CREATE TABLE public.exams (
   allowed_programs ARRAY,
   allowed_year_levels ARRAY,
   program text,
+  approval_status USER-DEFINED NOT NULL DEFAULT 'draft'::approval_status,
+  submitted_by uuid,
+  submitted_at timestamp with time zone,
+  approved_by uuid,
+  approved_at timestamp with time zone,
+  review_notes text,
+  rejected_at timestamp with time zone,
+  published_at timestamp with time zone,
   CONSTRAINT exams_pkey PRIMARY KEY (id),
   CONSTRAINT exams_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.exam_categories(id),
   CONSTRAINT exams_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id),
-  CONSTRAINT exams_program_id_fkey FOREIGN KEY (program_id) REFERENCES public.programs(id)
+  CONSTRAINT exams_program_id_fkey FOREIGN KEY (program_id) REFERENCES public.programs(id),
+  CONSTRAINT exams_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES public.profiles(id),
+  CONSTRAINT exams_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.faculty (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -183,6 +204,28 @@ CREATE TABLE public.programs (
   CONSTRAINT programs_pkey PRIMARY KEY (id),
   CONSTRAINT programs_school_id_fkey FOREIGN KEY (school_id) REFERENCES public.schools(id)
 );
+CREATE TABLE public.question_banks (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  program_id uuid,
+  exam_id uuid,
+  approval_status USER-DEFINED NOT NULL DEFAULT 'draft'::approval_status,
+  submitted_by uuid,
+  submitted_at timestamp with time zone,
+  approved_by uuid,
+  approved_at timestamp with time zone,
+  rejected_at timestamp with time zone,
+  published_at timestamp with time zone,
+  review_notes text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT question_banks_pkey PRIMARY KEY (id),
+  CONSTRAINT question_banks_program_id_fkey FOREIGN KEY (program_id) REFERENCES public.programs(id),
+  CONSTRAINT question_banks_exam_id_fkey FOREIGN KEY (exam_id) REFERENCES public.exams(id),
+  CONSTRAINT question_banks_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES public.profiles(id),
+  CONSTRAINT question_banks_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.profiles(id)
+);
 CREATE TABLE public.questions (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   exam_id uuid,
@@ -196,9 +239,19 @@ CREATE TABLE public.questions (
   created_by uuid,
   created_at timestamp with time zone DEFAULT now(),
   scenario text,
+  approval_status USER-DEFINED NOT NULL DEFAULT 'draft'::approval_status,
+  submitted_by uuid,
+  submitted_at timestamp with time zone,
+  approved_by uuid,
+  approved_at timestamp with time zone,
+  review_notes text,
+  question_bank_id uuid,
   CONSTRAINT questions_pkey PRIMARY KEY (id),
   CONSTRAINT questions_exam_id_fkey FOREIGN KEY (exam_id) REFERENCES public.exams(id),
-  CONSTRAINT questions_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id)
+  CONSTRAINT questions_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id),
+  CONSTRAINT questions_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES public.profiles(id),
+  CONSTRAINT questions_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.profiles(id),
+  CONSTRAINT questions_question_bank_id_fkey FOREIGN KEY (question_bank_id) REFERENCES public.question_banks(id)
 );
 CREATE TABLE public.schools (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -299,6 +352,13 @@ CREATE TABLE public.users (
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
+
+
+
+
+
+
+
 
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.

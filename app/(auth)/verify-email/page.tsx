@@ -33,7 +33,6 @@ export default function VerifyEmailPage() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmail(saved)
     } else if (emailFromUrl) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmail(emailFromUrl)
       sessionStorage.setItem('verify_email', emailFromUrl)
     } else {

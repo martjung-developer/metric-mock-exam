@@ -39,6 +39,7 @@ export function useUpdateStudent(
   // Sync when initialForm resolves from the fetch hook
   // (initialForm starts null while loading)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (initialForm !== null) {setForm(initialForm)}
   }, [initialForm])
 

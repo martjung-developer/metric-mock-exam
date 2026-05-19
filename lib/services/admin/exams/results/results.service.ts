@@ -103,10 +103,6 @@ export async function fetchResults(
 
   const rows = (subData ?? []) as FlatSubmissionRow[]
 
-  if (process.env.NODE_ENV === 'development') {
-    console.debug('[fetchResults] rows:', rows.length)
-  }
-
   if (rows.length === 0) {return { ok: true, results: [] }}
 
   const studentIds = [
@@ -301,10 +297,6 @@ export async function getExamResultsWithAttempts(
 
   // Sort by best score descending (mirrors ResultsTable ranking)
   histories.sort((a, b) => b.bestAttempt.percentage - a.bestAttempt.percentage)
-
-  if (process.env.NODE_ENV === 'development') {
-    console.debug('[getExamResultsWithAttempts] students:', histories.length)
-  }
 
   return { ok: true, histories }
 }

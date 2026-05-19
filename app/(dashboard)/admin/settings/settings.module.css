@@ -6,18 +6,18 @@
    DESIGN TOKENS (mirrors dashboard tokens)
 ═══════════════════════════════════════════ */
 :root {
-  --bg:           #f4f6f9;
-  --surface:      #ffffff;
-  --surface-soft: #f9fafc;
-  --surface-tint: #f0f3f8;
+  --bg:           var(--dashboard-bg);
+  --surface:      var(--dashboard-surface);
+  --surface-soft: var(--dashboard-surface-soft);
+  --surface-tint: var(--dashboard-input-bg);
 
-  --border:       #e4e9f0;
-  --border-soft:  #edf0f5;
-  --border-focus: #93b4d8;
+  --border:       var(--dashboard-border);
+  --border-soft:  var(--dashboard-border);
+  --border-focus: var(--dashboard-accent);
 
-  --text:         #0d1523;
-  --text-sub:     #4a5568;
-  --text-muted:   #8a9ab5;
+  --text:         var(--dashboard-text);
+  --text-sub:     var(--dashboard-text);
+  --text-muted:   var(--dashboard-muted);
 
   --primary:      #0d2540;
   --primary-dark: #1e3a5f;
@@ -911,4 +911,38 @@
   .avatarUploadRow { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
 
   .heroName { font-size: 1.1rem; }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+:global(html.dark) .page {
+  --bg: var(--dashboard-bg);
+  --surface: var(--dashboard-surface);
+  --surface-soft: var(--dashboard-surface-soft);
+  --surface-tint: var(--dashboard-input-bg);
+  --border: var(--dashboard-border);
+  --border-soft: var(--dashboard-border);
+  --text: var(--dashboard-text);
+  --text-sub: var(--dashboard-text);
+  --text-muted: var(--dashboard-muted);
+}
+
+:global(html.dark) .card,
+:global(html.dark) .nav,
+:global(html.dark) .dangerZone {
+  box-shadow: none;
+}
+
+:global(html.dark) .profileHero {
+  background: #15243b;
+}
+
+:global(html.dark) .toggle {
+  background: #334155;
+}
+
+:global(html.dark) .toggleOn {
+  background: #2563eb;
 }

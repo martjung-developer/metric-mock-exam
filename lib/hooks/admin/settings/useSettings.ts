@@ -11,9 +11,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter }           from 'next/navigation'
+import Swal from 'sweetalert2'
 import { useUser }             from '@/lib/context/AuthContext'
 import { createClient }        from '@/lib/supabase/client'
 import { useRealtimeProfile }  from '@/lib/hooks/shared/useRealtimeProfile'
+import { useTheme } from '@/lib/hooks/theme/useTheme'
 import {
   uploadAvatarFromDataUrl,
   deleteAvatar as sharedDeleteAvatar,
@@ -106,6 +108,7 @@ export interface UseSettingsReturn {
   toggleEmailNotif:      () => void
   handleSavePreferences: () => void
 
+  refreshData: () => Promise<void>
   handleLogout: () => Promise<void>
 }
 
@@ -117,6 +120,7 @@ export function useSettings(): UseSettingsReturn {
   const router   = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const { user, loading: authLoading } = useUser()
+  const { resolved, setMode } = useTheme()
 
   const [profile,   setProfile]   = useState<Profile | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -130,6 +134,17 @@ export function useSettings(): UseSettingsReturn {
   const showToast = useCallback((next: ToastState) => {
     if (toastTimerRef.current) {clearTimeout(toastTimerRef.current)}
     setToast(next)
+    void Swal.fire({
+      toast: true,
+      position: 'top-end',
+      timer: 2800,
+      timerProgressBar: true,
+      showConfirmButton: false,
+      icon: next.type,
+      title: next.message,
+      background: '#0f172a',
+      color: '#e2e8f0',
+    })
     toastTimerRef.current = setTimeout(() => setToast(null), 4000)
   }, [])
 
@@ -196,12 +211,20 @@ export function useSettings(): UseSettingsReturn {
   const toggleShowConfirm = useCallback(() => setShowConfirm((v) => !v), [])
 
   const [preferences, setPreferences] = useState<PreferencesState>({
-    darkMode:     false,
+    darkMode:     resolved === 'dark',
     notifEnabled: true,
     emailNotif:   true,
   })
 
-  const toggleDarkMode   = useCallback(() => setPreferences((p) => ({ ...p, darkMode:     !p.darkMode })), [])
+  useEffect(() => {
+    setPreferences((p) => ({ ...p, darkMode: resolved === 'dark' }))
+  }, [resolved])
+
+  const toggleDarkMode = useCallback(() => {
+    const nextDark = resolved !== 'dark'
+    setPreferences((p) => ({ ...p, darkMode: nextDark }))
+    setMode(nextDark ? 'dark' : 'light')
+  }, [resolved, setMode])
   const toggleNotif      = useCallback(() => setPreferences((p) => ({ ...p, notifEnabled: !p.notifEnabled })), [])
   const toggleEmailNotif = useCallback(() => setPreferences((p) => ({ ...p, emailNotif:   !p.emailNotif })), [])
 
@@ -240,21 +263,43 @@ export function useSettings(): UseSettingsReturn {
   }, [user, authLoading, router])
 
   // ── Fetch profile ─────────────────────────────────────────────────────────
+  const fetchProfile = useCallback(async (userId: string) => {
+    const { data, error } = await SettingsService.getProfile(userId)
+    if (!error && data) {
+      setProfile(data)
+      setFullName(data.full_name ?? '')
+      setAvatarUrl(data.avatar_url ?? null)
+      return true
+    }
+    return false
+  }, [])
+
   useEffect(() => {
     if (!user) {return}
     let cancelled = false
+    setLoading(true)
     void (async () => {
-      const { data, error } = await SettingsService.getProfile(user.id)
+      const ok = await fetchProfile(user.id)
       if (cancelled) {return}
-      if (!error && data) {
-        setProfile(data)
-        setFullName(data.full_name ?? '')
-        setAvatarUrl(data.avatar_url ?? null)
+      if (!ok) {
+        showToast({ type: 'error', message: 'Unable to load settings profile.' })
       }
       setLoading(false)
     })()
     return () => { cancelled = true }
-  }, [user])
+  }, [fetchProfile, showToast, user])
+
+  const refreshData = useCallback(async () => {
+    if (!user?.id) {return}
+    setLoading(true)
+    const ok = await fetchProfile(user.id)
+    setLoading(false)
+    if (!ok) {
+      showToast({ type: 'error', message: 'Failed to refresh settings data.' })
+      return
+    }
+    showToast({ type: 'success', message: 'Settings data refreshed.' })
+  }, [fetchProfile, showToast, user?.id])
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
@@ -352,6 +397,7 @@ export function useSettings(): UseSettingsReturn {
     toggleShowCurrent, toggleShowNew, toggleShowConfirm,
     resetPasswordForm, handleChangePassword,
     preferences, toggleDarkMode, toggleNotif, toggleEmailNotif, handleSavePreferences,
+    refreshData,
     handleLogout,
   }
 }

@@ -84,8 +84,10 @@ export interface PendingReviewItem {
   entityType:   ApprovalEntityType
   title:        string
   submittedBy:  string | null
+  submittedByName?: string | null
   submittedAt:  string | null
   programCode:  string | null
+  programName?: string | null
   status:       ApprovalStatus
   reviewNotes:  string | null
 }

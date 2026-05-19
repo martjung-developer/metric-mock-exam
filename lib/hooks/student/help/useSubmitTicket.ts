@@ -122,7 +122,7 @@ export function useSubmitTicket(userId: string | null): UseSubmitTicketReturn {
 
     const errors = validateTicketForm(form)
     setFormErrors(errors)
-    if (!isTicketFormValid(errors)) return
+    if (!isTicketFormValid(errors)) { return }
 
     setNotifying(true)
     setSubmitError(null)

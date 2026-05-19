@@ -11,7 +11,6 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/types/database'
 
@@ -63,7 +62,7 @@ export function useUnreadCount(userId: string | null): number {
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
         },
-        (_: RealtimePostgresChangesPayload<NotificationRow>) => {
+        () => {
           void fetchCount()
         }
       )

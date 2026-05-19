@@ -6,7 +6,7 @@ import {
   CheckCircle2, XCircle, BookOpen, RotateCcw, ArrowLeft,
   Save, Clock, Target, TrendingDown,
 } from 'lucide-react'
-import { useEffect, useCallback, useMemo } from 'react'
+import { useEffect, useCallback, useMemo, useState } from 'react'
 import type { UsePracticeExamReturn } from '@/lib/hooks/student/practice-exams/usePracticeExam'
 import { stripDiffTag } from '@/lib/utils/student/practice-exams/practiceExam.utils'
 import { formatSeconds } from '@/lib/utils/student/practice-exams/practiceExam.utils'
@@ -123,9 +123,13 @@ function CompletionScreen({ hook, onBack }: Props) {
 
   const gradable  = Object.values(feedbacks).filter(f => f.isCorrect !== null).length
   const accuracy  = gradable > 0 ? Math.round((correctCount / gradable) * 100) : null
+  const [nowTs, setNowTs] = useState(0)
+  useEffect(() => {
+    setNowTs(Date.now())
+  }, [startedAt])
   const timeSpent = useMemo(
-    () => (startedAt ? Math.floor((Date.now() - startedAt.getTime()) / 1000) : 0),
-    [startedAt],
+    () => (startedAt ? Math.floor((nowTs - startedAt.getTime()) / 1000) : 0),
+    [startedAt, nowTs],
   )
 
   return (

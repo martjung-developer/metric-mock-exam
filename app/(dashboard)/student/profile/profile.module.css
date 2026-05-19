@@ -608,3 +608,55 @@
   .statsGrid { grid-template-columns: repeat(2, 1fr); }
   .header    { flex-direction: column; align-items: flex-start; }
 }
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+:global(html.dark) .title,
+:global(html.dark) .heroName,
+:global(html.dark) .cardTitle,
+:global(html.dark) .infoValue,
+:global(html.dark) .tableHeadTitle,
+:global(html.dark) .statMiniValue {
+  color: #e6edf7;
+}
+
+:global(html.dark) .subtitle,
+:global(html.dark) .heroEmail,
+:global(html.dark) .infoLabel,
+:global(html.dark) .tableHeadHint,
+:global(html.dark) .statMiniLabel {
+  color: #9db0ca;
+}
+
+:global(html.dark) .heroCard,
+:global(html.dark) .card,
+:global(html.dark) .tableCard {
+  background: #111a2b;
+  border-color: #243247;
+  box-shadow: none;
+}
+
+:global(html.dark) .tableHead,
+:global(html.dark) .table th,
+:global(html.dark) .table tbody tr:hover td,
+:global(html.dark) .statMini,
+:global(html.dark) .progressTrack,
+:global(html.dark) .emptyIconWrap {
+  background: #172338;
+}
+
+:global(html.dark) .table td,
+:global(html.dark) .cardHead,
+:global(html.dark) .infoRow {
+  border-color: #1d293b;
+}
+
+:global(html.dark) .avatarFallback {
+  background: #1e3a5f;
+}

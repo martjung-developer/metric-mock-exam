@@ -54,6 +54,8 @@ export interface FacultyRow {
 export interface CreateFacultyPayload {
   fullName:   string
   email:      string
+  facultyId:  string
+  password:   string
   department: FacultyDepartment
   program:    FacultyProgram
   programId:  string          

@@ -10,6 +10,7 @@ import {
   FileText, ClipboardList, FolderOpen,
   Bell, BarChart2, Settings, LogOut, Menu, X,
   BookUser,
+  ClipboardCheck,
 } from 'lucide-react'
 import { createClient }   from '@/lib/supabase/client'
 import { signOut }        from '@/lib/auth/actions'
@@ -29,6 +30,7 @@ const NAV_SECTIONS = [
     items: [
       { key: 'dashboard',      icon: LayoutDashboard, label: 'Dashboard',       iconColor: '#3b82f6', iconBg: 'rgba(59,130,246,0.15)',  badge: false },
       { key: 'notifications',  icon: Bell,            label: 'Notifications',   iconColor: '#f59e0b', iconBg: 'rgba(245,158,11,0.15)',  badge: true  },
+      { key: 'approvals',      icon: ClipboardCheck,  label: 'Questionnaire Review',       iconColor: '#0ea5e9', iconBg: 'rgba(14,165,233,0.15)',  badge: true  },
     ],
   },
   {
@@ -80,6 +82,7 @@ export default function AdminSidebar({ role, collapsed, onCollapse }: AdminSideb
   const [adminEmail, setAdminEmail] = useState<string | null>(null)
   const [userId,     setUserId]     = useState<string | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [pendingApprovals, setPendingApprovals] = useState(0)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -104,6 +107,32 @@ export default function AdminSidebar({ role, collapsed, onCollapse }: AdminSideb
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (role !== 'admin') {
+      return
+    }
+    let cancelled = false
+    const load = async () => {
+      try {
+        const res = await fetch('/api/admin/approvals')
+        const json = (await res.json().catch(() => ({}))) as { items?: unknown[] }
+        if (!cancelled) {
+          setPendingApprovals(Array.isArray(json.items) ? json.items.length : 0)
+        }
+      } catch {
+        if (!cancelled) {
+          setPendingApprovals(0)
+        }
+      }
+    }
+    void load()
+    const t = setInterval(() => { void load() }, 10000)
+    return () => {
+      cancelled = true
+      clearInterval(t)
+    }
+  }, [role])
 
   const unreadCount = useUnreadCount(userId)
 
@@ -168,7 +197,9 @@ export default function AdminSidebar({ role, collapsed, onCollapse }: AdminSideb
                   pathname.startsWith(href))
 
               const badgeValue =
-                item.badge && unreadCount > 0 ? unreadCount : 0
+                item.key === 'approvals'
+                  ? pendingApprovals
+                  : item.badge && unreadCount > 0 ? unreadCount : 0
 
               return (
                 <Link

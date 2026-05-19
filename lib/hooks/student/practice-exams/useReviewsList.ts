@@ -67,6 +67,7 @@ export function useReviewsList(): UseReviewsListReturn {
   useEffect(() => {
     if (!user || !programReady) {return}
     const controller = new AbortController()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDataLoading(true)
     setDataError(null)
 
@@ -74,9 +75,7 @@ export function useReviewsList(): UseReviewsListReturn {
       ({ reviews, error }) => {
         if (controller.signal.aborted) {return}
         setAllReviews(reviews)
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setDataError(error)
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setDataLoading(false)
       },
     )

@@ -11,7 +11,7 @@
 //
 // WHY THIS EXISTS
 // ───────────────
-// mammoth.convertToHtml() and mammoth.convertToRaw() are synchronous CPU-heavy
+// mammoth.convertToHtml() and mammoth.extractRawText() are synchronous CPU-heavy
 // operations that parse the full OOXML ZIP in one shot.  Running them in the
 // browser blocks the main thread for 2–10 seconds on realistic exam files
 // (150+ questions), causing "page not responding" freezes.
@@ -28,9 +28,12 @@
 
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import mammoth                       from 'mammoth'
-
-import { parseDocxToRows }           from '@/lib/utils/admin/questionnaires/docx.parser'
+import {
+  extractHtml,
+  extractRawText,
+  parseDocxToRows,
+  parseQuestionsFromHtml,
+}                                    from '@/lib/utils/admin/questionnaires/docx.parser'
 import type { DocxParagraph }        from '@/lib/utils/admin/questionnaires/docx.parser'
 import type { DocxExtractResult }    from '@/lib/utils/admin/questionnaires/docx.extractor'
 import type { ImportRow }            from '@/lib/types/admin/questionnaires/questionnaires-types'
@@ -50,67 +53,94 @@ const ALLOWED_TYPES    = new Set([
 // Mammoth extraction — mirrors docx.extractor.ts but runs on the server
 // ─────────────────────────────────────────────────────────────────────────────
 
-type MammothElement = {
-  type?:      string
-  value?:     string
-  isBold?:    boolean
-  numbering?: { isOrdered: boolean; level: string } | null
-  children?:  MammothElement[]
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
 }
 
-function getText(el: MammothElement): string {
-  if (!el)                    { return '' }
-  if (el.value !== undefined) { return el.value }
-  if (el.children)            { return el.children.map(getText).join('') }
-  return ''
-}
-
-function collectBoldStrings(el: MammothElement, acc: Set<string>): void {
-  if (el.type === 'run' && el.isBold) {
-    const t = getText(el).trim()
-    if (t.length > 0) { acc.add(t) }
+function collectBoldStringsFromHtml(html: string): Set<string> {
+  const boldSet = new Set<string>()
+  const re = /<(?:b|strong)[^>]*>([\s\S]*?)<\/(?:b|strong)>/gi
+  let match: RegExpExecArray | null = re.exec(html)
+  while (match !== null) {
+    const content = decodeHtmlEntities(match[1]?.replace(/<[^>]+>/g, '').trim() ?? '')
+    if (content.length > 0) {
+      boldSet.add(content)
+    }
+    match = re.exec(html)
   }
-  for (const child of el.children ?? []) { collectBoldStrings(child, acc) }
+  return boldSet
+}
+
+function collectParagraphsFromHtml(html: string): DocxParagraph[] {
+  const paragraphs: DocxParagraph[] = []
+  const re = /<p[^>]*>([\s\S]*?)<\/p>/gi
+  let match: RegExpExecArray | null = re.exec(html)
+  while (match !== null) {
+    const raw = match[1] ?? ''
+    const text = decodeHtmlEntities(raw.replace(/<[^>]+>/g, '').trim())
+    const boldText = decodeHtmlEntities(
+      raw
+        .replace(/<(?!\/?(?:b|strong)\b)[^>]+>/gi, '')
+        .replace(/<\/?(?:b|strong)\b[^>]*>/gi, ' ')
+        .trim(),
+    )
+
+    if (text.length > 0) {
+      paragraphs.push({
+        level: null,
+        boldText,
+        text,
+      })
+    }
+
+    match = re.exec(html)
+  }
+  return paragraphs
 }
 
 async function extractDocx(buffer: Buffer): Promise<DocxExtractResult & { paragraphs: DocxParagraph[] }> {
-  const convertToRaw = (mammoth as unknown as { convertToRaw: (input: { buffer: Buffer }) => Promise<{ value: unknown }> }).convertToRaw
-  const [htmlResult, rawResult] = await Promise.all([
-    mammoth.convertToHtml({ buffer }),
-    convertToRaw({ buffer }),
-  ])
+  let html = ''
+  let plainText = ''
+  let extractionFailed = false
 
-  const html      = htmlResult.value
-  const plainText = html
-    .replace(/<\/p>/gi,      '\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<li[^>]*>/gi,  '\n')
-    .replace(/<[^>]+>/g,     '')
-    .replace(/&nbsp;/g,      ' ')
-    .replace(/&amp;/g,       '&')
-    .replace(/&lt;/g,        '<')
-    .replace(/&gt;/g,        '>')
-    .replace(/&quot;/g,      '"')
-
-  // Collect bold strings for the legacy path
-  const boldSet = new Set<string>()
-  const root    = rawResult.value as MammothElement
-  collectBoldStrings(root, boldSet)
-
-  // Collect structured paragraphs for the OOXML path
-  const paragraphs: DocxParagraph[] = []
-
-  function walk(el: MammothElement): void {
-    if (el.type === 'paragraph') {
-      paragraphs.push({
-        level:    el.numbering !== null && el.numbering !== undefined ? parseInt(el.numbering.level, 10) : null,
-        boldText: (el.children ?? []).map((c) => (c.isBold ? getText(c) : '')).join('').trim(),
-        text:     getText(el).trim(),
-      })
+  try {
+    const [htmlValue, rawTextValue] = await Promise.all([
+      extractHtml(buffer),
+      extractRawText(buffer),
+    ])
+    html = htmlValue
+    plainText = rawTextValue.trim().length > 0 ? rawTextValue : parseQuestionsFromHtml(htmlValue)
+  } catch {
+    extractionFailed = true
+    try {
+      html = await extractHtml(buffer)
+      plainText = parseQuestionsFromHtml(html)
+      extractionFailed = false
+    } catch {
+      html = ''
     }
-    for (const child of el.children ?? []) { walk(child) }
+    if (extractionFailed) {
+      try {
+        plainText = await extractRawText(buffer)
+        html = `<p>${plainText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`
+        extractionFailed = false
+      } catch {
+        extractionFailed = true
+      }
+    }
   }
-  walk(root)
+
+  if (extractionFailed) {
+    throw new Error('mammoth extraction failed')
+  }
+
+  const boldSet = collectBoldStringsFromHtml(html)
+  const paragraphs = collectParagraphsFromHtml(html)
 
   return { html, plainText, boldSet, paragraphs }
 }

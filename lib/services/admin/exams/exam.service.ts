@@ -25,6 +25,46 @@ import type { ExamType } from '@/lib/types/database'
 // ── Convenience client alias ──────────────────────────────────────────────────
 type DB = SupabaseClient<Database>
 
+interface AccessScope {
+  schoolId: string | null
+  programId: string | null
+}
+
+async function getAccessScope(supabase: DB): Promise<AccessScope> {
+  const { data: userRes } = await supabase.auth.getUser()
+  const userId = userRes.user?.id ?? null
+  if (!userId) {
+    return { schoolId: null, programId: null }
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (profile?.role === 'faculty') {
+    const { data: facultyRow } = await supabase
+      .from('faculty')
+      .select('school_id, program_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    return {
+      schoolId: facultyRow?.school_id ?? null,
+      programId: facultyRow?.program_id ?? null,
+    }
+  }
+
+  const { data: adminRow } = await supabase
+    .from('admins')
+    .select('school_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  return { schoolId: adminRow?.school_id ?? null, programId: null }
+}
+
 // ── Internal raw query types (not exported) ───────────────────────────────────
 // These match exactly what Supabase returns for the join query.
 type QuestionCountRow  = Pick<Database['public']['Tables']['questions']['Row'],      'exam_id'>
@@ -79,6 +119,7 @@ function toExam(
     total_points:     raw.total_points,
     passing_score:    raw.passing_score,
     is_published:     raw.is_published,
+    approval_status:  raw.approval_status,
     question_count:   qCountMap[raw.id] ?? 0,
     assigned_count:   aCountMap[raw.id] ?? 0,
     created_at:       raw.created_at,
@@ -88,9 +129,19 @@ function toExam(
 // ── getPrograms ───────────────────────────────────────────────────────────────
 
 export async function getPrograms(supabase: DB): Promise<ProgramOption[]> {
-  const { data } = await supabase
+  const scope = await getAccessScope(supabase)
+  let query = supabase
     .from('programs')
     .select('id, code, name')
+
+  if (scope.schoolId) {
+    query = query.eq('school_id', scope.schoolId)
+  }
+  if (scope.programId) {
+    query = query.eq('id', scope.programId)
+  }
+
+  const { data } = await query
     .order('code')
     .returns<ProgramOption[]>()
 
@@ -154,14 +205,37 @@ export async function getExamCounts(
 // ── getAllExamsWithMeta ────────────────────────────────────────────────────────
 
 export async function getAllExamsWithMeta(supabase: DB): Promise<Exam[]> {
-  const { data: rawExams, error } = await supabase
+  const scope = await getAccessScope(supabase)
+
+  let allowedProgramIds: string[] | null = null
+  if (scope.programId) {
+    allowedProgramIds = [scope.programId]
+  } else if (scope.schoolId) {
+    const { data: scopedPrograms } = await supabase
+      .from('programs')
+      .select('id')
+      .eq('school_id', scope.schoolId)
+      .returns<{ id: string }[]>()
+    allowedProgramIds = (scopedPrograms ?? []).map((p) => p.id)
+  }
+
+  let query = supabase
     .from('exams')
     .select(`
       id, title, description, duration_minutes, total_points, passing_score,
-      is_published, exam_type, created_at,
+      is_published, approval_status, exam_type, created_at,
       exam_categories ( id, name, icon ),
       programs ( id, code, name )
     `)
+
+  if (allowedProgramIds) {
+    if (allowedProgramIds.length === 0) {
+      return []
+    }
+    query = query.in('program_id', allowedProgramIds)
+  }
+
+  const { data: rawExams, error } = await query
     .order('created_at', { ascending: false })
     .returns<RawExamRow[]>()
 

@@ -4,17 +4,12 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import type {
   PendingReviewItem,
   ApprovalEntityType,
-  ReviewActionPayload,
 } from '@/lib/types/approval'
-import {
-  fetchPendingReviewItems,
-  reviewAction,
-  fetchApprovalHistory,
-} from '@/lib/services/approval/approval.service'
+import { createClient } from '@/lib/supabase/client'
+import { fetchApprovalHistory } from '@/lib/services/approval/approval.service'
 import type { ApprovalEvent } from '@/lib/types/approval'
 import { useUser } from '@/lib/context/AuthContext'
 
@@ -59,17 +54,39 @@ export function useApprovalQueue(): UseApprovalQueueReturn {
     if (silent) { setRefreshing(true) } else { setLoading(true) }
     setError(null)
     try {
-      const data = await fetchPendingReviewItems(supabase)
-      setItems(data)
+      const res = await fetch('/api/admin/approvals')
+      const json = (await res.json().catch(() => ({}))) as { items?: PendingReviewItem[]; error?: string }
+      if (!res.ok) {
+        throw new Error(json.error ?? 'Failed to load review queue.')
+      }
+      setItems(json.items ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load review queue.')
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [supabase])
+  }, [])
 
   useEffect(() => { void fetchAll() }, [fetchAll])
+  useEffect(() => {
+    const es = new EventSource('/api/admin/approvals/stream')
+    es.addEventListener('approval', () => {
+      void fetchAll(true)
+    })
+    es.addEventListener('heartbeat', () => {
+      // no-op keepalive
+    })
+    es.onerror = () => {
+      es.close()
+      setTimeout(() => {
+        void fetchAll(true)
+      }, 10000)
+    }
+    return () => {
+      es.close()
+    }
+  }, [fetchAll])
 
   const handleRefresh = useCallback(() => { void fetchAll(true) }, [fetchAll])
 
@@ -99,24 +116,25 @@ export function useApprovalQueue(): UseApprovalQueueReturn {
     setHistory([])
   }, [])
 
-  const doAction = useCallback(async (
-    action: ReviewActionPayload['action'],
-  ) => {
+  const doAction = useCallback(async (action: 'approve' | 'reject' | 'publish') => {
     if (!selectedItem || !user) {
       return
     }
     setActing(true)
     try {
-      await reviewAction(
-        supabase,
-        {
+      const res = await fetch(`/api/admin/approvals/${selectedItem.id}/review`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           entityType: selectedItem.entityType,
-          entityId:   selectedItem.id,
           action,
-          notes:      reviewNotes.trim() || undefined,
-        },
-        user.id,
-      )
+          note: reviewNotes.trim() || undefined,
+        }),
+      })
+      const json = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) {
+        throw new Error(json.error ?? 'Action failed.')
+      }
       closeReview()
       await fetchAll(true)
     } catch (err) {
@@ -124,7 +142,7 @@ export function useApprovalQueue(): UseApprovalQueueReturn {
     } finally {
       setActing(false)
     }
-  }, [selectedItem, user, supabase, reviewNotes, closeReview, fetchAll])
+  }, [selectedItem, user, reviewNotes, closeReview, fetchAll])
 
   return {
     items, loading, refreshing, error,

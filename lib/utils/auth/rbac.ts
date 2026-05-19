@@ -30,6 +30,7 @@ const STAFF_ROUTE_RULES: Record<StaffRole, StaffRouteRules> = {
     nav: [
       'dashboard',
       'notifications',
+      'approvals',
       'students',
       'faculty',
       'exams',

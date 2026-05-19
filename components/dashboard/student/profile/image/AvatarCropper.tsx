@@ -40,6 +40,7 @@ export function AvatarCropper({ file, onComplete, onCancel }: AvatarCropperProps
   const offset     = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
   const [zoom, setZoom] = useState(1)
+  const [isDragging, setIsDragging] = useState(false)
   const zoomRef = useRef(1)
   useEffect(() => { zoomRef.current = zoom }, [zoom])
 
@@ -105,6 +106,7 @@ export function AvatarCropper({ file, onComplete, onCancel }: AvatarCropperProps
   const onPointerDown = useCallback((e: RMouseEvent | RTouchEvent) => {
     dragging.current = true
     lastPos.current  = getXY(e)
+    setIsDragging(true)
   }, [])
 
   const onPointerMove = useCallback((e: RMouseEvent | RTouchEvent) => {
@@ -119,6 +121,7 @@ export function AvatarCropper({ file, onComplete, onCancel }: AvatarCropperProps
   const onPointerUp = useCallback(() => {
     dragging.current = false
     lastPos.current  = null
+    setIsDragging(false)
   }, [])
 
   // ── Confirm ────────────────────────────────────────────────────────────────
@@ -142,7 +145,7 @@ export function AvatarCropper({ file, onComplete, onCancel }: AvatarCropperProps
           width={OUTPUT_SIZE}
           height={OUTPUT_SIZE}
           className={styles.canvas}
-          style={{ cursor: dragging.current ? 'grabbing' : 'grab' }}
+          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
           onMouseDown={onPointerDown}
           onMouseMove={onPointerMove}
           onMouseUp={onPointerUp}

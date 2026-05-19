@@ -10,10 +10,13 @@ import type {
   DepartmentPrograms,
 } from '@/lib/types/admin/faculty'
 import { DEPARTMENT_PROGRAMS } from '@/lib/types/admin/faculty'
+import { validateFacultyId } from '@/lib/utils/auth'
 
 export interface FacultyFormErrors {
   fullName?:   string
   email?:      string
+  facultyId?:  string
+  password?:   string
   department?: string
   program?:    string
   roleType?:   string
@@ -35,6 +38,21 @@ export function validateFacultyForm(
     errors.email = 'Email is required.'
   } else if (!EMAIL_RE.test(payload.email.trim())) {
     errors.email = 'Enter a valid email address.'
+  }
+
+  if (!payload.facultyId?.trim()) {
+    errors.facultyId = 'Faculty ID Number is required.'
+  } else {
+    const idError = validateFacultyId(payload.facultyId)
+    if (idError) {
+      errors.facultyId = idError
+    }
+  }
+
+  if (!payload.password?.trim()) {
+    errors.password = 'Password is required.'
+  } else if (payload.password.trim().length < 8) {
+    errors.password = 'Password must be at least 8 characters.'
   }
 
   if (!payload.department) {

@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { X, Loader2, UserPlus }             from 'lucide-react'
+import { X, Loader2, UserPlus, Eye, EyeOff } from 'lucide-react'
 import { useCreateFaculty }                 from '@/lib/hooks/admin/faculty/useCreateFaculty'
 import {
   validateFacultyForm,
@@ -32,6 +32,8 @@ interface AddFacultyModalProps {
 const BLANK: CreateFacultyPayload = {
   fullName:   '',
   email:      '',
+  facultyId:  '',
+  password:   '',
   department: '' as FacultyDepartment,
   program:    '' as FacultyProgram,
   programId:  '',
@@ -44,8 +46,9 @@ export default function AddFacultyModal({
   onSuccess,
 }: AddFacultyModalProps) {
   const [form,      setForm]      = useState<CreateFacultyPayload>(BLANK)
+  const [showPassword, setShowPassword] = useState(false)
   const [programOptions, setProgramOptions] = useState<ProgramOption[]>([])
-  const [_touched,  setTouched]   = useState<Partial<Record<keyof CreateFacultyPayload, boolean>>>({})
+  const [,  setTouched]   = useState<Partial<Record<keyof CreateFacultyPayload, boolean>>>({})
   const [submitted, setSubmitted] = useState(false)
 
   const { create, loading, error: apiError, clearError } = useCreateFaculty()
@@ -55,9 +58,8 @@ export default function AddFacultyModal({
     if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(BLANK)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowPassword(false)
       setTouched({})
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSubmitted(false)
       clearError()
     }
@@ -194,6 +196,48 @@ export default function AddFacultyModal({
             />
             {showErrors && errors.email && (
               <span className={styles.fieldError}>{errors.email}</span>
+            )}
+          </div>
+
+          {/* Faculty ID Number */}
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="fm-facultyId">Faculty ID Number</label>
+            <input
+              id="fm-facultyId"
+              type="text"
+              placeholder="e.g. SBIT-202261"
+              className={`${styles.input} ${showErrors && errors.facultyId ? styles.inputError : ''}`}
+              autoComplete="off"
+              {...field('facultyId')}
+            />
+            {showErrors && errors.facultyId && (
+              <span className={styles.fieldError}>{errors.facultyId}</span>
+            )}
+          </div>
+
+          {/* Password */}
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="fm-password">Password</label>
+            <div className={styles.passwordWrap}>
+              <input
+                id="fm-password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Enter temporary password"
+                className={`${styles.input} ${showErrors && errors.password ? styles.inputError : ''}`}
+                autoComplete="new-password"
+                {...field('password')}
+              />
+              <button
+                type="button"
+                className={styles.passwordToggle}
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+            {showErrors && errors.password && (
+              <span className={styles.fieldError}>{errors.password}</span>
             )}
           </div>
 

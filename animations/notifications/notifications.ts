@@ -27,6 +27,6 @@ export const notifAnimations = {
  * Example:
  *   <div className={getStaggerClass(index)} />
  */
-export function getStaggerClass(index: number): string {
+export function getStaggerClass(): string {
   return `${notifAnimations.fadeSlideIn} ${notifAnimations.staggerChild}`;
 }

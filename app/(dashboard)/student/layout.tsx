@@ -51,7 +51,7 @@ export default async function StudentLayout({
       <div style={{
         display:    'flex',
         minHeight:  '100vh',
-        background: '#eef2f7',
+        background: 'var(--dashboard-bg)',
         fontFamily: "'Plus Jakarta Sans', 'DM Sans', sans-serif",
       }}>
         <StudentSidebar profile={profile} />
@@ -61,7 +61,7 @@ export default async function StudentLayout({
           flexDirection: 'column',
           overflow:      'hidden',
           minWidth:      0,
-          background:    '#eef2f7',
+          background:    'var(--dashboard-bg)',
         }}>
           <StudentTopbar profile={profile} userId={user.id} />
           <main style={{

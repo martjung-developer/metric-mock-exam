@@ -463,3 +463,11 @@
   .heroTitle  { font-size: 1.1rem; }
   .card       { padding: 1rem; }
 }
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

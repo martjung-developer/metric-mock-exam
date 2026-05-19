@@ -78,11 +78,8 @@ export function useMockExams() {
   useEffect(() => {
     if (user === null || user === undefined || !programReady) {return}
     if (!programId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAllExams([])
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDataLoading(false)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDataError('No degree program is assigned to your student account.')
       return
     }

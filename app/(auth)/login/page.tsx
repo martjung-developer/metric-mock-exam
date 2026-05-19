@@ -88,9 +88,7 @@ export default function LoginPage() {
     const detected = detectRoleFromId(userId)
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDetectedRole(detected)
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setBadgeLabel(getPreResolveBadgeLabel(userId))
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMismatch(
       detected !== null &&
       selectedRole !== null &&

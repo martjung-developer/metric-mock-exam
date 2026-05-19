@@ -34,6 +34,7 @@ export interface UseProfileReturn {
   error:            string | null
   authLoading:      boolean
   authError:        string | null
+  refetch:          () => Promise<void>
 }
 
 export function useProfile(): UseProfileReturn {
@@ -50,6 +51,40 @@ export function useProfile(): UseProfileReturn {
   const [liveAvatarUrl, setLiveAvatarUrl] = useState<string | null>(null)
   const [loading,       setLoading]       = useState(false)
   const [error,         setError]         = useState<string | null>(null)
+
+  const fetchAll = useCallback(async (userId: string) => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const [profileData, studentData] = await Promise.all([
+        getProfile(supabase, userId),
+        getStudent(supabase, userId),
+      ])
+
+      const [programData, schoolData] = await Promise.all([
+        studentData?.program_id ? getProgram(supabase, studentData.program_id) : Promise.resolve(null),
+        studentData?.school_id ? getSchool(supabase, studentData.school_id) : Promise.resolve(null),
+      ])
+
+      const [taken, subs] = await Promise.all([
+        getTotalTaken(supabase, userId),
+        getRecentSubmissions(supabase, userId),
+      ])
+
+      setProfile(profileData)
+      setStudent(studentData)
+      setProgram(programData)
+      setSchool(schoolData)
+      setTotalTaken(taken)
+      setSubmissions(subs)
+      setLiveAvatarUrl(profileData?.avatar_url ?? null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unexpected error')
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
 
   // ── Realtime profile updates ──────────────────────────────────────────────
   useRealtimeProfile({
@@ -73,53 +108,21 @@ export function useProfile(): UseProfileReturn {
 
     let cancelled = false
 
-    async function fetchAll() {
-      setLoading(true)
-      setError(null)
-
-      try {
-        const userId = user.id
-
-        const [profileData, studentData] = await Promise.all([
-          getProfile(supabase, userId),
-          getStudent(supabase, userId),
-        ])
-
-        if (cancelled) {return}
-
-        const [programData, schoolData] = await Promise.all([
-          studentData?.program_id ? getProgram(supabase, studentData.program_id) : Promise.resolve(null),
-          studentData?.school_id  ? getSchool(supabase, studentData.school_id)   : Promise.resolve(null),
-        ])
-
-        if (cancelled) {return}
-
-        const [taken, subs] = await Promise.all([
-          getTotalTaken(supabase, userId),
-          getRecentSubmissions(supabase, userId),
-        ])
-
-        if (!cancelled) {
-          setProfile(profileData)
-          setStudent(studentData)
-          setProgram(programData)
-          setSchool(schoolData)
-          setTotalTaken(taken)
-          setSubmissions(subs)
-          setLiveAvatarUrl(profileData?.avatar_url ?? null)
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Unexpected error')
-        }
-      } finally {
-        if (!cancelled) {setLoading(false)}
+    void (async () => {
+      await fetchAll(user.id)
+      if (cancelled) {
+        return
       }
-    }
-
-    void fetchAll()
+    })()
     return () => { cancelled = true }
-  }, [authLoading, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authLoading, fetchAll, router, user]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const refetch = useCallback(async () => {
+    if (!user?.id) {
+      return
+    }
+    await fetchAll(user.id)
+  }, [fetchAll, user?.id])
 
   return {
     profile, student, program, school,
@@ -127,5 +130,6 @@ export function useProfile(): UseProfileReturn {
     liveAvatarUrl, setLiveAvatarUrl,
     loading, error,
     authLoading, authError,
+    refetch,
   }
 }

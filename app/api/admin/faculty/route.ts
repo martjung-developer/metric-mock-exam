@@ -42,6 +42,17 @@ export async function GET() {
 
     // ── Query ─────────────────────────────────────────────────────────────
     const serviceClient = getServiceRoleClient()
+    let adminSchoolId: string | null = null
+
+    if (profile.role === 'admin') {
+      const { data: adminRow } = await serviceClient
+        .from('admins')
+        .select('school_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      adminSchoolId = adminRow?.school_id ?? null
+    }
 
     type FacultyListDbRow = {
       id: string
@@ -62,7 +73,7 @@ export async function GET() {
       } | null
     }
 
-    const { data, error } = await serviceClient
+    let query = serviceClient
       .from('faculty')
       .select(`
         id,
@@ -86,7 +97,12 @@ export async function GET() {
         )
       `)
       .returns<FacultyListDbRow[]>()
-      .order('created_at', { ascending: false })
+
+    if (adminSchoolId) {
+      query = query.eq('school_id', adminSchoolId)
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false })
 
     if (error) {
       console.error('[faculty/GET] query error:', error)

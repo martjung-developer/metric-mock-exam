@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 'use client'
 
-import { type FC }      from 'react'
+import { type FC, useState }      from 'react'
 import Link             from 'next/link'
 import { motion }       from 'framer-motion'
 import { Clock, ChevronRight } from 'lucide-react'
@@ -29,17 +29,32 @@ interface Props {
 
 const DashboardClient: FC<Props> = ({ firstName, greeting }) => {
   const { data, loading, error, refresh } = useStudentDashboard()
+  const [refreshing, setRefreshing] = useState(false)
 
   // Wire real-time subscriptions — automatically triggers refresh on DB events
   useRealtimeDashboard({ onRefresh: refresh })
 
   const { stats, progress, recentActivity, assignedExams } = data
 
+  async function handleRefresh() {
+    if (refreshing) {
+      return
+    }
+    setRefreshing(true)
+    await refresh()
+    setTimeout(() => setRefreshing(false), 500)
+  }
+
   return (
     <motion.div className={styles.page} {...dashboardPage}>
 
       {/* ── Header ── */}
-      <DashboardHeader firstName={firstName} greeting={greeting} />
+      <DashboardHeader
+        firstName={firstName}
+        greeting={greeting}
+        refreshing={refreshing}
+        onRefresh={() => { void handleRefresh() }}
+      />
 
       {/* ── Hero Banner ── */}
       <motion.div className={styles.heroBanner} {...section}>

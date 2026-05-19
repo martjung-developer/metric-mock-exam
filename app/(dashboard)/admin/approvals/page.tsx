@@ -7,7 +7,7 @@ import {
   ClipboardCheck, RefreshCw, X,
   CheckCircle2, XCircle, Rocket,
   FileText, Database, Filter,
-  Clock, MessageSquare,
+  MessageSquare,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -61,11 +61,11 @@ export default function ApprovalsPage() {
             <ClipboardCheck size={20} color="#fff" />
           </div>
           <div>
-            <h1 className={styles.heading}>Approval Queue</h1>
+            <h1 className={styles.heading}>Questionnaire Review Queue</h1>
             <p className={styles.headingSub}>
               {q.loading
                 ? 'Loading…'
-                : `${q.items.length} item${q.items.length !== 1 ? 's' : ''} pending review`}
+                : `${q.items.length} item${q.items.length !== 1 ? 's' : ''} pending questionnaire review`}
             </p>
           </div>
         </div>
@@ -127,41 +127,45 @@ export default function ApprovalsPage() {
             <ClipboardCheck size={22} color="#94a3b8" />
           </div>
           <p className={styles.emptyTitle}>Queue is empty</p>
-          <p className={styles.emptySub}>No items are pending review right now.</p>
+          <p className={styles.emptySub}>No questionnaires are pending review right now.</p>
         </div>
       ) : (
-        <div className={styles.queueList}>
-          {q.filteredItems.map((item) => (
-            <div key={item.id} className={styles.queueCard}>
-              <div className={styles.queueCardLeft}>
-                <div className={styles.entityTypeTag}>
-                  {ENTITY_ICONS[item.entityType]}
-                  <span>{item.entityType === 'exam' ? 'Exam' : 'Question Bank'}</span>
-                </div>
-                <h3 className={styles.queueCardTitle}>{item.title}</h3>
-                <div className={styles.queueCardMeta}>
-                  {item.programCode && (
-                    <span className={styles.metaChip}>{item.programCode}</span>
-                  )}
-                  {item.submittedAt && (
-                    <span className={styles.metaTime}>
-                      <Clock size={11} />
-                      {new Date(item.submittedAt).toLocaleDateString(undefined, {
-                        month: 'short', day: 'numeric', year: 'numeric',
-                      })}
-                    </span>
-                  )}
-                  <StatusBadge status={item.status} size="sm" />
-                </div>
-              </div>
-              <button
-                className={styles.reviewBtn}
-                onClick={() => q.openReview(item)}
-              >
-                Review
-              </button>
-            </div>
-          ))}
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Exam Title</th>
+                <th>Faculty Name</th>
+                <th>Program</th>
+                <th>Submitted</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {q.filteredItems.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.title}</td>
+                  <td>{item.submittedByName ?? item.submittedBy ?? '—'}</td>
+                  <td>{item.programCode ?? item.programName ?? '—'}</td>
+                  <td>
+                    {item.submittedAt
+                      ? new Date(item.submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                      : '—'}
+                  </td>
+                  <td><StatusBadge status={item.status} size="sm" /></td>
+                  <td>
+                    <button
+                      className={styles.reviewBtn}
+                      onClick={() => q.openReview(item)}
+                    >
+                      Review
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

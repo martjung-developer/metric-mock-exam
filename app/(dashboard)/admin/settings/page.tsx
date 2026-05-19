@@ -10,6 +10,7 @@
 'use client'
 
 import { AnimatePresence, motion } from 'framer-motion'
+import { useState } from 'react'
 import { containerVariants } from '@/animations/admin/settings/settings'
 import { useSettings } from '@/lib/hooks/admin/settings/useSettings'
 
@@ -29,7 +30,20 @@ import s from './settings.module.css'
 import type { JSX } from 'react'
 
 export default function SettingsPage(): JSX.Element {
+  const [refreshing, setRefreshing] = useState(false)
   const settings = useSettings()
+
+  async function handleRefresh() {
+    if (refreshing) {
+      return
+    }
+    setRefreshing(true)
+    try {
+      await settings.refreshData()
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (settings.authLoading || settings.loading) {
@@ -49,7 +63,7 @@ export default function SettingsPage(): JSX.Element {
       animate="visible"
     >
       {/* ── Page header ── */}
-      <SettingsHeader />
+      <SettingsHeader refreshing={refreshing} onRefresh={handleRefresh} />
 
       {/* ── Toast ── */}
       <AnimatePresence>

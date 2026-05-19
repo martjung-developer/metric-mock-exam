@@ -19,6 +19,59 @@ import { parseDifficulty } from '@/lib/utils/admin/questionnaires/questionnaires
 
 type TypedClient = SupabaseClient<Database>
 
+interface Scope {
+  schoolId: string | null
+  programId: string | null
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const candidate = (error as { message?: unknown }).message
+    if (typeof candidate === 'string' && candidate.length > 0) {
+      return candidate
+    }
+  }
+  return 'Unknown error'
+}
+
+async function getScope(client: TypedClient): Promise<Scope> {
+  const { data: userRes } = await client.auth.getUser()
+  const userId = userRes.user?.id ?? null
+  if (!userId) {
+    return { schoolId: null, programId: null }
+  }
+
+  const { data: profile } = await client
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (profile?.role === 'faculty') {
+    const { data: facultyRow } = await client
+      .from('faculty')
+      .select('school_id, program_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    return {
+      schoolId: facultyRow?.school_id ?? null,
+      programId: facultyRow?.program_id ?? null,
+    }
+  }
+
+  const { data: adminRow } = await client
+    .from('admins')
+    .select('school_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  return { schoolId: adminRow?.school_id ?? null, programId: null }
+}
+
 // Supabase currently infers mutation payloads as `never` in this workspace.
 // Keep runtime payloads unchanged while satisfying the generated typings.
 function asMutationPayload<T>(payload: T): never {
@@ -44,16 +97,26 @@ function toOptions(raw: unknown): QuestionOption[] | null {
 // ── Programs ──────────────────────────────────────────────────────────────────
 
 export async function fetchPrograms(client: TypedClient): Promise<ProgramOption[]> {
-  const { data, error } = await client
+  const scope = await getScope(client)
+  let query = client
     .from('programs')
     .select('id, code, name')
+
+  if (scope.schoolId) {
+    query = query.eq('school_id', scope.schoolId)
+  }
+  if (scope.programId) {
+    query = query.eq('id', scope.programId)
+  }
+
+  const { data, error } = await query
     .order('code') as {
       data:  Array<{ id: string; code: string; name: string }> | null
       error: unknown
     }
 
   if (error !== null) {
-    throw new Error(error instanceof Error ? error.message : 'Unknown error')
+    throw new Error(getErrorMessage(error))
   }
   return (data ?? []).map((p) => ({ id: p.id, code: p.code, name: p.name }))
 }
@@ -61,9 +124,34 @@ export async function fetchPrograms(client: TypedClient): Promise<ProgramOption[
 // ── Exams ─────────────────────────────────────────────────────────────────────
 
 export async function fetchExams(client: TypedClient): Promise<ExamOption[]> {
-  const { data, error } = await client
+  const scope = await getScope(client)
+
+  let allowedProgramIds: string[] | null = null
+  if (scope.programId) {
+    allowedProgramIds = [scope.programId]
+  } else if (scope.schoolId) {
+    const { data: scopedPrograms } = await client
+      .from('programs')
+      .select('id')
+      .eq('school_id', scope.schoolId) as {
+        data: Array<{ id: string }> | null
+        error: unknown
+      }
+    allowedProgramIds = (scopedPrograms ?? []).map((p) => p.id)
+  }
+
+  let query = client
     .from('exams')
     .select('id, title, program_id, category_id')
+
+  if (allowedProgramIds) {
+    if (allowedProgramIds.length === 0) {
+      return []
+    }
+    query = query.in('program_id', allowedProgramIds)
+  }
+
+  const { data, error } = await query
     .order('title') as {
       data: Array<{
         id: string; title: string
@@ -73,7 +161,7 @@ export async function fetchExams(client: TypedClient): Promise<ExamOption[]> {
     }
 
   if (error !== null) {
-    throw new Error(error instanceof Error ? error.message : 'Unknown error')
+    throw new Error(getErrorMessage(error))
   }
   return (data ?? []).map((e) => ({
     id:          e.id,
@@ -106,7 +194,23 @@ interface RawQuestionRow {
 }
 
 export async function fetchQuestions(client: TypedClient): Promise<DisplayQuestion[]> {
-  const { data, error } = await client
+  const scope = await getScope(client)
+
+  let allowedProgramIds: string[] | null = null
+  if (scope.programId) {
+    allowedProgramIds = [scope.programId]
+  } else if (scope.schoolId) {
+    const { data: scopedPrograms } = await client
+      .from('programs')
+      .select('id')
+      .eq('school_id', scope.schoolId) as {
+        data: Array<{ id: string }> | null
+        error: unknown
+      }
+    allowedProgramIds = (scopedPrograms ?? []).map((p) => p.id)
+  }
+
+  const query = client
     .from('questions')
     .select(`
       id, question_text, question_type, points, options,
@@ -114,16 +218,22 @@ export async function fetchQuestions(client: TypedClient): Promise<DisplayQuesti
       exam_id, created_by, created_at,
       exams ( title, program_id, exam_categories ( name ) )
     `)
+
+  if (allowedProgramIds && allowedProgramIds.length === 0) {
+    return []
+  }
+
+  const { data, error } = await query
     .order('created_at', { ascending: false }) as {
       data:  RawQuestionRow[] | null
       error: unknown
     }
 
   if (error !== null) {
-    throw new Error(error instanceof Error ? error.message : 'Unknown error')
+    throw new Error(getErrorMessage(error))
   }
 
-  return (data ?? []).map((row): DisplayQuestion => {
+  const mapped = (data ?? []).map((row): DisplayQuestion => {
     const exam = Array.isArray(row.exams) ? row.exams[0] : row.exams
     const cat  = exam && !Array.isArray(exam.exam_categories)
       ? exam.exam_categories
@@ -148,6 +258,12 @@ export async function fetchQuestions(client: TypedClient): Promise<DisplayQuesti
       difficulty:     parseDifficulty(row.explanation),
     }
   })
+
+  if (!allowedProgramIds) {
+    return mapped
+  }
+
+  return mapped.filter((q) => q.examProgramId !== null && allowedProgramIds.includes(q.examProgramId))
 }
 
 // ── Insert / Update / Delete ──────────────────────────────────────────────────
@@ -161,7 +277,7 @@ export async function insertQuestion(
     .insert(asMutationPayload([payload]))
 
   if (error !== null) {
-    throw new Error(error instanceof Error ? error.message : 'Unknown error')
+    throw new Error(getErrorMessage(error))
   }
 }
 
@@ -176,7 +292,7 @@ export async function updateQuestion(
     .eq('id', id)
 
   if (error !== null) {
-    throw new Error(error instanceof Error ? error.message : 'Unknown error')
+    throw new Error(getErrorMessage(error))
   }
 }
 
@@ -201,6 +317,6 @@ export async function bulkInsertQuestions(
     .insert(asMutationPayload(payloads))
 
   if (error !== null) {
-    throw new Error(error instanceof Error ? error.message : 'Unknown error')
+    throw new Error(getErrorMessage(error))
   }
 }

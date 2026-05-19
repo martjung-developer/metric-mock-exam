@@ -129,6 +129,35 @@
 
 /* ── Queue list ── */
 .queueList { display: flex; flex-direction: column; gap: .65rem; }
+.tableWrap {
+  background: var(--ap-surface);
+  border: 1.5px solid var(--ap-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--ap-shadow-card);
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .8rem;
+}
+.table thead th {
+  text-align: left;
+  padding: .75rem .9rem;
+  background: #f8fafc;
+  color: var(--ap-text-sub);
+  font-family: var(--ap-font-head);
+  font-size: .72rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--ap-border);
+}
+.table tbody td {
+  padding: .75rem .9rem;
+  border-bottom: 1px solid #eef2f7;
+  color: var(--ap-text);
+}
+.table tbody tr:last-child td { border-bottom: none; }
 
 .queueCard {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;

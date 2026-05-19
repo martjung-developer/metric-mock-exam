@@ -195,6 +195,30 @@ export function useProgress(): UseProgressReturn {
     return () => { abortRef.current?.abort() }
   }, [authLoading, user, refetch])
 
+  useEffect(() => {
+    if (!user) {
+      return
+    }
+
+    const channel = supabase
+      .channel(`student-progress-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'submissions',
+          filter: `student_id=eq.${user.id}`,
+        },
+        () => { void refetch() },
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [supabase, user, refetch])
+
   const loading = authLoading || dataLoading
   const error   = authError   ?? dataError
 

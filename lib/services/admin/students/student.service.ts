@@ -12,6 +12,46 @@ import { mapStudentRow } from '@/lib/utils/admin/students/mappers'
 
 type AppClient = SupabaseClient<Database>
 
+interface StudentScope {
+  schoolId: string | null
+  programId: string | null
+}
+
+async function getStudentScope(client: AppClient): Promise<StudentScope> {
+  const { data: userRes } = await client.auth.getUser()
+  const userId = userRes.user?.id ?? null
+  if (!userId) {
+    return { schoolId: null, programId: null }
+  }
+
+  const { data: profile } = await client
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (profile?.role === 'faculty') {
+    const { data: facultyRow } = await client
+      .from('faculty')
+      .select('school_id, program_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    return {
+      schoolId: facultyRow?.school_id ?? null,
+      programId: facultyRow?.program_id ?? null,
+    }
+  }
+
+  const { data: adminRow } = await client
+    .from('admins')
+    .select('school_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  return { schoolId: adminRow?.school_id ?? null, programId: null }
+}
+
 // ── ADDED: Student access snapshot ───────────────────────────────────────────
 // Returns the program_id and year_level needed for exam access validation.
 // These are the source-of-truth values — always fetched fresh, never cached.
@@ -57,7 +97,8 @@ export async function getStudentAccessSnapshot(
 export async function getStudentsWithProfiles(
   client: AppClient,
 ): Promise<FetchStudentsResult> {
-  const { data, error } = await client
+  const scope = await getStudentScope(client)
+  let query = client
     .from('students')
     .select(`
       id,
@@ -77,7 +118,15 @@ export async function getStudentsWithProfiles(
       )
     `)
     .eq('profiles.role', 'student')
-    .order('created_at', { ascending: false })
+
+  if (scope.schoolId) {
+    query = query.eq('school_id', scope.schoolId)
+  }
+  if (scope.programId) {
+    query = query.eq('program_id', scope.programId)
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false })
 
   if (error) {
     return { students: [], error: 'Failed to load students.' }

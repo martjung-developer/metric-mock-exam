@@ -22,6 +22,8 @@ export async function createFaculty(
     body:    JSON.stringify({
       fullName:   payload.fullName,
       email:      payload.email,
+      facultyId:  payload.facultyId,
+      password:   payload.password,
       programId:  payload.programId,
       roleType:   payload.roleType,
     }),
