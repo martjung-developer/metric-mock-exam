@@ -2,6 +2,9 @@
 
 .page {
   font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+  background: transparent;
+  color: var(--student-text);
+  min-height: 100vh;
 }
 
 /* ── Header ── */
@@ -10,7 +13,7 @@
 .greeting {
   font-size: 1.45rem;
   font-weight: 800;
-  color: #0d1117;
+  color: var(--student-heading);
   margin: 0;
   letter-spacing: -0.03em;
   line-height: 1.2;
@@ -18,7 +21,7 @@
 
 .subGreeting {
   font-size: 0.825rem;
-  color: #6b7280;
+  color: var(--student-text-muted);
   margin: 0.3rem 0 0;
   font-weight: 400;
 }
@@ -29,8 +32,8 @@
   align-items: center;
   gap: 0.45rem;
   padding: 0.55rem 1.1rem;
-  background: #0d2540;
-  color: #dce8f5;
+  background: var(--student-chip-active-bg);
+  color: var(--student-chip-active-text);
   border: 1px solid #1e3a5f;
   border-radius: 8px;
   font-size: 0.8rem;
@@ -42,8 +45,8 @@
 }
 
 .ctaBtn:hover {
-  background: #1e3a5f;
-  color: #ffffff;
+  background: var(--student-chip-active-bg);
+  color: var(--student-chip-active-text);
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(30, 58, 95, 0.25);
 }
@@ -116,7 +119,7 @@
   gap: 0.4rem;
   padding: 0.48rem 1rem;
   background: #4a7fa5;
-  color: #ffffff;
+  color: var(--student-chip-active-text);
   border-radius: 7px;
   font-size: 0.785rem;
   font-weight: 700;
@@ -148,8 +151,8 @@
 }
 
 .statCard {
-  background: #ffffff;
-  border: 1px solid #e4ecf3;
+  background: var(--student-card-bg);
+  border: 1px solid var(--student-border);
   border-radius: 12px;
   padding: 1.125rem 1.25rem;
   display: flex;
@@ -189,14 +192,14 @@
 .statValue {
   font-size: 1.35rem;
   font-weight: 800;
-  color: #0d1117;
+  color: var(--student-heading);
   line-height: 1;
   letter-spacing: -0.025em;
 }
 
 .statLabel {
   font-size: 0.715rem;
-  color: #6b7280;
+  color: var(--student-text-muted);
   margin-top: 0.2rem;
   font-weight: 500;
 }
@@ -213,8 +216,8 @@
 
 /* ── Card ── */
 .card {
-  background: #ffffff;
-  border: 1px solid #e4ecf3;
+  background: var(--student-card-bg);
+  border: 1px solid var(--student-border);
   border-radius: 12px;
   padding: 1.375rem;
 }
@@ -229,7 +232,7 @@
 .cardTitle {
   font-size: 0.875rem;
   font-weight: 700;
-  color: #0d1117;
+  color: var(--student-heading);
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -257,7 +260,7 @@
   gap: 0.55rem;
   padding: 1rem;
   border-radius: 10px;
-  border: 1px solid #e4ecf3;
+  border: 1px solid var(--student-border);
   text-decoration: none;
   transition: all 0.18s ease;
   background: #f8fbfd;
@@ -289,7 +292,7 @@
 
 .quickDesc {
   font-size: 0.68rem;
-  color: #9ca3af;
+  color: var(--student-text-muted);
   margin-top: 1px;
 }
 
@@ -306,22 +309,22 @@
 .emptyTitle {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--student-text);
   margin: 0;
 }
 
 .emptyText {
   font-size: 0.775rem;
   margin: 0;
-  color: #9ca3af;
+  color: var(--student-text-muted);
 }
 
 .emptyBtn {
   display: inline-block;
   margin-top: 0.75rem;
   padding: 0.45rem 1.1rem;
-  background: #0d2540;
-  color: #dce8f5;
+  background: var(--student-chip-active-bg);
+  color: var(--student-chip-active-text);
   border-radius: 7px;
   font-size: 0.775rem;
   font-weight: 600;
@@ -330,8 +333,8 @@
 }
 
 .emptyBtn:hover {
-  background: #1e3a5f;
-  color: #ffffff;
+  background: var(--student-chip-active-bg);
+  color: var(--student-chip-active-text);
 }
 
 /* ── Progress bars ── */
@@ -346,7 +349,7 @@
 
 .progressLabel {
   font-size: 0.75rem;
-  color: #374151;
+  color: var(--student-text);
   font-weight: 500;
 }
 
@@ -419,7 +422,7 @@
 
 .tipBtn:hover {
   background: rgba(126, 184, 212, 0.22);
-  color: #dce8f5;
+  color: var(--student-chip-active-text);
   border-color: rgba(126, 184, 212, 0.4);
 }
 
@@ -427,7 +430,7 @@
 .assignedEmpty {
   text-align: center;
   padding: 1.25rem 0;
-  color: #9ca3af;
+  color: var(--student-text-muted);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -437,7 +440,7 @@
 .assignedEmptyText {
   font-size: 0.775rem;
   margin: 0;
-  color: #9ca3af;
+  color: var(--student-text-muted);
 }
 
 /* ── Responsive ── */
@@ -471,3 +474,5 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+

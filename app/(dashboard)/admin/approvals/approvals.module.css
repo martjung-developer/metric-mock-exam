@@ -5,12 +5,12 @@
 :root {
   --ap-font-head: 'Plus Jakarta Sans', sans-serif;
   --ap-font-body: 'DM Sans', sans-serif;
-  --ap-bg:        #f4f6f9;
-  --ap-surface:   #ffffff;
-  --ap-border:    #e4e9f0;
-  --ap-text:      #0d1523;
-  --ap-text-sub:  #4a5568;
-  --ap-text-muted:#8a9ab5;
+  --ap-bg:        var(--admin-page-bg);
+  --ap-surface:   var(--admin-card-bg);
+  --ap-border:    var(--admin-border);
+  --ap-text:      var(--admin-text);
+  --ap-text-sub:  var(--admin-text-muted);
+  --ap-text-muted:var(--admin-text-muted);
   --ap-primary:   #0d2540;
   --ap-primary-dark: #1e3a5f;
   --ap-primary-pale: #eff4ff;
@@ -326,3 +326,4 @@
   .queueCard { flex-direction: column; align-items: flex-start; }
   .reviewBtn { width: 100%; justify-content: center; }
 }
+

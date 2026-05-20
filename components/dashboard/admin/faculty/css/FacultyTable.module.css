@@ -4,8 +4,8 @@
 .wrapper {
   overflow-x: auto;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
+  border: 1px solid var(--admin-border);
+  background: var(--admin-card-bg);
 }
 
 /* ── Table ───────────────────────────────────────────────────────────────── */
@@ -24,9 +24,9 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #64748b;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  color: var(--admin-text-muted);
+  background: var(--admin-card-bg);
+  border-bottom: 1px solid var(--admin-border);
   white-space: nowrap;
 }
 
@@ -36,7 +36,7 @@
 
 /* ── Body rows ───────────────────────────────────────────────────────────── */
 .tr {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--admin-page-bg);
   transition: background 0.12s;
 }
 
@@ -45,13 +45,13 @@
 }
 
 .tr:hover {
-  background: #f8fafc;
+  background: var(--admin-card-bg);
 }
 
 .td {
   padding: 0.875rem 1rem;
   font-size: 0.82rem;
-  color: #334155;
+  color: var(--admin-text);
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -80,17 +80,17 @@
 
 .name {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--admin-text);
 }
 
 /* ── ID code ─────────────────────────────────────────────────────────────── */
 .idCode {
   font-family: 'Fira Code', 'Cascadia Code', monospace;
   font-size: 0.78rem;
-  background: #f1f5f9;
+  background: var(--admin-page-bg);
   padding: 0.2rem 0.5rem;
   border-radius: 5px;
-  color: #334155;
+  color: var(--admin-text);
   letter-spacing: 0.03em;
 }
 
@@ -101,7 +101,7 @@
 
 /* ── Dept/program ────────────────────────────────────────────────────────── */
 .dept {
-  color: #64748b;
+  color: var(--admin-text-muted);
 }
 
 /* ── Role badge ──────────────────────────────────────────────────────────── */
@@ -132,7 +132,7 @@
 }
 
 .badgeNone {
-  color: #94a3b8;
+  color: var(--admin-text-muted);
   font-size: 0.82rem;
 }
 
@@ -159,7 +159,7 @@
 
 /* ── Date ────────────────────────────────────────────────────────────────── */
 .date {
-  color: #94a3b8;
+  color: var(--admin-text-muted);
   font-size: 0.78rem;
 }
 
@@ -183,13 +183,13 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #94a3b8;
+  color: var(--admin-text-muted);
   transition: background 0.12s, color 0.12s;
 }
 
 .menuBtn:hover {
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--admin-page-bg);
+  color: var(--admin-text);
 }
 
 .menuBtn:disabled {
@@ -201,8 +201,8 @@
   position: absolute;
   right: 0;
   top: calc(100% + 4px);
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--admin-card-bg);
+  border: 1px solid var(--admin-border);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.1);
   min-width: 130px;
@@ -219,36 +219,36 @@
   text-align: left;
   font-size: 0.8rem;
   font-weight: 500;
-  color: #334155;
+  color: var(--admin-text);
   cursor: pointer;
   font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
   transition: background 0.12s;
 }
 
 .dropdownItem:hover {
-  background: #f8fafc;
+  background: var(--admin-card-bg);
 }
 
 /* ── Empty state ─────────────────────────────────────────────────────────── */
 .empty {
   padding: 3.5rem 1.5rem;
   text-align: center;
-  background: #fff;
+  background: var(--admin-card-bg);
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--admin-border);
 }
 
 .emptyText {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--admin-text);
   margin: 0 0 0.35rem;
   font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
 }
 
 .emptySubtext {
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: var(--admin-text-muted);
   margin: 0;
   font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
 }

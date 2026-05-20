@@ -34,6 +34,7 @@ export interface UseResultsReturn {
   setStatusFilter:ReturnType<typeof useResultsFilters>['setStatusFilter']
   setCategoryFilter: ReturnType<typeof useResultsFilters>['setCategoryFilter']
   setPage:        ReturnType<typeof useResultsFilters>['setPage']
+  refetch:        () => Promise<void>
 }
 
 const EMPTY_STATS: SummaryStats = {
@@ -126,12 +127,20 @@ export function useResults(): UseResultsReturn {
       }, [])
   }, [totalPages, filters.page])
 
+  const refetch = useCallback(async () => {
+    if (!user) {
+      return
+    }
+    await Promise.all([loadStaticData(user.id), loadResults(user.id)])
+  }, [loadResults, loadStaticData, user])
+
   return {
     results, pendingRows, stats, categories, passRate,
     loading: authLoading || dataLoading,
     dataLoading,
     error:   authError ?? dataError,
     total, totalPages, pageNumbers,
+    refetch,
     ...filters,
   }
 }

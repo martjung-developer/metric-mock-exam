@@ -28,7 +28,8 @@
 /* ── Page shell ────────────────────────────────────────────────────────────── */
 .page {
   font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
-  color: #0d1117;
+  color: var(--student-text);
+  background: var(--student-page-bg);
   min-height: 100vh;
 }
 
@@ -126,14 +127,14 @@
   border-radius: 10px;
   font-size: 0.845rem;
   font-family: inherit;
-  color: #0d1117;
+  color: var(--student-heading);
   outline: none;
   transition: border-color 0.18s, box-shadow 0.18s;
   box-sizing: border-box;
   box-shadow: 0 2px 12px rgba(0,0,0,0.18);
 }
 
-.searchInput::placeholder { color: #9ca3af; }
+.searchInput::placeholder { color: var(--student-text-muted); }
 
 .searchInput:focus {
   border-color: #4a7fa5;
@@ -148,14 +149,14 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #9ca3af;
+  color: var(--student-text-muted);
   display: flex;
   align-items: center;
   padding: 3px;
   border-radius: 4px;
   transition: color 0.12s;
 }
-.searchClear:hover { color: #374151; }
+.searchClear:hover { color: var(--student-text); }
 
 /* Program pills */
 .programPills {
@@ -181,7 +182,7 @@
 .programPill:hover {
   background: rgba(74, 127, 165, 0.22);
   border-color: rgba(126, 184, 212, 0.4);
-  color: #dce8f5;
+  color: var(--student-chip-active-text);
 }
 
 /* ── Body ──────────────────────────────────────────────────────────────────── */
@@ -208,7 +209,7 @@
 .sectionTitle {
   font-size: 0.95rem;
   font-weight: 800;
-  color: #0d1117;
+  color: var(--student-heading);
   margin: 0;
   letter-spacing: -0.01em;
   flex: 1;
@@ -217,7 +218,7 @@
 .faqCount {
   font-size: 0.72rem;
   font-weight: 600;
-  color: #9ca3af;
+  color: var(--student-text-muted);
   background: #f3f4f6;
   padding: 0.2rem 0.55rem;
   border-radius: 99px;
@@ -231,8 +232,8 @@
 }
 
 .catCard {
-  background: #ffffff;
-  border: 1px solid #e4ecf3;
+  background: var(--student-card-bg);
+  border: 1px solid var(--student-border);
   border-radius: 11px;
   padding: 0.875rem 1rem;
   display: flex;
@@ -277,7 +278,7 @@
 .catCount {
   font-size: 0.7rem;
   font-weight: 700;
-  color: #9ca3af;
+  color: var(--student-text-muted);
   background: #f3f4f6;
   padding: 0.15rem 0.45rem;
   border-radius: 99px;
@@ -306,8 +307,8 @@
 }
 
 .faqItem {
-  background: #ffffff;
-  border: 1px solid #e4ecf3;
+  background: var(--student-card-bg);
+  border: 1px solid var(--student-border);
   border-radius: 11px;
   overflow: hidden;
   transition: border-color 0.18s, box-shadow 0.18s;
@@ -359,7 +360,7 @@
 }
 
 .faqChevron {
-  color: #9ca3af;
+  color: var(--student-text-muted);
   flex-shrink: 0;
   margin-top: 2px;
   transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), color 0.18s;
@@ -385,8 +386,8 @@
 
 /* Empty */
 .emptyFaq {
-  background: #ffffff;
-  border: 1px solid #e4ecf3;
+  background: var(--student-card-bg);
+  border: 1px solid var(--student-border);
   border-radius: 11px;
   padding: 3rem 1.5rem;
   text-align: center;
@@ -399,21 +400,21 @@
 .emptyTitle {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #374151;
+  color: var(--student-text);
   margin: 0.25rem 0 0;
 }
 
 .emptyText {
   font-size: 0.8rem;
-  color: #9ca3af;
+  color: var(--student-text-muted);
   margin: 0;
 }
 
 .emptyReset {
   margin-top: 0.75rem;
   padding: 0.45rem 1.125rem;
-  background: #0d2540;
-  color: #dce8f5;
+  background: var(--student-chip-active-bg);
+  color: var(--student-chip-active-text);
   border: none;
   border-radius: 7px;
   font-size: 0.775rem;
@@ -423,7 +424,7 @@
   transition: background 0.15s;
 }
 
-.emptyReset:hover { background: #1e3a5f; }
+.emptyReset:hover { background: var(--student-chip-active-bg); }
 
 /* Skeleton faq */
 .skeletonFaq {
@@ -442,8 +443,8 @@
 }
 
 .contactCard {
-  background: #ffffff;
-  border: 1px solid #e4ecf3;
+  background: var(--student-card-bg);
+  border: 1px solid var(--student-border);
   border-radius: 12px;
   padding: 1.25rem;
   display: flex;
@@ -480,7 +481,7 @@
 
 .contactDesc {
   font-size: 0.775rem;
-  color: #6b7280;
+  color: var(--student-text-muted);
   margin: 0 0 0.625rem;
   line-height: 1.55;
 }
@@ -499,15 +500,15 @@
 
 /* ── Ticket box ─────────────────────────────────────────────────────────────── */
 .ticketBox {
-  background: #ffffff;
-  border: 1px solid #e4ecf3;
+  background: var(--student-card-bg);
+  border: 1px solid var(--student-border);
   border-radius: 13px;
   padding: 1.625rem 1.5rem;
 }
 
 .ticketLead {
   font-size: 0.83rem;
-  color: #6b7280;
+  color: var(--student-text-muted);
   margin: 0 0 1.375rem;
   line-height: 1.6;
 }
@@ -529,7 +530,7 @@
 .formLabel {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #374151;
+  color: var(--student-text);
 }
 
 .formInput,
@@ -541,19 +542,19 @@
   font-size: 0.82rem;
   font-family: inherit;
   color: #111827;
-  background: #f9fbfd;
+  background: var(--student-input-bg);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
 .formInput::placeholder,
-.formTextarea::placeholder { color: #9ca3af; }
+.formTextarea::placeholder { color: var(--student-text-muted); }
 
 .formInput:focus,
 .formSelect:focus,
 .formTextarea:focus {
   border-color: #1e3a5f;
-  background: #ffffff;
+  background: var(--student-card-bg);
   box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.08);
 }
 
@@ -597,8 +598,8 @@
   align-items: center;
   gap: 0.45rem;
   padding: 0.6rem 1.375rem;
-  background: #0d2540;
-  color: #dce8f5;
+  background: var(--student-chip-active-bg);
+  color: var(--student-chip-active-text);
   border: 1px solid #1e3a5f;
   border-radius: 8px;
   font-size: 0.83rem;
@@ -609,8 +610,8 @@
 }
 
 .submitBtn:hover {
-  background: #1e3a5f;
-  color: #ffffff;
+  background: var(--student-chip-active-bg);
+  color: var(--student-chip-active-text);
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(30, 58, 95, 0.25);
 }
@@ -641,3 +642,4 @@
   .catGrid      { grid-template-columns: repeat(2, 1fr); }
   .ticketBox    { padding: 1.25rem 1rem; }
 }
+

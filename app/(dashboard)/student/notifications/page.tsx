@@ -41,6 +41,8 @@ export default function StudentNotificationsPage(): JSX.Element {
   const {
     notifications,
     unreadCount,
+    loading,
+    refetch,
     markAsRead,
     markAsUnread,
     markAllAsRead,
@@ -97,6 +99,8 @@ export default function StudentNotificationsPage(): JSX.Element {
       {/* Page header */}
       <NotificationHeader
         unreadCount={unreadCount}
+        refreshing={loading}
+        onRefresh={() => { void refetch() }}
         onMarkAllRead={markAllAsRead}
         onOpenSettings={() => setShowSettings(true)}
       />

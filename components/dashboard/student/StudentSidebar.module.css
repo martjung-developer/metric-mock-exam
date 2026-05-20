@@ -3,7 +3,7 @@
 .sidebar {
   width: 232px;
   min-height: 100vh;
-  background: var(--dashboard-sidebar-bg);
+  background: #06192d;
   display: flex;
   flex-direction: column;
   position: sticky;

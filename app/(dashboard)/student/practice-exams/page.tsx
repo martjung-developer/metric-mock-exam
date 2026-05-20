@@ -3,7 +3,7 @@
 
 import { useCallback }  from 'react'
 import { useRouter }    from 'next/navigation'
-import { Search, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, RefreshCw, X } from 'lucide-react'
 import styles           from './reviews.module.css'
 import ReviewCard       from '@/components/dashboard/student/practice-exams/ReviewCard'
 import ReviewCardSkeleton from '@/components/dashboard/student/practice-exams/ReviewCardSkeleton'
@@ -15,7 +15,7 @@ export default function ReviewsPage() {
     filtered, paginated, categories, availableCount,
     search, category, setSearch, setCategory,
     page, safePage, totalPages, pageNums, setPage,
-    loading, error,
+    loading, error, refetch,
   } = useReviewsList()
 
   const handleStartReview = useCallback(
@@ -41,6 +41,16 @@ export default function ReviewsPage() {
           <span className={styles.dot} />
           {availableCount} Available
         </span>
+        <button
+          type="button"
+          className={styles.refreshBtn}
+          onClick={() => { void refetch() }}
+          disabled={loading}
+          title="Refresh reviewers"
+        >
+          <RefreshCw size={16} className={loading ? styles.spin : undefined} />
+          Refresh
+        </button>
       </div>
 
       <div className={styles.filterRow}>

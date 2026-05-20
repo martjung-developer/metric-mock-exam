@@ -9,15 +9,15 @@
    TOKENS — mirrors existing dashboard tokens
 ═══════════════════════════════════════ */
 :root {
-  --a-bg:           #f4f6f9;
-  --a-surface:      #ffffff;
-  --a-surface-soft: #f9fafc;
-  --a-surface-tint: #f0f3f8;
-  --a-border:       #e4e9f0;
-  --a-border-soft:  #edf0f5;
-  --a-text:         #0d1523;
-  --a-text-sub:     #4a5568;
-  --a-text-muted:   #8a9ab5;
+  --a-bg:           var(--admin-page-bg);
+  --a-surface:      var(--admin-card-bg);
+  --a-surface-soft: var(--admin-card-bg);
+  --a-surface-tint: var(--admin-card-bg);
+  --a-border:       var(--admin-border);
+  --a-border-soft:  var(--admin-border);
+  --a-text:         var(--admin-text);
+  --a-text-sub:     var(--admin-text-muted);
+  --a-text-muted:   var(--admin-text-muted);
   --a-primary:      #0d2540;
   --a-primary-dark: #1e3a5f;
   --a-primary-pale: #eff4ff;

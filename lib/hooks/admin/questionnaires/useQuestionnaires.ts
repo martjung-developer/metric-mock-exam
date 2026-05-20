@@ -418,20 +418,17 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
     try {
       const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
 
-      if (ext === 'docx' || ext === 'doc') {
-        // ── DOCX / DOC: parse server-side ──────────────────────────────────
-        // mammoth is CPU-heavy and runs synchronously. Running it in the browser
-        // blocks the main thread for seconds on large files → "page not responding".
-        // We POST the raw file to the API route which runs mammoth in Node.js.
-        // The route returns already-validated ImportRow[] so no further processing
-        // is needed on the client.
+      if (ext === 'docx' || ext === 'doc' || ext === 'pdf') {
+        // ── DOCX / DOC / PDF: parse server-side ─────────────────────────────
+        // PDFs require color-aware parsing for correct-answer detection, so
+        // they are parsed on the server through the Python parser endpoint.
 
         const body = new FormData()
         body.append('file', file)
 
         let res: Response
         try {
-          res = await fetch('/api/admin/questionnaires/parse-docx', {
+          res = await fetch('/api/admin/questionnaires/parse-questionnaire', {
             method: 'POST',
             body,
           })
@@ -459,7 +456,7 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
         setImportRows(rows)
 
       } else {
-        // ── CSV / XLSX / PDF: existing local parser (unchanged) ─────────────
+        // ── CSV / XLSX: existing local parser (unchanged) ───────────────────
         const rawRows = await parseFile(file)
         if (rawRows.length === 0) {
           setImportError('The file appears empty or no question blocks were detected.')

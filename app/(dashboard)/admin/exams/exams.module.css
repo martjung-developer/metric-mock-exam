@@ -3,15 +3,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
 
 :root {
-  --bg:           #f4f6f9;
-  --surface:      #ffffff;
-  --surface-soft: #f9fafc;
-  --surface-tint: #f0f3f8;
-  --border:       #e4e9f0;
-  --border-soft:  #edf0f5;
-  --text:         #0d1523;
-  --text-sub:     #4a5568;
-  --text-muted:   #8a9ab5;
+  --bg:           var(--admin-page-bg);
+  --surface:      var(--admin-card-bg);
+  --surface-soft: var(--admin-card-bg);
+  --surface-tint: var(--admin-card-bg);
+  --border:       var(--admin-border);
+  --border-soft:  var(--admin-border);
+  --text:         var(--admin-text);
+  --text-sub:     var(--admin-text-muted);
+  --text-muted:   var(--admin-text-muted);
   --primary:      #0d2540;
   --primary-dark: #1e3a5f;
   --primary-pale: #eff4ff;

@@ -378,7 +378,7 @@ function ParsedRowsSection({ q }: { q: Q }) {
             fontSize: '0.76rem', fontWeight: 600, color: '#dc2626',
             background: 'rgba(220,38,38,0.08)', borderRadius: 20, padding: '0.2rem 0.65rem',
           }}>
-            <AlertCircle size={12} /> {q.invalidCount} with errors
+            <AlertCircle size={12} /> {q.invalidCount} issues
           </span>
         )}
         <span style={{ fontSize: '0.76rem', color: '#94a3b8', marginLeft: 'auto' }}>

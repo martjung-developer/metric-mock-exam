@@ -1,19 +1,23 @@
 // components/dashboard/student/notifications/NotificationHeader.tsx
 // Pure UI — title, subtitle, mark-all-read button, settings button.
 
-import { CheckCheck, Settings } from 'lucide-react'
+import { CheckCheck, RefreshCw, Settings } from 'lucide-react'
 import { notifAnimations } from '@/animations/notifications/notifications'
 import styles from '@/app/(dashboard)/student/notifications/notifications.module.css'
 import type { JSX } from 'react'
 
 interface NotificationHeaderProps {
   unreadCount:   number
+  refreshing: boolean
+  onRefresh: () => void
   onMarkAllRead: () => void
   onOpenSettings: () => void
 }
 
 export function NotificationHeader({
   unreadCount,
+  refreshing,
+  onRefresh,
   onMarkAllRead,
   onOpenSettings,
 }: NotificationHeaderProps): JSX.Element {
@@ -27,6 +31,15 @@ export function NotificationHeader({
       </div>
 
       <div className={styles.headerActions}>
+        <button
+          className={styles.btnRefresh}
+          onClick={onRefresh}
+          title="Refresh notifications"
+          disabled={refreshing}
+        >
+          <RefreshCw size={16} className={refreshing ? styles.spinning : undefined} />
+        </button>
+
         <button
           className={styles.btnMarkAll}
           onClick={onMarkAllRead}

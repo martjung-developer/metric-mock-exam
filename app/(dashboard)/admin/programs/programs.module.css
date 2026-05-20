@@ -9,15 +9,15 @@
    TOKENS — mirrors dashboard/exams/questionnaires tokens exactly
 ═══════════════════════════════════════ */
 :root {
-  --p-bg:           #f4f6f9;
-  --p-surface:      #ffffff;
-  --p-surface-soft: #f9fafc;
-  --p-surface-tint: #f0f3f8;
-  --p-border:       #e4e9f0;
-  --p-border-soft:  #edf0f5;
-  --p-text:         #0d1523;
-  --p-text-sub:     #4a5568;
-  --p-text-muted:   #8a9ab5;
+  --p-bg:           var(--admin-page-bg);
+  --p-surface:      var(--admin-card-bg);
+  --p-surface-soft: var(--admin-card-bg);
+  --p-surface-tint: var(--admin-card-bg);
+  --p-border:       var(--admin-border);
+  --p-border-soft:  var(--admin-border);
+  --p-text:         var(--admin-text);
+  --p-text-sub:     var(--admin-text-muted);
+  --p-text-muted:   var(--admin-text-muted);
   --p-primary:      #0d2540;
   --p-primary-dark: #1e3a5f;
   --p-primary-pale: #eff4ff;

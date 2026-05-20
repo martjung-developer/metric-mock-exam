@@ -21,6 +21,10 @@
   50%       { transform: scale(1.5); opacity: 0.55; }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ─── Global animation classes (keyed to animations/notifications.ts) ── */
 :global(.anim-fadeSlideIn) {
   animation: fadeSlideIn 0.32s ease both;
@@ -57,6 +61,9 @@
 /* ─── Page shell ─────────────────────────────────────────── */
 .page {
   font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+  background: transparent;
+  color: var(--student-text);
+  min-height: 100vh;
 }
 
 /* ─── Header ─────────────────────────────────────────────── */
@@ -74,7 +81,7 @@
 .title {
   font-size: 1.45rem;
   font-weight: 800;
-  color: #0d1117;
+  color: var(--student-heading);
   margin: 0;
   letter-spacing: -0.03em;
   line-height: 1.2;
@@ -82,7 +89,7 @@
 
 .subtitle {
   font-size: 0.825rem;
-  color: #6b7280;
+  color: var(--student-text-muted);
   margin: 0.3rem 0 0;
   font-weight: 400;
 }
@@ -100,12 +107,12 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.5rem 0.9rem;
-  background: #f9fbfd;
-  border: 1px solid #e2e8f0;
+  background: var(--student-input-bg);
+  border: 1px solid var(--student-border);
   border-radius: 10px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--student-text-muted);
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
@@ -113,9 +120,9 @@
 }
 
 .btnMarkAll:hover {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  color: #0f172a;
+  background: var(--student-card-bg);
+  border-color: var(--student-border);
+  color: var(--student-text);
 }
 
 .btnMarkAll:disabled {
@@ -129,18 +136,47 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: #f9fbfd;
-  border: 1px solid #e2e8f0;
+  background: var(--student-input-bg);
+  border: 1px solid var(--student-border);
   border-radius: 10px;
-  color: #6b7280;
+  color: var(--student-text-muted);
   cursor: pointer;
   transition: all 0.18s ease;
 }
 
 .btnSettings:hover {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  color: #0f172a;
+  background: var(--student-card-bg);
+  border-color: var(--student-border);
+  color: var(--student-text);
+}
+
+.btnRefresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--student-card-bg);
+  border: 1px solid var(--student-border);
+  border-radius: 10px;
+  color: var(--student-text-muted);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btnRefresh:hover:not(:disabled) {
+  background: var(--student-chip-bg);
+  border-color: var(--student-border);
+  color: var(--student-text);
+}
+
+.btnRefresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinning {
+  animation: spin 0.9s linear infinite;
 }
 
 /* ─── Tabs ────────────────────────────────────────────────── */
@@ -164,7 +200,7 @@
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
-  color: #6b7280;
+  color: var(--student-text-muted);
   font-size: 0.825rem;
   font-weight: 600;
   font-family: inherit;
@@ -174,19 +210,19 @@
 }
 
 .tab:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: var(--student-chip-bg);
+  color: var(--student-text);
 }
 
 .tabActive {
-  background: #0d2540;
-  color: #ffffff;
+  background: var(--student-chip-active-bg);
+  color: var(--student-chip-active-text);
   border-color: transparent;
 }
 
 .tabActive:hover {
-  background: #1e3a5f;
-  color: #ffffff;
+  background: var(--student-chip-active-bg);
+  color: var(--student-chip-active-text);
 }
 
 .tabBadge {
@@ -200,7 +236,7 @@
   font-size: 0.675rem;
   font-weight: 700;
   background: #ef4444;
-  color: #ffffff;
+  color: var(--student-chip-active-text);
   line-height: 1;
 }
 
@@ -224,7 +260,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: #94a3b8;
+  color: var(--student-text-muted);
   margin: 0 0 0.55rem;
   padding-left: 2px;
 }
@@ -241,8 +277,8 @@
   align-items: flex-start;
   gap: 0.875rem;
   padding: 1rem 1.125rem;
-  background: #ffffff;
-  border: 1px solid #e4ecf3;
+  background: var(--student-card-bg);
+  border: 1px solid var(--student-border);
   border-radius: 13px;
   cursor: pointer;
   position: relative;
@@ -293,7 +329,7 @@
 .iconReminder { background: #fef3c7; color: #92400e; }
 .iconStudy    { background: #ede9fe; color: #6d28d9; }
 .iconStreak   { background: #ffe4e6; color: #be123c; }
-.iconSystem   { background: #f1f5f9; color: #475569; }
+.iconSystem   { background: var(--student-chip-bg); color: #475569; }
 
 /* ─── Body ────────────────────────────────────────────────── */
 .notifBody {
@@ -323,12 +359,12 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #1e3a5f;
+  background: var(--student-chip-active-bg);
 }
 
 .notifMessage {
   font-size: 0.8rem;
-  color: #6b7280;
+  color: var(--student-text-muted);
   line-height: 1.55;
   margin: 0 0 0.45rem;
   display: -webkit-box;
@@ -350,7 +386,7 @@
   gap: 0.25rem;
   font-size: 0.72rem;
   font-weight: 500;
-  color: #94a3b8;
+  color: var(--student-text-muted);
 }
 
 .notifCta {
@@ -373,7 +409,7 @@
 .notifCta:hover {
   background: #dce8f5;
   border-color: #93c5d7;
-  color: #0d2540;
+  color: var(--student-text);
 }
 
 /* ─── Item actions ────────────────────────────────────────── */
@@ -399,15 +435,15 @@
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
-  color: #94a3b8;
+  color: var(--student-text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .actionBtn:hover {
-  background: #f1f5f9;
+  background: var(--student-chip-bg);
   border-color: #e2e8f0;
-  color: #334155;
+  color: var(--student-text-muted);
 }
 
 .actionBtnDanger:hover {
@@ -424,8 +460,8 @@
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  background: #ffffff;
-  border: 1px solid #e4ecf3;
+  background: var(--student-card-bg);
+  border: 1px solid var(--student-border);
   border-radius: 13px;
   margin-bottom: 1.75rem;
   animation: fadeIn 0.25s ease both;
@@ -439,20 +475,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #94a3b8;
+  color: var(--student-text-muted);
   margin-bottom: 0.25rem;
 }
 
 .emptyTitle {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #374151;
+  color: var(--student-text);
   margin: 0.25rem 0 0;
 }
 
 .emptySubtitle {
   font-size: 0.8rem;
-  color: #9ca3af;
+  color: var(--student-text-muted);
   margin: 0;
   max-width: 280px;
 }
@@ -470,8 +506,8 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.5rem 1.1rem;
-  background: #0d2540;
-  color: #dce8f5;
+  background: var(--student-chip-active-bg);
+  color: var(--student-chip-active-text);
   border: 1px solid #1e3a5f;
   border-radius: 8px;
   font-size: 0.8rem;
@@ -483,8 +519,8 @@
 }
 
 .emptyBtnPrimary:hover {
-  background: #1e3a5f;
-  color: #ffffff;
+  background: var(--student-chip-active-bg);
+  color: var(--student-chip-active-text);
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(30, 58, 95, 0.25);
 }
@@ -494,12 +530,12 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.5rem 1.1rem;
-  background: #f9fbfd;
-  border: 1px solid #e2e8f0;
+  background: var(--student-input-bg);
+  border: 1px solid var(--student-border);
   border-radius: 8px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--student-text-muted);
   font-family: inherit;
   cursor: pointer;
   text-decoration: none;
@@ -507,9 +543,9 @@
 }
 
 .emptyBtnSecondary:hover {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  color: #0f172a;
+  background: var(--student-card-bg);
+  border-color: var(--student-border);
+  color: var(--student-text);
 }
 
 /* ─── Settings modal ──────────────────────────────────────── */
@@ -526,7 +562,7 @@
 }
 
 .modal {
-  background: #ffffff;
+  background: var(--student-card-bg);
   border-radius: 14px;
   width: 100%;
   max-width: 440px;
@@ -546,7 +582,7 @@
 .modalTitle {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #0d1117;
+  color: var(--student-heading);
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -558,17 +594,17 @@
   width: 28px;
   height: 28px;
   border-radius: 7px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--student-border);
   background: transparent;
-  color: #94a3b8;
+  color: var(--student-text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .modalClose:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #374151;
+  background: var(--student-chip-bg);
+  border-color: var(--student-border);
+  color: var(--student-text);
 }
 
 .modalBody {
@@ -583,7 +619,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: #94a3b8;
+  color: var(--student-text-muted);
   margin: 0 0 0.75rem;
 }
 
@@ -613,7 +649,7 @@
 
 .settingDesc {
   font-size: 0.73rem;
-  color: #94a3b8;
+  color: var(--student-text-muted);
   margin: 0;
 }
 
@@ -649,13 +685,13 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--student-card-bg);
   transition: transform 0.2s;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .toggleInput:checked + .toggleSlider {
-  background: #1e3a5f;
+  background: var(--student-chip-active-bg);
 }
 
 .toggleInput:checked + .toggleSlider::after {
@@ -665,12 +701,12 @@
 /* Frequency select — mirrors categorySelect from reviews */
 .frequencySelect {
   padding: 0.45rem 2rem 0.45rem 0.7rem;
-  background: #f9fbfd;
-  border: 1px solid #e2e8f0;
+  background: var(--student-input-bg);
+  border: 1px solid var(--student-border);
   border-radius: 8px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--student-text);
   font-family: inherit;
   cursor: pointer;
   appearance: none;
@@ -682,8 +718,8 @@
 }
 
 .frequencySelect:hover {
-  background-color: #ffffff;
-  border-color: #cbd5e1;
+  background-color: var(--student-chip-active-text);
+  border-color: var(--student-border);
 }
 
 .frequencySelect:focus {
@@ -703,3 +739,4 @@
   .notifItem  { padding: 0.875rem 1rem; }
   .notifTitle { font-size: 0.8125rem; }
 }
+

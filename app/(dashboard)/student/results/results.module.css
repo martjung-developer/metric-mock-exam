@@ -4,6 +4,13 @@
 
 .page {
   font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+  background: transparent;
+  color: var(--student-text);
+  min-height: 100vh;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ══════════════════════════════════════
@@ -23,7 +30,7 @@
 .title {
   font-size: 1.45rem;
   font-weight: 800;
-  color: #0d1117;
+  color: var(--student-heading);
   margin: 0;
   letter-spacing: -0.03em;
   line-height: 1.2;
@@ -31,9 +38,39 @@
 
 .subtitle {
   font-size: 0.825rem;
-  color: #6b7280;
+  color: var(--student-text-muted);
   margin: 0.3rem 0 0;
   font-weight: 400;
+}
+
+.refreshBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.375rem 0.78rem;
+  border-radius: 999px;
+  border: 1px solid var(--student-border);
+  background: var(--student-card-bg);
+  color: var(--student-text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: all 0.16s ease;
+}
+
+.refreshBtn:hover:not(:disabled) {
+  background: var(--student-chip-bg);
+  border-color: var(--student-border);
+  color: var(--student-text);
+}
+
+.refreshBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
 }
 
 /* ══════════════════════════════════════
@@ -47,8 +84,8 @@
 }
 
 .statCard {
-  background: #ffffff;
-  border: 1px solid #e4ecf3;
+  background: var(--student-card-bg);
+  border: 1px solid var(--student-border);
   border-radius: 13px;
   padding: 1.25rem;
   display: flex;
@@ -106,7 +143,7 @@
 .statValue {
   font-size: 1.7rem;
   font-weight: 800;
-  color: #0d1117;
+  color: var(--student-heading);
   letter-spacing: -0.03em;
   line-height: 1;
 }
@@ -117,14 +154,14 @@
 
 .statLabel {
   font-size: 0.78rem;
-  color: #6b7280;
+  color: var(--student-text-muted);
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
 .statSub {
   font-size: 0.7rem;
-  color: #9ca3af;
+  color: var(--student-text-muted);
   margin-top: 0.1rem;
 }
 
@@ -143,8 +180,8 @@
 .tabGroup {
   display: flex;
   gap: 0.25rem;
-  background: #f9fbfd;
-  border: 1px solid #e2e8f0;
+  background: var(--student-input-bg);
+  border: 1px solid var(--student-border);
   border-radius: 10px;
   padding: 0.25rem;
 }
@@ -152,7 +189,7 @@
 .tabBtn {
   background: transparent;
   border: none;
-  color: #6b7280;
+  color: var(--student-text-muted);
   font-size: 0.8rem;
   font-weight: 600;
   padding: 0.4rem 1rem;
@@ -163,7 +200,7 @@
   font-family: inherit;
 }
 
-.tabBtn:hover { background: #f1f5f9; color: #0d1117; }
+.tabBtn:hover { background: var(--student-chip-bg); color: var(--student-heading); }
 
 .tabBtnActive {
   background: linear-gradient(135deg, #0d2540, #1e3a5f) !important;
@@ -185,34 +222,34 @@
   left: 0.8rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #94a3b8;
+  color: var(--student-text-muted);
   pointer-events: none;
 }
 
 .searchInput {
   width: 100%;
   padding: 0.55rem 2.4rem 0.55rem 2.4rem;
-  background: #f9fbfd;
-  border: 1px solid #e2e8f0;
+  background: var(--student-input-bg);
+  border: 1px solid var(--student-border);
   border-radius: 10px;
   font-size: 0.82rem;
   font-weight: 500;
-  color: #0f172a;
+  color: var(--student-text);
   font-family: inherit;
   transition: all 0.18s ease;
   box-sizing: border-box;
 }
 
-.searchInput::placeholder { color: #94a3b8; }
+.searchInput::placeholder { color: var(--student-text-muted); }
 
 .searchInput:focus {
   outline: none;
-  background: #ffffff;
+  background: var(--student-card-bg);
   border-color: #1e3a5f;
   box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.08), 0 2px 6px rgba(30, 58, 95, 0.06);
 }
 
-.searchInput:hover { border-color: #cbd5e1; }
+.searchInput:hover { border-color: var(--student-border); }
 
 .searchClear {
   position: absolute;
@@ -222,7 +259,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #94a3b8;
+  color: var(--student-text-muted);
   display: flex;
   align-items: center;
   padding: 2px;
@@ -230,17 +267,17 @@
   transition: color 0.15s;
 }
 
-.searchClear:hover { color: #0f172a; }
+.searchClear:hover { color: var(--student-text); }
 
 /* Filter select */
 .filterSelect {
   padding: 0.55rem 0.9rem;
-  background: #f9fbfd;
-  border: 1px solid #e2e8f0;
+  background: var(--student-input-bg);
+  border: 1px solid var(--student-border);
   border-radius: 10px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--student-text);
   font-family: inherit;
   cursor: pointer;
   transition: all 0.18s ease;
@@ -252,7 +289,7 @@
   min-width: 155px;
 }
 
-.filterSelect:hover { border-color: #cbd5e1; background-color: #ffffff; }
+.filterSelect:hover { border-color: var(--student-border); background-color: var(--student-chip-active-text); }
 
 .filterSelect:focus {
   outline: none;
@@ -262,20 +299,20 @@
 
 .resultCount {
   font-size: 0.78rem;
-  color: #94a3b8;
+  color: var(--student-text-muted);
   margin: 0;
   white-space: nowrap;
   font-weight: 500;
 }
 
-.resultCount strong { color: #0d1117; font-weight: 700; }
+.resultCount strong { color: var(--student-heading); font-weight: 700; }
 
 /* ══════════════════════════════════════
    TABLE CARD
 ══════════════════════════════════════ */
 .tableCard {
-  background: #ffffff;
-  border: 1px solid #e4ecf3;
+  background: var(--student-card-bg);
+  border: 1px solid var(--student-border);
   border-radius: 13px;
   overflow: hidden;
   margin-bottom: 1.375rem;
@@ -290,7 +327,7 @@
   font-size: 0.82rem;
 }
 
-.table thead { background: #f9fbfd; }
+.table thead { background: var(--student-input-bg); }
 
 .table th {
   text-align: left;
@@ -298,7 +335,7 @@
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: var(--student-text-muted);
   padding: 0.85rem 1rem;
   border-bottom: 1px solid #e4ecf3;
   white-space: nowrap;
@@ -311,7 +348,7 @@
 }
 
 .table tr:last-child td { border-bottom: none; }
-.table tbody tr:hover td { background: #f9fbfd; }
+.table tbody tr:hover td { background: var(--student-input-bg); }
 
 /* Column: Exam info */
 .examInfo {}
@@ -334,7 +371,7 @@
 
 .examCategory {
   font-size: 0.68rem;
-  color: #9ca3af;
+  color: var(--student-text-muted);
   font-weight: 500;
 }
 
@@ -349,7 +386,7 @@
   text-transform: uppercase;
 }
 
-.typeMock     { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.typeMock     { background: var(--student-chip-bg); color: #1d4ed8; border: 1px solid #bfdbfe; }
 .typePractice { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
 
 /* Column: Score */
@@ -367,7 +404,7 @@
 
 .scoreTotal {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--student-text-muted);
   font-weight: 500;
 }
 
@@ -416,20 +453,20 @@
 
 .badgePassed  { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
 .badgeFailed  { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
-.badgePending { background: #f0f5fa; color: #64748b; border: 1px solid #e2e8f0; }
+.badgePending { background: #f0f5fa; color: #64748b; border: 1px solid var(--student-border); }
 
 /* Column: Time spent */
 .timeVal {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--student-text);
   white-space: nowrap;
 }
 
 /* Column: Date */
 .dateVal {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--student-text-muted);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -453,9 +490,9 @@
 }
 
 .reviewBtn:hover {
-  background: #0d2540;
-  color: #dce8f5;
-  border-color: #0d2540;
+  background: var(--student-chip-active-bg);
+  color: var(--student-chip-active-text);
+  border-color: var(--student-text);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(13, 37, 64, 0.2);
 }
@@ -470,8 +507,8 @@
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  background: #ffffff;
-  border: 1px solid #e4ecf3;
+  background: var(--student-card-bg);
+  border: 1px solid var(--student-border);
   border-radius: 13px;
   margin-bottom: 1.375rem;
   animation: fadeUp 0.4s ease 0.1s both;
@@ -491,14 +528,14 @@
 .emptyTitle {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #374151;
+  color: var(--student-text);
   margin: 0;
   letter-spacing: -0.01em;
 }
 
 .emptyText {
   font-size: 0.8rem;
-  color: #9ca3af;
+  color: var(--student-text-muted);
   margin: 0;
   max-width: 300px;
   line-height: 1.55;
@@ -508,7 +545,7 @@
   margin-top: 0.75rem;
   padding: 0.5rem 1.25rem;
   background: linear-gradient(135deg, #0d2540, #1e3a5f);
-  color: #dce8f5;
+  color: var(--student-chip-active-text);
   border: none;
   border-radius: 8px;
   font-size: 0.8rem;
@@ -567,7 +604,7 @@
 
 .pageInfo {
   font-size: 0.775rem;
-  color: #9ca3af;
+  color: var(--student-text-muted);
   font-weight: 500;
 }
 
@@ -581,14 +618,14 @@
   min-width: 34px;
   height: 34px;
   border-radius: 9px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
+  border: 1px solid var(--student-border);
+  background: var(--student-card-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--student-text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: inherit;
@@ -597,29 +634,29 @@
 .pageBtn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .pageBtn:hover:not(:disabled) {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #0f172a;
+  background: var(--student-chip-bg);
+  border-color: var(--student-border);
+  color: var(--student-text);
 }
 
 .pageNum {
   min-width: 34px;
   height: 34px;
   border-radius: 9px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
+  border: 1px solid var(--student-border);
+  background: var(--student-card-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--student-text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: inherit;
 }
 
-.pageNum:hover { background: #f1f5f9; border-color: #cbd5e1; color: #0f172a; }
+.pageNum:hover { background: var(--student-chip-bg); border-color: var(--student-border); color: var(--student-text); }
 
 .pageNumActive {
   background: linear-gradient(135deg, #0d2540, #1e3a5f) !important;
@@ -657,3 +694,4 @@
   .tabGroup     { width: 100%; justify-content: stretch; }
   .tabBtn       { flex: 1; text-align: center; }
 }
+

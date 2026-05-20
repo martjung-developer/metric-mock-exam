@@ -1,6 +1,7 @@
 // app/(dashboard)/student/results/page.tsx
 'use client'
 
+import { useState } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { useResults }          from '@/lib/hooks/student/results/useResults'
 import { ResultsHeader }       from '@/components/dashboard/student/results/ResultsHeader'
@@ -18,22 +19,36 @@ export default function ResultsPage() {
     loading, error, total, totalPages, pageNumbers,
     tab, search, statusFilter, categoryFilter, page,
     setTab, setSearch, setStatusFilter, setCategoryFilter, setPage,
+    refetch,
   } = useResults()
+  const [refreshing, setRefreshing] = useState(false)
+
+  async function handleRefresh() {
+    if (refreshing) {
+      return
+    }
+    setRefreshing(true)
+    try {
+      await refetch()
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   return (
     <div className={styles.page}>
 
-      <ResultsHeader />
+      <ResultsHeader refreshing={refreshing} onRefresh={() => { void handleRefresh() }} />
 
       {/* Error banner */}
       {error && (
         <div style={{
-          background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 10,
+          background: 'var(--student-card-bg)', border: '1px solid var(--student-border)', borderRadius: 10,
           padding: '0.8rem 1rem', marginBottom: '0.75rem',
           display: 'flex', alignItems: 'center', gap: '0.6rem',
         }}>
-          <AlertCircle size={15} color="#dc2626" style={{ flexShrink: 0 }} />
-          <p style={{ fontSize: '0.82rem', color: '#991b1b', margin: 0 }}>{error}</p>
+          <AlertCircle size={15} color="var(--student-text-muted)" style={{ flexShrink: 0 }} />
+          <p style={{ fontSize: '0.82rem', color: 'var(--student-text)', margin: 0 }}>{error}</p>
         </div>
       )}
 

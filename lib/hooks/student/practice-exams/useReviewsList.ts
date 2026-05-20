@@ -36,6 +36,7 @@ export interface UseReviewsListReturn {
   // Status
   loading: boolean
   error:   string | null
+  refetch: () => Promise<void>
 }
 
 export function useReviewsList(): UseReviewsListReturn {
@@ -63,15 +64,13 @@ export function useReviewsList(): UseReviewsListReturn {
     return () => controller.abort()
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load reviews
-  useEffect(() => {
+  const refetch = useCallback(async () => {
     if (!user || !programReady) {return}
     const controller = new AbortController()
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDataLoading(true)
     setDataError(null)
 
-    fetchReviewsForStudent(user.id, programId, controller.signal).then(
+    await fetchReviewsForStudent(user.id, programId, controller.signal).then(
       ({ reviews, error }) => {
         if (controller.signal.aborted) {return}
         setAllReviews(reviews)
@@ -79,8 +78,13 @@ export function useReviewsList(): UseReviewsListReturn {
         setDataLoading(false)
       },
     )
-    return () => controller.abort()
-  }, [user?.id, programId, programReady]) // eslint-disable-line react-hooks/exhaustive-deps
+    controller.abort()
+  }, [programId, programReady, user])
+
+  // Load reviews
+  useEffect(() => {
+    void refetch()
+  }, [refetch])
 
   const categories = useMemo(() => {
     const unique = Array.from(new Set(allReviews.map(r => r.category))).sort()
@@ -134,5 +138,6 @@ export function useReviewsList(): UseReviewsListReturn {
     setPage,
     loading: authLoading || dataLoading,
     error:   authError ?? dataError,
+    refetch,
   }
 }

@@ -9,19 +9,19 @@
 ═══════════════════════════════════════════ */
 :root {
   /* Surface */
-  --bg:           #f4f6f9;
-  --surface:      #ffffff;
-  --surface-soft: #f9fafc;
-  --surface-tint: #f0f3f8;
+  --bg:           var(--admin-page-bg);
+  --surface:      var(--admin-card-bg);
+  --surface-soft: var(--admin-card-bg);
+  --surface-tint: var(--admin-card-bg);
 
   /* Borders */
-  --border:       #e4e9f0;
-  --border-soft:  #edf0f5;
+  --border:       var(--admin-border);
+  --border-soft:  var(--admin-border);
 
   /* Text */
-  --text:         #0d1523;
-  --text-sub:     #4a5568;
-  --text-muted:   #8a9ab5;
+  --text:         var(--admin-text);
+  --text-sub:     var(--admin-text-muted);
+  --text-muted:   var(--admin-text-muted);
 
   /* Brand / Accent (flat, no gradient) */
   --primary:      #0d2540;
@@ -890,3 +890,4 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
