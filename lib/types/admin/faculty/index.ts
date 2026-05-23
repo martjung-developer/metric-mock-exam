@@ -1,6 +1,7 @@
 // lib/types/admin/faculty/index.ts
 
 export type FacultyRoleType = 'professional' | 'major' | 'minor'
+export type FacultyAssignmentRole = 'full_time' | 'part_time' | 'adjunct' | 'emeritus'
 
 export type FacultyDepartment = 'SBIT' | 'SSLATE' | 'SARFAID'
 
@@ -30,6 +31,13 @@ export const ROLE_TYPE_LABELS: Record<FacultyRoleType, string> = {
   professional: 'Professional Education',
   major:        'Major Education',
   minor:        'Minor Education',
+}
+
+export const FACULTY_ASSIGNMENT_ROLE_LABELS: Record<FacultyAssignmentRole, string> = {
+  full_time: 'Full-time',
+  part_time: 'Part-time',
+  adjunct: 'Adjunct',
+  emeritus: 'Emeritus',
 }
 
 // ── Row returned from the faculty table ──────────────────────────────────────

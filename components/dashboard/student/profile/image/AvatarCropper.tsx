@@ -69,7 +69,10 @@ export function AvatarCropper({ file, onComplete, onCancel }: AvatarCropperProps
     ctx.arc(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, 0, Math.PI * 2)
     ctx.clip()
 
+    // Slight boost so uploaded portraits do not look dull in dark UI contexts.
+    ctx.filter = 'saturate(1.15) brightness(1.06) contrast(1.03)'
     ctx.drawImage(img, x, y, drawW, drawH)
+    ctx.filter = 'none'
     ctx.restore()
   }, [])
 

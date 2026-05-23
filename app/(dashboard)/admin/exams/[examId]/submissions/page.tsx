@@ -144,6 +144,8 @@ function handleGradeSubmission() {
       <SubmissionsTable
         paginated={subs.paginated}
         loading={subs.loading}
+        takeSort={subs.takeSort}
+        onTakeSort={subs.setTakeSort}
         onView={details.openModal}
         onForceSubmit={subs.forceSubmit}
       />

@@ -50,6 +50,8 @@ export interface ExamDetailRaw {
   exam_type:        string | null   // DB stores as string; we narrow via safeExamType()
   created_at:       string
   updated_at:       string
+  approval_status:  string | null
+  review_notes:     string | null
   // Supabase may return these as a single object or wrapped array depending on
   // the join cardinality and client version. Mappers handle both shapes.
   exam_categories:  ExamCategoryJoin | ExamCategoryJoin[] | null
@@ -75,6 +77,8 @@ export interface ExamDetail {
   avg_score:        number | null
   created_at:       string
   updated_at:       string
+  approval_status:  string | null
+  review_notes:     string | null
 }
 
 // ── Edit Form ───────────────────────────────────────────────────────────────

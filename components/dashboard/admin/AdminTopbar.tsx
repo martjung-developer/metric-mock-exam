@@ -11,8 +11,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Image                   from 'next/image'
 import Link                    from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Search, Bell, Settings, ChevronDown, GraduationCap } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Search, Bell, Settings, ChevronDown, GraduationCap, UserCircle2, LogOut } from 'lucide-react'
 import { createClient }        from '@/lib/supabase/client'
 import { useUnreadCount }      from '@/lib/hooks/notifications/useUnreadCount'
 import { useRealtimeProfile }  from '@/lib/hooks/shared/useRealtimeProfile'
@@ -41,7 +41,9 @@ export default function AdminTopbar() {
   const [avatarUrl,   setAvatarUrl]   = useState<string | null>(null)
   const [userId,      setUserId]      = useState<string | null>(null)
   const [search,      setSearch]      = useState('')
-    const pathname = usePathname()
+  const [menuOpen,    setMenuOpen]    = useState(false)
+  const pathname = usePathname()
+  const router = useRouter()
 
   // ── Resolve current user + profile ───────────────────────────────────────
   useEffect(() => {
@@ -81,6 +83,25 @@ export default function AdminTopbar() {
   const notificationHref = inFaculty ? '/faculty/notifications' : '/admin/notifications'
   const settingsHref = inFaculty ? '/faculty/settings' : '/admin/settings'
   const roleLabel = inFaculty ? 'Faculty' : 'Admin'
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      const target = e.target as HTMLElement | null
+      if (!target) { return }
+      if (!target.closest('[data-topbar-profile-menu="admin"]')) {
+        setMenuOpen(false)
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener('click', onDocClick)
+      return () => document.removeEventListener('click', onDocClick)
+    }
+  }, [menuOpen])
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   return (
     <header className={styles.topbar}>
@@ -129,7 +150,14 @@ export default function AdminTopbar() {
         </Link>
 
         {/* Avatar — image or initials fallback */}
-        <button className={styles.avatarBtn} type="button">
+        <div className={styles.profileMenuWrap} data-topbar-profile-menu="admin">
+        <button
+          className={styles.avatarBtn}
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-expanded={menuOpen}
+          aria-haspopup="menu"
+        >
           <div className={styles.avatarCircle}>
             {avatarUrl ? (
               <Image
@@ -147,6 +175,17 @@ export default function AdminTopbar() {
           <span className={styles.avatarName}>{facultyName ?? 'Faculty'}</span>
           <ChevronDown size={12} className={styles.avatarChevron} />
         </button>
+          {menuOpen && (
+            <div className={styles.profileMenu} role="menu">
+              <Link href={settingsHref} className={styles.profileMenuItem} role="menuitem" onClick={() => setMenuOpen(false)}>
+                <UserCircle2 size={14} /> Account Settings
+              </Link>
+              <button type="button" className={`${styles.profileMenuItem} ${styles.profileMenuDanger}`} onClick={handleLogout} role="menuitem">
+                <LogOut size={14} /> Logout
+              </button>
+            </div>
+          )}
+        </div>
 
       </div>
     </header>

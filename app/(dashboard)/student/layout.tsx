@@ -39,7 +39,7 @@ export default async function StudentLayout({
     email:      authProfile.email,
     full_name:  authProfile.full_name ?? 'Student',
     role:       'student',
-    avatar_url: null,
+    avatar_url: authProfile.avatar_url ?? null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }

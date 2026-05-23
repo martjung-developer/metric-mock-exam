@@ -118,6 +118,7 @@
 .studentName{font-weight:700;color:var(--text);font-size:.81rem}
 .studentEmail{font-size:.7rem;color:var(--text-muted);margin-top:1px}
 .idChip{font-size:.71rem;font-weight:700;color:var(--text-sub);background:var(--surface-tint);border:1px solid var(--border-soft);border-radius:6px;padding:2px 8px;font-family:monospace}
+.takeChip{font-size:.7rem;font-weight:700;color:var(--primary);background:var(--primary-pale);border:1px solid var(--primary-tint);border-radius:6px;padding:2px 8px;white-space:nowrap}
 .dateCell{font-size:.73rem;color:var(--text-muted);white-space:nowrap}
 .timeCell{font-size:.73rem;color:var(--text-sub);font-weight:500;white-space:nowrap}
 .na{color:var(--text-muted)}
@@ -289,6 +290,22 @@
 .actionForceSubmit:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.sortBtn{
+  border:none;
+  background:none;
+  color:inherit;
+  font:inherit;
+  font-size:.67rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+  padding:0;
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  cursor:pointer;
 }
 
 @media(max-width:768px){

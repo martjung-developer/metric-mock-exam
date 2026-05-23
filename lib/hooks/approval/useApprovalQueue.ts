@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import type {
   PendingReviewItem,
   ApprovalEntityType,
+  ApprovalReviewDetail,
 } from '@/lib/types/approval'
 import { createClient } from '@/lib/supabase/client'
 import { fetchApprovalHistory } from '@/lib/services/approval/approval.service'
@@ -23,6 +24,9 @@ export interface UseApprovalQueueReturn {
   acting:         boolean
   history:        ApprovalEvent[]
   historyLoading: boolean
+  reviewDetail: ApprovalReviewDetail | null
+  detailLoading: boolean
+  noteError: string | null
   filterType:     ApprovalEntityType | 'all'
   filteredItems:  PendingReviewItem[]
   setFilterType:  (t: ApprovalEntityType | 'all') => void
@@ -49,6 +53,9 @@ export function useApprovalQueue(): UseApprovalQueueReturn {
   const [history,        setHistory]        = useState<ApprovalEvent[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [filterType,     setFilterType]     = useState<ApprovalEntityType | 'all'>('all')
+  const [reviewDetail,   setReviewDetail]   = useState<ApprovalReviewDetail | null>(null)
+  const [detailLoading,  setDetailLoading]  = useState(false)
+  const [noteError,      setNoteError]      = useState<string | null>(null)
 
   const fetchAll = useCallback(async (silent = false) => {
     if (silent) { setRefreshing(true) } else { setLoading(true) }
@@ -100,19 +107,32 @@ export function useApprovalQueue(): UseApprovalQueueReturn {
   const openReview = useCallback(async (item: PendingReviewItem) => {
     setSelectedItem(item)
     setReviewNotes(item.reviewNotes ?? '')
+    setNoteError(null)
     setHistory([])
+    setReviewDetail(null)
     setHistoryLoading(true)
+    setDetailLoading(true)
     try {
-      const hist = await fetchApprovalHistory(supabase, item.entityType, item.id)
+      const [hist, detailRes] = await Promise.all([
+        fetchApprovalHistory(supabase, item.entityType, item.id),
+        fetch(`/api/admin/approvals/${item.id}/review?entityType=${item.entityType}`),
+      ])
       setHistory(hist)
+      if (detailRes.ok) {
+        const detailJson = (await detailRes.json().catch(() => ({}))) as { detail?: ApprovalReviewDetail }
+        setReviewDetail(detailJson.detail ?? null)
+      }
     } finally {
       setHistoryLoading(false)
+      setDetailLoading(false)
     }
   }, [supabase])
 
   const closeReview = useCallback(() => {
     setSelectedItem(null)
     setReviewNotes('')
+    setReviewDetail(null)
+    setNoteError(null)
     setHistory([])
   }, [])
 
@@ -120,6 +140,11 @@ export function useApprovalQueue(): UseApprovalQueueReturn {
     if (!selectedItem || !user) {
       return
     }
+    if (action === 'reject' && !reviewNotes.trim()) {
+      setNoteError('Please provide a reason for rejection.')
+      return
+    }
+    setNoteError(null)
     setActing(true)
     try {
       const res = await fetch(`/api/admin/approvals/${selectedItem.id}/review`, {
@@ -147,7 +172,7 @@ export function useApprovalQueue(): UseApprovalQueueReturn {
   return {
     items, loading, refreshing, error,
     selectedItem, reviewNotes, acting,
-    history, historyLoading,
+    history, historyLoading, reviewDetail, detailLoading, noteError,
     filterType, filteredItems,
     setFilterType,
     openReview, closeReview,

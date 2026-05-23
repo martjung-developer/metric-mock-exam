@@ -147,9 +147,10 @@ export async function fetchStudentSubmissionStatuses(
 
   const { data, error } = await supabase
     .from('submissions')
-    .select('id, exam_id, status')
+    .select('id, exam_id, status, attempt_no')
     .eq('student_id', userId)
     .in('exam_id', examIds)
+    .order('attempt_no', { ascending: false })
     .order('created_at', { ascending: false })
 
   if (error !== null) {return {}}
@@ -295,6 +296,20 @@ export async function fetchOrCreateSubmission(
 ): Promise<SessionCreateResult> {
   const supabase = getSupabase()
 
+  // Block resume/retake once any graded/reviewed/released record exists.
+  const { data: gradedLock, error: gradedLockErr } = await supabase
+    .from('submissions')
+    .select('id')
+    .eq('exam_id', examId)
+    .eq('student_id', userId)
+    .in('status', ['graded', 'reviewed', 'released'])
+    .limit(1)
+    .maybeSingle()
+  if (gradedLockErr !== null) {throw new Error('Could not verify grading lock state.')}
+  if (gradedLock !== null) {
+    throw new Error('This exam has already been graded and can no longer be resumed.')
+  }
+
   // 1. Check for an existing in_progress session → resume it
   const { data: inProg, error: inProgError } = await supabase
     .from('submissions')
@@ -341,6 +356,25 @@ export async function fetchOrCreateSubmission(
     .single()
 
   if (insertError !== null || newSub === null) {
+    if (insertError?.code === '23505') {
+      const { data: existing, error: existingErr } = await supabase
+        .from('submissions')
+        .select('id, started_at, attempt_no')
+        .eq('exam_id', examId)
+        .eq('student_id', userId)
+        .eq('status', 'in_progress')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (existingErr === null && existing !== null) {
+        return {
+          kind: 'resumed',
+          submissionId: existing.id,
+          startedAt: existing.started_at,
+          attemptNo: existing.attempt_no,
+        }
+      }
+    }
     // Surface the actual Postgres error message for debugging
     throw new Error(
       insertError?.message
@@ -463,6 +497,39 @@ export async function createNewSubmission(
 ): Promise<SessionCreateResult> {
   const supabase = getSupabase()
 
+  const { data: gradedLock, error: gradedLockErr } = await supabase
+    .from('submissions')
+    .select('id')
+    .eq('exam_id', examId)
+    .eq('student_id', userId)
+    .in('status', ['graded', 'reviewed', 'released'])
+    .limit(1)
+    .maybeSingle()
+  if (gradedLockErr !== null) {throw new Error('Could not verify grading lock state.')}
+  if (gradedLock !== null) {
+    throw new Error('This exam has already been graded and can no longer be resumed.')
+  }
+
+  // Reuse any existing active session to enforce one in_progress record.
+  const { data: inProg, error: inProgErr } = await supabase
+    .from('submissions')
+    .select('id, started_at, attempt_no')
+    .eq('exam_id', examId)
+    .eq('student_id', userId)
+    .eq('status', 'in_progress')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (inProgErr !== null) {throw new Error('Could not check existing in-progress attempt.')}
+  if (inProg !== null) {
+    return {
+      kind: 'resumed',
+      submissionId: inProg.id,
+      startedAt: inProg.started_at,
+      attemptNo: inProg.attempt_no,
+    }
+  }
+
   const totalCount = await countAllSubmissions(supabase, userId, examId)
 
   if (totalCount >= MAX_ATTEMPTS) {
@@ -488,9 +555,11 @@ export async function createNewSubmission(
     throw new Error(
       error?.message
         ? `Could not create new attempt: ${error.message}`
-        : 'Could not create new attempt.',
+      : 'Could not create new attempt.',
     )
   }
+
+  return { kind: 'started', submissionId: data.id, startedAt: now, attemptNo: nextAttemptNo }
 }
 
 export async function sendExamSubmittedNotificationToAdmins(
@@ -502,9 +571,6 @@ export async function sendExamSubmittedNotificationToAdmins(
     studentLabel,
     examTitle,
   })
-
-
-  return { kind: 'started', submissionId: data.id, startedAt: now, attemptNo: nextAttemptNo }
 }
 
 export async function verifyStudentExamAccess(

@@ -140,8 +140,8 @@ export function ExamCard({ exam, onStart, onContinue, onViewAttempt }: Props) {
         )}
 
         {isCompleted && (
-          <button className={styles.viewBtn} onClick={() => onViewAttempt(exam.id)}>
-            <Eye size={15} strokeWidth={2} /> View Attempt
+          <button className={styles.disabledBtn} disabled>
+            <Eye size={15} strokeWidth={2} /> Results Available
           </button>
         )}
 

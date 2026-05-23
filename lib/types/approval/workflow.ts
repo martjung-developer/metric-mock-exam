@@ -92,6 +92,36 @@ export interface PendingReviewItem {
   reviewNotes:  string | null
 }
 
+export interface ApprovalReviewQuestion {
+  id: string
+  questionNumber: number
+  scenario: string | null
+  stem: string
+  choices: { label: string; text: string }[]
+  correctAnswer: string | null
+  hasParseIssue: boolean
+}
+
+export interface ApprovalReviewDetail {
+  examId: string
+  title: string
+  status: ApprovalStatus
+  programCode: string | null
+  programName: string | null
+  submittedAt: string | null
+  facultyId: string | null
+  facultyName: string | null
+  facultyAvatarUrl: string | null
+  metadata: {
+    durationMinutes: number | null
+    passingScore: number | null
+    examType: string | null
+    category: string | null
+    questionCount: number
+  }
+  questions: ApprovalReviewQuestion[]
+}
+
 // ── Faculty submission summary ────────────────────────────────────────────────
 
 export interface FacultySubmissionSummary {

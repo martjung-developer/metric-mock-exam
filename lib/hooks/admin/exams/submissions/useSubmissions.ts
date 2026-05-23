@@ -40,6 +40,7 @@ export interface UseSubmissionsReturn {
   // Filters
   search:          string
   statusFilter:    SubmissionStatus | 'all'
+  takeSort:        'asc' | 'desc'
   page:            number
   // Derived
   filtered:        Submission[]
@@ -52,6 +53,7 @@ export interface UseSubmissionsReturn {
   // Actions
   setSearch:       (v: string)                          => void
   setStatusFilter: (v: SubmissionStatus | 'all')        => void
+  setTakeSort:     (v: 'asc' | 'desc')                  => void
   setPage:         (v: number)                          => void
   setSubmissions:  React.Dispatch<React.SetStateAction<Submission[]>>
   refetch:         () => Promise<void>
@@ -69,6 +71,7 @@ export function useSubmissions(examId: string): UseSubmissionsReturn {
   const [error,        setError]        = useState<string | null>(null)
   const [search,       setSearch]       = useState('')
   const [statusFilter, setStatusFilter] = useState<SubmissionStatus | 'all'>('all')
+  const [takeSort,     setTakeSort]     = useState<'asc' | 'desc'>('desc')
   const [page,         setPage]         = useState(1)
 
   const refetch = useCallback(async () => {
@@ -129,19 +132,28 @@ export function useSubmissions(examId: string): UseSubmissionsReturn {
 
   // ── Derived: filtered list ───────────────────────────────────────────────────
 
-  const filtered = useMemo(() => submissions.filter(sub => {
+  const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    const matchSearch =
-      !search ||
-      sub.student.full_name.toLowerCase().includes(q) ||
-      sub.student.email.toLowerCase().includes(q) ||
-      (sub.student.student_id ?? '').toLowerCase().includes(q)
+    const base = submissions.filter(sub => {
+      const matchSearch =
+        !search ||
+        sub.student.full_name.toLowerCase().includes(q) ||
+        sub.student.email.toLowerCase().includes(q) ||
+        (sub.student.student_id ?? '').toLowerCase().includes(q)
 
-    const matchStatus =
-      statusFilter === 'all' || sub.status === statusFilter
+      const matchStatus =
+        statusFilter === 'all' || sub.status === statusFilter
 
-    return matchSearch && matchStatus
-  }), [submissions, search, statusFilter])
+      return matchSearch && matchStatus
+    })
+
+    const sorted = [...base].sort((a, b) => {
+      const diff = (a.attempt_no ?? 1) - (b.attempt_no ?? 1)
+      return takeSort === 'asc' ? diff : -diff
+    })
+
+    return sorted
+  }, [submissions, search, statusFilter, takeSort])
 
   // ── Derived: pagination ──────────────────────────────────────────────────────
 
@@ -165,10 +177,10 @@ export function useSubmissions(examId: string): UseSubmissionsReturn {
 
   return {
     submissions, examInfo, loading, error,
-    search, statusFilter, page,
+    search, statusFilter, takeSort, page,
     filtered, paginated, totalPages,
     reviewedCount, gradeableCount,
-    setSearch, setStatusFilter, setPage, setSubmissions,
+    setSearch, setStatusFilter, setTakeSort, setPage, setSubmissions,
     refetch, clearError: () => setError(null),
     forceSubmit,
   }

@@ -100,6 +100,7 @@ export function mapSubmission(row: SubmissionRaw): Submission {
       email:      profile?.email      ?? '',
       student_id: studentJoin?.student_id ?? null,
     },
+    attempt_no:         row.attempt_no ?? 1,
     started_at:         row.started_at,
     submitted_at:       row.submitted_at,
     time_spent_seconds: row.time_spent_seconds,

@@ -23,3 +23,14 @@ export function initials(name: string): string {
     .slice(0, 2)
     .toUpperCase()
 }
+
+export function fmtOrdinalTake(n: number): string {
+  const v = Math.abs(n)
+  const mod100 = v % 100
+  if (mod100 >= 11 && mod100 <= 13) {return `${v}th Take`}
+  const mod10 = v % 10
+  if (mod10 === 1) {return `${v}st Take`}
+  if (mod10 === 2) {return `${v}nd Take`}
+  if (mod10 === 3) {return `${v}rd Take`}
+  return `${v}th Take`
+}

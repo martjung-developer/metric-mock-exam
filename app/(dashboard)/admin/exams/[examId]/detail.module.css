@@ -158,6 +158,7 @@
 }
 .navItem:last-child { border-bottom: none; }
 .navItem:hover { background: var(--surface-soft); }
+.navItemLocked { opacity: .7; cursor: not-allowed; pointer-events: auto; }
 .navIcon {
   width: 36px; height: 36px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
@@ -198,6 +199,29 @@
 }
 .btnSecondary:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-pale); }
 .btnSecondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.pendingBanner, .rejectedBanner {
+  display: flex;
+  gap: .7rem;
+  align-items: flex-start;
+  border-radius: 12px;
+  padding: .85rem 1rem;
+  margin-bottom: 1rem;
+}
+.pendingBanner {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #7c2d12;
+}
+.rejectedBanner {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #7f1d1d;
+}
+.pendingBanner p, .rejectedBanner p {
+  margin: .2rem 0 0;
+  font-size: .78rem;
+}
 
 /* ── Skeleton ── */
 .skeleton {

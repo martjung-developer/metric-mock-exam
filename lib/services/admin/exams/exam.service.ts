@@ -120,6 +120,7 @@ function toExam(
     passing_score:    raw.passing_score,
     is_published:     raw.is_published,
     approval_status:  raw.approval_status,
+    review_notes:     raw.review_notes,
     question_count:   qCountMap[raw.id] ?? 0,
     assigned_count:   aCountMap[raw.id] ?? 0,
     created_at:       raw.created_at,
@@ -223,7 +224,7 @@ export async function getAllExamsWithMeta(supabase: DB): Promise<Exam[]> {
     .from('exams')
     .select(`
       id, title, description, duration_minutes, total_points, passing_score,
-      is_published, approval_status, exam_type, created_at,
+      is_published, approval_status, review_notes, exam_type, created_at,
       exam_categories ( id, name, icon ),
       programs ( id, code, name )
     `)
@@ -255,6 +256,12 @@ export async function updateExam(
   id:       string,
   payload:  ExamUpdatePayload,
 ): Promise<void> {
+  const { data: before } = await supabase
+    .from('exams')
+    .select('approval_status, title')
+    .eq('id', id)
+    .maybeSingle()
+
   const { error } = await supabase
     .from('exams')
     .update(payload)
@@ -262,6 +269,54 @@ export async function updateExam(
     .returns<void>()
 
   if (error) {throw new Error(error.message)}
+
+  if (before?.approval_status !== 'rejected') {
+    return
+  }
+
+  const { data: auth } = await supabase.auth.getUser()
+  const actorId = auth.user?.id ?? null
+  if (!actorId) {
+    return
+  }
+  const { data: actor } = await supabase
+    .from('profiles')
+    .select('full_name, role')
+    .eq('id', actorId)
+    .maybeSingle()
+  if (actor?.role !== 'faculty') {
+    return
+  }
+
+  await supabase
+    .from('exams')
+    .update({
+      approval_status: 'pending_review',
+      submitted_at: new Date().toISOString(),
+    } as never)
+    .eq('id', id)
+
+  const actorName = actor.full_name ?? 'Faculty member'
+  await supabase.from('approval_events').insert({
+    entity_type: 'exam',
+    entity_id: id,
+    from_status: 'rejected',
+    to_status: 'pending_review',
+    actor_id: actorId,
+    notes: `Pending Review <- Rejected - resubmitted by ${actorName}`,
+  } as never)
+
+  const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'admin')
+  if ((admins ?? []).length > 0) {
+    await supabase.from('notifications').insert(
+      (admins ?? []).map((a) => ({
+        user_id: a.id,
+        title: 'Exam Resubmitted',
+        message: `${actorName} resubmitted ${payload.title} for review.`,
+        type: 'info',
+      })),
+    )
+  }
 }
 
 // ── deleteExam ────────────────────────────────────────────────────────────────

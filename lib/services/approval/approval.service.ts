@@ -195,7 +195,8 @@ export async function fetchPendingReviewItems(
       .from('exams')
       .select(`
         id, title, submitted_by, submitted_at, review_notes, approval_status,
-        programs ( code )
+        programs ( code ),
+        profiles!exams_submitted_by_fkey ( full_name )
       `)
       .eq('approval_status', 'pending_review')
       .order('submitted_at', { ascending: true }) as {
@@ -204,6 +205,7 @@ export async function fetchPendingReviewItems(
           submitted_at: string | null; review_notes: string | null
           approval_status: ApprovalStatus
           programs: { code: string } | null
+          profiles: { full_name: string | null } | { full_name: string | null }[] | null
         }> | null
         error: unknown
       },
@@ -239,6 +241,9 @@ export async function fetchPendingReviewItems(
         : (row.programs?.code ?? null),
       status:      row.approval_status,
       reviewNotes: row.review_notes,
+      submittedByName: Array.isArray(row.profiles)
+        ? (row.profiles[0]?.full_name ?? null)
+        : (row.profiles?.full_name ?? null),
     })
   }
 

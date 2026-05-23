@@ -26,6 +26,7 @@ export interface RawStudentJoin {
 export interface SubmissionRaw {
   id:                 string
   student_id:         string | null
+  attempt_no:         number | null
   started_at:         string
   submitted_at:       string | null
   time_spent_seconds: number | null
@@ -49,6 +50,7 @@ export interface StudentSummary {
 export interface Submission {
   id:                 string
   student:            StudentSummary
+  attempt_no:         number
   started_at:         string
   submitted_at:       string | null
   time_spent_seconds: number | null

@@ -3,8 +3,7 @@
  * Pure presentational — no Supabase, no hooks, no business logic.
  */
 
-import Link            from 'next/link'
-import { GraduationCap, UserPlus } from 'lucide-react'
+import { GraduationCap } from 'lucide-react'
 import styles from '@/app/(dashboard)/admin/students/students.module.css'
 
 interface StudentsHeaderProps {
@@ -28,11 +27,12 @@ export function StudentsHeader({ totalCount, loading }: StudentsHeaderProps) {
           </p>
         </div>
       </div>
-
+{/*
       <Link href="/admin/students/create" className={styles.btnAdd}>
         <UserPlus size={15} strokeWidth={2.2} />
         Add Student
       </Link>
+      */}
     </div>
   )
 }

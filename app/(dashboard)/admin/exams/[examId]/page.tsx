@@ -1,45 +1,31 @@
-// app/(dashboard)/admin/exams/[examId]/page.tsx
-// Thin orchestration layer — auth guard + layout only.
-// All data logic lives in useExamDetail() and useEditExam().
-// No direct Supabase calls, no inline business logic.
-
 'use client'
 
-// React + Next
-import React    from 'react'
+import React from 'react'
 import { useParams } from 'next/navigation'
+import { Clock3, XCircle } from 'lucide-react'
 
-// Hooks
 import { useExamDetail } from '@/lib/hooks/admin/exams/detail/useExamDetail'
-import { useEditExam }   from '@/lib/hooks/admin/exams/detail/useEditExam'
+import { useEditExam } from '@/lib/hooks/admin/exams/detail/useEditExam'
+import { useUser } from '@/lib/context/AuthContext'
 
-// Components
-import Toast               from '@/components/dashboard/admin/exams/detail/Toast'
-import ExamHeader          from '@/components/dashboard/admin/exams/detail/ExamHeader'
-import ExamStats           from '@/components/dashboard/admin/exams/detail/ExamStats'
+import Toast from '@/components/dashboard/admin/exams/detail/Toast'
+import ExamHeader from '@/components/dashboard/admin/exams/detail/ExamHeader'
+import ExamStats from '@/components/dashboard/admin/exams/detail/ExamStats'
 import ExamDescriptionCard from '@/components/dashboard/admin/exams/detail/ExamDescriptionCard'
-import ExamDetailsCard     from '@/components/dashboard/admin/exams/detail/ExamDetailsCard'
-import ExamSectionsNav     from '@/components/dashboard/admin/exams/detail/ExamSectionsNav'
-import EditExamModal       from '@/components/dashboard/admin/exams/detail/EditExamModal'
+import ExamDetailsCard from '@/components/dashboard/admin/exams/detail/ExamDetailsCard'
+import ExamSectionsNav from '@/components/dashboard/admin/exams/detail/ExamSectionsNav'
+import EditExamModal from '@/components/dashboard/admin/exams/detail/EditExamModal'
 
 import s from './detail.module.css'
 
-// ── Page ─────────────────────────────────────────────────────────────────────
-
 export default function ExamDetailPage() {
   const { examId } = useParams<{ examId: string }>()
+  const { user } = useUser()
+  const role = ((user?.user_metadata?.['role'] as string | undefined) ?? (user?.app_metadata?.['role'] as string | undefined)) ?? ''
+  const isFaculty = role === 'faculty'
 
-  // ── Data layer ──────────────────────────────────────────────────────────────
-  const {
-    exam,
-    categories,
-    programs,
-    loading,
-    error,
-    setExam,
-  } = useExamDetail(examId)
+  const { exam, categories, programs, loading, error, setExam } = useExamDetail(examId)
 
-  // ── Edit layer ──────────────────────────────────────────────────────────────
   const {
     showEdit,
     editForm,
@@ -53,7 +39,6 @@ export default function ExamDetailPage() {
     clearToast,
   } = useEditExam({ exam, categories, programs, setExam })
 
-  // ── Loading ─────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className={s.page}>
@@ -68,7 +53,6 @@ export default function ExamDetailPage() {
     )
   }
 
-  // ── Error / not found ───────────────────────────────────────────────────────
   if (error || !exam) {
     return (
       <div className={s.page}>
@@ -77,36 +61,50 @@ export default function ExamDetailPage() {
     )
   }
 
+  const assignmentLocked = isFaculty && (exam.approval_status === 'pending_review' || exam.approval_status === 'rejected')
+  const assignmentLockReason = exam.approval_status === 'pending_review'
+    ? 'Exam must be approved before assigning students'
+    : 'Exam was rejected - please resubmit for review'
+
   return (
     <div className={s.page}>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={clearToast} />}
 
-      {/* ── Toast ── */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={clearToast}
-        />
-      )}
-
-      {/* ── Header ── */}
       <ExamHeader exam={exam} onEdit={openEdit} />
 
-      {/* ── Stats ── */}
+      {isFaculty && exam.approval_status === 'pending_review' && (
+        <div className={s.pendingBanner}>
+          <Clock3 size={16} />
+          <div>
+            <strong>This exam is pending admin review</strong>
+            <p>You cannot assign students to this exam until it has been approved. You will be notified once the admin has reviewed it.</p>
+          </div>
+        </div>
+      )}
+      {isFaculty && exam.approval_status === 'rejected' && (
+        <div className={s.rejectedBanner}>
+          <XCircle size={16} />
+          <div>
+            <strong>This exam was rejected</strong>
+            <p>Reason: {exam.review_notes ?? 'No reason provided.'}</p>
+            <p>Please edit the exam to address the feedback and resubmit for review.</p>
+          </div>
+          <button className={s.btnSecondary} onClick={openEdit}>Edit Exam</button>
+        </div>
+      )}
+
       <ExamStats exam={exam} />
 
-      {/* ── Main Layout ── */}
       <div className={s.layout}>
         <div className={s.mainCol}>
           <ExamDescriptionCard description={exam.description} />
-          <ExamDetailsCard     exam={exam} />
+          <ExamDetailsCard exam={exam} />
         </div>
         <div className={s.sideCol}>
-          <ExamSectionsNav examId={examId} exam={exam} />
+          <ExamSectionsNav examId={examId} exam={exam} assignmentLocked={assignmentLocked} assignmentLockReason={assignmentLockReason} />
         </div>
       </div>
 
-      {/* ── Edit Modal ── */}
       {showEdit && editForm && (
         <EditExamModal
           editForm={editForm}
@@ -119,7 +117,6 @@ export default function ExamDetailPage() {
           onClose={closeEdit}
         />
       )}
-
     </div>
   )
 }

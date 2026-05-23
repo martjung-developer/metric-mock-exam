@@ -1,16 +1,18 @@
 // components/dashboard/admin/exams/submissions/SubmissionsTable.tsx
 'use client'
-import { Eye, Pencil, PlayCircle, Loader2 } from 'lucide-react'
+import { Eye, Pencil, PlayCircle, Loader2, ArrowUpDown } from 'lucide-react'
 import { useState }                  from 'react'
 import type { Submission }           from '@/lib/types/admin/exams/submissions/submission.types'
 import { STATUS_CONFIG }             from '@/lib/utils/admin/submissions/constants'
-import { fmtDate, fmtTime, initials } from '@/lib/utils/admin/submissions/format'
+import { fmtDate, fmtOrdinalTake, fmtTime, initials } from '@/lib/utils/admin/submissions/format'
 import { EmptyState, LoadingSkeleton } from './SubmissionsUI'
 import s from '@/app/(dashboard)/admin/exams/[examId]/submissions/submissions.module.css'
 
 interface SubmissionsTableProps {
   paginated:    Submission[]
   loading:      boolean
+  takeSort:     'asc' | 'desc'
+  onTakeSort:   (v: 'asc' | 'desc') => void
   onView:       (sub: Submission) => void
   onForceSubmit?: (submissionId: string, startedAt: string) => Promise<string | null>
 }
@@ -18,6 +20,8 @@ interface SubmissionsTableProps {
 export function SubmissionsTable({
   paginated,
   loading,
+  takeSort,
+  onTakeSort,
   onView,
   onForceSubmit,
 }: SubmissionsTableProps) {
@@ -39,6 +43,11 @@ export function SubmissionsTable({
             <tr>
               <th>Student</th>
               <th>Student ID</th>
+              <th>
+                <button className={s.sortBtn} onClick={() => onTakeSort(takeSort === 'asc' ? 'desc' : 'asc')}>
+                  Take <ArrowUpDown size={12} />
+                </button>
+              </th>
               <th>Submitted</th>
               <th>Time</th>
               <th>Status</th>
@@ -50,7 +59,7 @@ export function SubmissionsTable({
             {loading ? (
               <LoadingSkeleton />
             ) : paginated.length === 0 ? (
-              <tr><td colSpan={7}><EmptyState /></td></tr>
+              <tr><td colSpan={8}><EmptyState /></td></tr>
             ) : paginated.map(sub => {
               const cfg        = STATUS_CONFIG[sub.status]
               const isInProgress = sub.status === 'in_progress'
@@ -77,6 +86,9 @@ export function SubmissionsTable({
 
                   {/* Student ID */}
                   <td><span className={s.idChip}>{sub.student.student_id ?? '—'}</span></td>
+
+                  {/* Attempt / Take */}
+                  <td><span className={s.takeChip}>{fmtOrdinalTake(sub.attempt_no ?? 1)}</span></td>
 
                   {/* Submitted */}
                   <td>

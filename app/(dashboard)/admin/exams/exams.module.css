@@ -269,6 +269,8 @@
   background: var(--accent-pale); color: var(--accent);
   border: 1px solid #ddd6fe;
 }
+.approvalPending { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.approvalRejected { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
 .programBadge {
   display: inline-flex; align-items: center;
   padding: 2px 9px; border-radius: 20px;
@@ -328,6 +330,12 @@
 .actionEdit:hover  { background: var(--warning-pale); border-color: #fde68a; }
 .actionDelete { color: var(--danger); }
 .actionDelete:hover { background: var(--danger-pale); border-color: #fca5a5; }
+.actionEdit:disabled, .actionDelete:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: var(--surface-tint);
+  border-color: var(--border);
+}
 
 /* ── Empty State ── */
 .emptyState {

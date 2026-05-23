@@ -35,6 +35,7 @@ const PAGE_SIZE = 8
 export interface UseExamsReturn {
   // Data
   loading:      boolean
+  refreshing:   boolean
   error:        string | null
   programs:     ProgramOption[]
   categoryRows: CategoryOption[]
@@ -72,6 +73,8 @@ export interface UseExamsReturn {
   // Toast
   toast:        ToastState | null
   clearToast:   () => void
+  refreshData:  () => Promise<void>
+  isFaculty:    boolean
 }
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -114,6 +117,7 @@ export function useExams(): UseExamsReturn {
   const [programs,      setPrograms]      = useState<ProgramOption[]>([])
   const [categoryRows,  setCategoryRows]  = useState<CategoryOption[]>([])
   const [loading,       setLoading]       = useState(true)
+  const [refreshing,    setRefreshing]    = useState(false)
   const [error,         setError]         = useState<string | null>(null)
 
   // ── Filter + pagination ───────────────────────────────────────────────────
@@ -132,30 +136,49 @@ export function useExams(): UseExamsReturn {
 
   // ── Toast ─────────────────────────────────────────────────────────────────
   const [toast, setToast] = useState<ToastState | null>(null)
+  const [isFaculty, setIsFaculty] = useState(false)
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
+  const refreshData = useCallback(async () => {
+    setRefreshing(true)
+    setError(null)
+    try {
+      const [exams, progs, cats] = await Promise.all([
+        getAllExamsWithMeta(supabase),
+        getPrograms(supabase),
+        getCategories(supabase),
+      ])
+      setAllExams(exams)
+      setPrograms(progs)
+      setCategoryRows(cats)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load exams.')
+    } finally {
+      setRefreshing(false)
+      setLoading(false)
+    }
+  }, [supabase])
+
   useEffect(() => {
     if (hasFetched.current) {return}
     hasFetched.current = true
+    void refreshData()
+  }, [refreshData])
 
-    async function load() {
-      try {
-        const [exams, progs, cats] = await Promise.all([
-          getAllExamsWithMeta(supabase),
-          getPrograms(supabase),
-          getCategories(supabase),
-        ])
-        setAllExams(exams)
-        setPrograms(progs)
-        setCategoryRows(cats)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not load exams.')
-      } finally {
-        setLoading(false)
+  useEffect(() => {
+    let mounted = true
+    void (async () => {
+      const { data: auth } = await supabase.auth.getUser()
+      const uid = auth.user?.id
+      if (!uid || !mounted) {
+        return
       }
-    }
-
-    load()
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', uid).maybeSingle()
+      if (mounted) {
+        setIsFaculty(profile?.role === 'faculty')
+      }
+    })()
+    return () => { mounted = false }
   }, [supabase])
 
   // ── Derived: category names for the filter <select> ───────────────────────
@@ -292,7 +315,7 @@ export function useExams(): UseExamsReturn {
   }, [deleteTarget, supabase])
 
   return {
-    loading, error,
+    loading, refreshing, error,
     programs, categoryRows, categoryNames,
     filters, setFilters, clearFilters, hasFilters,
     page, setPage, totalPages, paginated, totalFiltered,
@@ -300,5 +323,7 @@ export function useExams(): UseExamsReturn {
     openEdit, closeEdit, setEditForm, saveEdit,
     deleteTarget, deleting, setDeleteTarget, confirmDelete,
     toast, clearToast: () => setToast(null),
+    refreshData,
+    isFaculty,
   }
 }

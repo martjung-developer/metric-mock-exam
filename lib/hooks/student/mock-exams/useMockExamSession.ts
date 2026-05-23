@@ -46,7 +46,9 @@ export interface ExamSessionState {
   qStates:               StateMap
   handleAnswer:          (qId: string, value: string) => void
   handleSkip:            () => void
+  skipAndNext:           (forceClear?: boolean) => 'skipped' | 'confirm'
   handleFlag:            () => void
+  clearResponse:         () => void
   jumpToUnanswered:      () => void
   // timer
   timeLeft:              number
@@ -364,6 +366,63 @@ export function useMockExamSession(examId: string): ExamSessionState {
     if (current < questionsRef.current.length - 1) {setCurrent((c) => c + 1)}
   }, [current])
 
+  const clearResponse = useCallback(() => {
+    const q = questionsRef.current[current]
+    if (q === undefined) {return}
+
+    setAnswers((prev) => {
+      const next = { ...prev }
+      delete next[q.id]
+      return next
+    })
+
+    setQStates((prev) => {
+      const cur = prev[q.id]
+      if (cur === 'flagged' || cur === 'flagged-answered') {
+        return { ...prev, [q.id]: 'flagged' }
+      }
+      return { ...prev, [q.id]: 'skipped' }
+    })
+
+    const sid = submissionRef.current
+    if (sid !== null) {
+      setSaveStatus('saving')
+      void dbSaveAnswer(sid, q.id, '').then(() => {
+        setSaveStatus('saved')
+        setTimeout(() => setSaveStatus('idle'), 1500)
+      })
+    }
+  }, [current])
+
+  const skipAndNext = useCallback((forceClear = false): 'skipped' | 'confirm' => {
+    const q = questionsRef.current[current]
+    if (q === undefined) {return 'skipped'}
+    const hasAnswer = Boolean((answersRef.current[q.id] ?? '').trim())
+    if (hasAnswer && !forceClear) {
+      return 'confirm'
+    }
+
+    if (hasAnswer) {
+      setAnswers((prev) => {
+        const next = { ...prev }
+        delete next[q.id]
+        return next
+      })
+      const sid = submissionRef.current
+      if (sid !== null) {
+        setSaveStatus('saving')
+        void dbSaveAnswer(sid, q.id, '').then(() => {
+          setSaveStatus('saved')
+          setTimeout(() => setSaveStatus('idle'), 1500)
+        })
+      }
+    }
+
+    setQStates((prev) => ({ ...prev, [q.id]: 'skipped' }))
+    if (current < questionsRef.current.length - 1) {setCurrent((c) => c + 1)}
+    return 'skipped'
+  }, [current])
+
   const handleFlag = useCallback(() => {
     const q   = questionsRef.current[current]
     const ans = answersRef.current
@@ -409,7 +468,9 @@ export function useMockExamSession(examId: string): ExamSessionState {
     qStates,
     handleAnswer,
     handleSkip,
+    skipAndNext,
     handleFlag,
+    clearResponse,
     jumpToUnanswered,
     timeLeft,
     timerWarning:          timeLeft <= TIMER_WARNING  && timeLeft > TIMER_CRITICAL && timeLeft > 0,

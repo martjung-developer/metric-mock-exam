@@ -46,11 +46,15 @@ function SkeletonRow() {
 
 interface ExamRowProps {
   exam:          Exam
+  isFaculty:     boolean
   onEdit:        (exam: Exam) => void
   onDeleteClick: (exam: Exam) => void
 }
 
-function ExamRow({ exam, onEdit, onDeleteClick }: ExamRowProps) {
+function ExamRow({ exam, isFaculty, onEdit, onDeleteClick }: ExamRowProps) {
+  const status = exam.approval_status
+  const editLocked = isFaculty && status === 'pending_review'
+  const rejectedReason = status === 'rejected' ? exam.review_notes : null
   return (
     <tr className={s.tableRow}>
       <td>
@@ -101,9 +105,11 @@ function ExamRow({ exam, onEdit, onDeleteClick }: ExamRowProps) {
         {exam.is_published
           ? <span className={s.badgePublished}><CheckCircle size={11} /> Published</span>
           : <span className={s.badgeDraft}><XCircle size={11} /> Draft</span>}
-        {!exam.is_published && exam.approval_status && exam.approval_status !== 'draft' && (
+        {!exam.is_published && status && status !== 'draft' && (
           <div style={{ marginTop: 6 }}>
-            <span className={s.categoryBadge}>Approval: {exam.approval_status.replace(/_/g, ' ')}</span>
+            <span className={`${s.categoryBadge} ${status === 'pending_review' ? s.approvalPending : status === 'rejected' ? s.approvalRejected : ''}`} title={rejectedReason ?? undefined}>
+              {status === 'pending_review' ? 'Pending Review' : status === 'rejected' ? 'Rejected' : `Approval: ${status.replace(/_/g, ' ')}`}
+            </span>
           </div>
         )}
       </td>
@@ -112,7 +118,7 @@ function ExamRow({ exam, onEdit, onDeleteClick }: ExamRowProps) {
           <Link href={`/admin/exams/${exam.id}`} className={s.actionView} title="View">
             <Eye size={14} />
           </Link>
-          <button className={s.actionEdit} title="Edit" onClick={() => onEdit(exam)}>
+          <button className={s.actionEdit} title={editLocked ? 'Under admin review - editing is locked' : 'Edit'} onClick={() => onEdit(exam)} disabled={editLocked}>
             <Pencil size={14} />
           </button>
           <button className={s.actionDelete} title="Delete" onClick={() => onDeleteClick(exam)}>
@@ -129,11 +135,12 @@ function ExamRow({ exam, onEdit, onDeleteClick }: ExamRowProps) {
 interface ExamTableProps {
   exams:         Exam[]
   loading:       boolean
+  isFaculty:     boolean
   onEdit:        (exam: Exam) => void
   onDeleteClick: (exam: Exam) => void
 }
 
-export function ExamTable({ exams, loading, onEdit, onDeleteClick }: ExamTableProps) {
+export function ExamTable({ exams, loading, isFaculty, onEdit, onDeleteClick }: ExamTableProps) {
   return (
     <div className={s.tableWrap}>
       <table className={s.table}>
@@ -172,6 +179,7 @@ export function ExamTable({ exams, loading, onEdit, onDeleteClick }: ExamTablePr
               <ExamRow
                 key={exam.id}
                 exam={exam}
+                isFaculty={isFaculty}
                 onEdit={onEdit}
                 onDeleteClick={onDeleteClick}
               />

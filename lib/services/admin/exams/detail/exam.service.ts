@@ -44,7 +44,7 @@ export async function getExamById(
     .select(`
       id, title, description,
       duration_minutes, total_points, passing_score,
-      is_published, exam_type, created_at, updated_at,
+      is_published, exam_type, created_at, updated_at, approval_status, review_notes,
       exam_categories ( id, name, icon ),
       programs ( id, code, name )
     `)
@@ -155,6 +155,69 @@ export async function updateExam(
   examId:  string,
   payload: ExamUpdate,
 ): Promise<void> {
+  const { data: before } = await db
+    .from('exams')
+    .select('approval_status, title')
+    .eq('id', examId)
+    .maybeSingle()
+
   const { error } = await db.from('exams').update(payload).eq('id', examId)
   if (error) {throw new Error(extractMessage(error))}
+
+  if (before?.approval_status !== 'rejected') {
+    return
+  }
+
+  const { data: auth } = await db.auth.getUser()
+  const actorId = auth.user?.id ?? null
+  if (!actorId) {
+    return
+  }
+
+  const { data: actor } = await db
+    .from('profiles')
+    .select('full_name, role')
+    .eq('id', actorId)
+    .maybeSingle()
+
+  if (actor?.role !== 'faculty') {
+    return
+  }
+
+  const resubmittedAt = new Date().toISOString()
+  await db
+    .from('exams')
+    .update({
+      approval_status: 'pending_review',
+      submitted_at: resubmittedAt,
+    } as never)
+    .eq('id', examId)
+
+  const actorName = actor.full_name ?? 'Faculty member'
+  const note = `Pending Review <- Rejected - resubmitted by ${actorName}`
+
+  await db.from('approval_events').insert({
+    entity_type: 'exam',
+    entity_id: examId,
+    from_status: 'rejected',
+    to_status: 'pending_review',
+    actor_id: actorId,
+    notes: note,
+  } as never)
+
+  const { data: admins } = await db
+    .from('profiles')
+    .select('id')
+    .eq('role', 'admin')
+
+  if ((admins ?? []).length > 0) {
+    await db.from('notifications').insert(
+      (admins ?? []).map((a) => ({
+        user_id: a.id,
+        title: 'Exam Resubmitted',
+        message: `${actorName} resubmitted ${payload.title ?? before.title} for review.`,
+        type: 'info',
+      })),
+    )
+  }
 }

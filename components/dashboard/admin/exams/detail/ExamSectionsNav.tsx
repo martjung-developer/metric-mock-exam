@@ -22,9 +22,11 @@ interface SubpageDef {
 interface ExamSectionsNavProps {
   examId: string
   exam:   ExamDetail
+  assignmentLocked?: boolean
+  assignmentLockReason?: string
 }
 
-export default function ExamSectionsNav({ examId, exam }: ExamSectionsNavProps) {
+export default function ExamSectionsNav({ examId, exam, assignmentLocked = false, assignmentLockReason }: ExamSectionsNavProps) {
   const subpages: SubpageDef[] = useMemo(
     () => [
       {
@@ -70,12 +72,25 @@ export default function ExamSectionsNav({ examId, exam }: ExamSectionsNavProps) 
         <h2 className={s.cardTitle}>Exam Sections</h2>
       </div>
       <div className={s.navList}>
-        {subpages.map((sp) => (
-          <Link
-            key={sp.href}
-            href={sp.href}
-            className={`${s.navItem} ${s[`navItem_${sp.color}`]}`}
-          >
+        {subpages.map((sp) => {
+          const locked = assignmentLocked && sp.label === 'Assignments'
+          if (locked) {
+            return (
+              <div key={sp.href} className={`${s.navItem} ${s[`navItem_${sp.color}`]} ${s.navItemLocked}`} title={assignmentLockReason}>
+                <div className={`${s.navIcon} ${s[`navIcon_${sp.color}`]}`}>
+                  <sp.icon size={17} />
+                </div>
+                <div className={s.navContent}>
+                  <div className={s.navLabel}>{sp.label}</div>
+                  <div className={s.navDesc}>{assignmentLockReason}</div>
+                </div>
+                {sp.count !== null && <span className={s.navCount}>{sp.count}</span>}
+                <ChevronRight size={14} className={s.navChevron} />
+              </div>
+            )
+          }
+          return (
+            <Link key={sp.href} href={sp.href} className={`${s.navItem} ${s[`navItem_${sp.color}`]}`}>
             <div className={`${s.navIcon} ${s[`navIcon_${sp.color}`]}`}>
               <sp.icon size={17} />
             </div>
@@ -88,7 +103,8 @@ export default function ExamSectionsNav({ examId, exam }: ExamSectionsNavProps) 
             )}
             <ChevronRight size={14} className={s.navChevron} />
           </Link>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

@@ -78,6 +78,8 @@ export function mapRawToExamDetail(
     avg_score:        stats.avg_score,
     created_at:       raw.created_at,
     updated_at:       raw.updated_at,
+    approval_status:  raw.approval_status,
+    review_notes:     raw.review_notes,
   }
 }
 

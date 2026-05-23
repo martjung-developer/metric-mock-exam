@@ -36,7 +36,7 @@ type AnswerUpdate     = Database['public']['Tables']['answers']['Update']
 
 type SubmissionRowLite = Pick<
   Database['public']['Tables']['submissions']['Row'],
-  'id' | 'student_id' | 'started_at' | 'submitted_at' | 'time_spent_seconds' |
+  'id' | 'student_id' | 'attempt_no' | 'started_at' | 'submitted_at' | 'time_spent_seconds' |
   'status' | 'score' | 'percentage' | 'passed'
 >
 type ProfileLite = Pick<Database['public']['Tables']['profiles']['Row'], 'id' | 'full_name' | 'email'>
@@ -67,7 +67,7 @@ export async function getSubmissionsByExam(
   const { data: subRows, error: subErr } = await supabase
     .from('submissions')
     .select(
-      'id, student_id, started_at, submitted_at, time_spent_seconds, ' +
+      'id, student_id, attempt_no, started_at, submitted_at, time_spent_seconds, ' +
       'status, score, percentage, passed',
     )
     .eq('exam_id', examId)
@@ -118,6 +118,7 @@ export async function getSubmissionsByExam(
     return {
       id:                 row.id,
       student_id:         row.student_id,
+      attempt_no:         row.attempt_no,
       started_at:         row.started_at,
       submitted_at:       row.submitted_at,
       time_spent_seconds: row.time_spent_seconds,

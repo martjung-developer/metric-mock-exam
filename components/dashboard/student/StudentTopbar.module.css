@@ -136,8 +136,10 @@
   border: 1.5px solid var(--dashboard-border-strong);
   background: var(--dashboard-surface-soft);
   text-decoration: none;
+  color: inherit;
   transition: all 0.18s ease;
   cursor: pointer;
+  font-family: inherit;
 }
 
 .userPill:hover {
@@ -174,6 +176,52 @@
   color: var(--dashboard-accent);
   font-weight: 600;
   letter-spacing: 0.01em;
+}
+
+.userChevron {
+  color: var(--dashboard-muted);
+}
+
+.profileMenuWrap {
+  position: relative;
+}
+
+.profileMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 184px;
+  background: var(--dashboard-surface);
+  border: 1px solid var(--dashboard-border);
+  border-radius: 10px;
+  box-shadow: 0 14px 30px rgba(2, 6, 23, 0.15);
+  padding: 0.35rem;
+  z-index: 60;
+}
+
+.profileMenuItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  background: transparent;
+  text-decoration: none;
+  color: var(--dashboard-text);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.profileMenuItem:hover {
+  background: var(--dashboard-input-bg);
+}
+
+.profileMenuDanger {
+  color: #dc2626;
 }
 
 @keyframes spin {

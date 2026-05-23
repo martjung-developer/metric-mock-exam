@@ -51,7 +51,7 @@
   pointer-events: none;
   box-shadow:
     inset 0 0 0 2px rgba(13, 37, 64, 0.22),
-    0 0 0 9999px rgba(13, 17, 23, 0.32);
+    0 0 0 9999px rgba(13, 17, 23, 0.18);
 }
 
 /* ── Zoom controls ── */

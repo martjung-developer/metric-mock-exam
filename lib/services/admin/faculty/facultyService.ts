@@ -7,6 +7,7 @@ import type {
   CreateFacultyPayload,
   CreateFacultyResponse,
   FacultyListResponse,
+  FacultyRoleType,
 } from '@/lib/types/admin/faculty'
 
 const BASE = '/api/admin'
@@ -60,5 +61,28 @@ export async function toggleFacultyStatus(
     credentials: 'include',
   })
 
+  return (await res.json()) as { success: boolean; error?: string }
+}
+
+export async function updateFacultyById(
+  facultyId: string,
+  payload: { full_name: string; role_type: FacultyRoleType | null },
+): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`${BASE}/faculty/${facultyId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    credentials: 'include',
+  })
+  return (await res.json()) as { success: boolean; error?: string }
+}
+
+export async function deleteFacultyById(
+  facultyId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`${BASE}/faculty/${facultyId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
   return (await res.json()) as { success: boolean; error?: string }
 }

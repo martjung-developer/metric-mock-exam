@@ -2,7 +2,7 @@
 'use client'
 
 import Link from 'next/link'
-import { BookOpen, Plus, AlertCircle } from 'lucide-react'
+import { BookOpen, Plus, AlertCircle, RefreshCw } from 'lucide-react'
 import { useExams }            from '@/lib/hooks/admin/exams/useExams'
 import { ExamFiltersBar }      from '@/components/dashboard/admin/exams/ExamFilters'
 import { ExamTable }           from '@/components/dashboard/admin/exams/ExamTable'
@@ -17,7 +17,7 @@ const PAGE_SIZE = 8
 export default function ExamsPage() {
   const {
     // Data
-    loading, error,
+    loading, refreshing, error,
     programs, categoryRows, categoryNames,
 
     // Filters
@@ -34,7 +34,7 @@ export default function ExamsPage() {
     deleteTarget, deleting, setDeleteTarget, confirmDelete,
 
     // Toast
-    toast, clearToast,
+    toast, clearToast, refreshData, isFaculty,
   } = useExams()
 
   return (
@@ -62,6 +62,15 @@ export default function ExamsPage() {
           </div>
         </div>
         <div className={s.headerActions}>
+          <button
+            type="button"
+            className={s.btnSecondary}
+            onClick={() => void refreshData()}
+            disabled={refreshing}
+          >
+            <RefreshCw size={14} className={refreshing ? s.spinner : undefined} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
           <Link href="/admin/exams/create" className={s.btnPrimary}>
             <Plus size={14} /> Create Exam
           </Link>
@@ -94,6 +103,7 @@ export default function ExamsPage() {
         <ExamTable
           exams={paginated}
           loading={loading}
+          isFaculty={isFaculty}
           onEdit={openEdit}
           onDeleteClick={setDeleteTarget}
         />

@@ -15,9 +15,11 @@
 
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import Link          from 'next/link'
 import { useParams } from 'next/navigation'
 import { ArrowLeft, AlertCircle, Plus, Users, X } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 import { useAssignments }   from '@/lib/hooks/admin/exams/assignments/useAssignments'
 import { useStudentSearch } from '@/lib/hooks/admin/exams/assignments/useStudentSearch'
@@ -32,6 +34,24 @@ import s from './assignments.module.css'
 
 export default function AssignmentsPage() {
   const { examId } = useParams<{ examId: string }>()
+  const supabase = useMemo(() => createClient(), [])
+  const [examStatus, setExamStatus] = useState<string | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    void (async () => {
+      const { data } = await supabase.from('exams').select('approval_status').eq('id', examId).maybeSingle()
+      if (mounted) {
+        setExamStatus(data?.approval_status ?? null)
+      }
+    })()
+    return () => { mounted = false }
+  }, [supabase, examId])
+
+  const assignLocked = examStatus === 'pending_review' || examStatus === 'rejected'
+  const assignLockReason = examStatus === 'pending_review'
+    ? 'Exam must be approved before assigning students'
+    : 'Exam was rejected - please resubmit for review'
 
   const {
     assignments, programs, filtered, paginated, totalPages,
@@ -80,7 +100,7 @@ export default function AssignmentsPage() {
               </p>
             </div>
           </div>
-          <button className={s.btnPrimary} onClick={openPanel}>
+          <button className={s.btnPrimary} onClick={openPanel} disabled={assignLocked} title={assignLocked ? assignLockReason : 'Assign students'}>
             <Plus size={14} /> Assign
           </button>
         </div>

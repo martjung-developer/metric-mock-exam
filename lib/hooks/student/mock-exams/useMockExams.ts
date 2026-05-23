@@ -117,7 +117,9 @@ export function useMockExams() {
             status = 'coming_soon'
           } else if (attemptCount >= MAX_ATTEMPTS) {
             status = 'locked'
-          } else if (sub?.status === 'submitted' || sub?.status === 'graded' || sub?.status === 'released') {
+          } else if (sub?.status === 'graded' || sub?.status === 'reviewed' || sub?.status === 'released') {
+            status = 'completed'
+          } else if (sub?.status === 'submitted') {
             status = attemptCount < MAX_ATTEMPTS ? 'available' : 'completed'
           } else if (sub?.status === 'in_progress') {
             status = 'in_progress'

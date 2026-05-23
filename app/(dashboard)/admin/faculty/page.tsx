@@ -4,6 +4,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { UserPlus, RefreshCw, Users, Search, X } from 'lucide-react'
 import { useFacultyList }   from '@/lib/hooks/admin/faculty/useFacultyList'
+import type { FacultyRoleType } from '@/lib/types/admin/faculty'
 import FacultyTable          from '@/components/dashboard/admin/faculty/FacultyTable'
 import FacultyStatsBar       from '@/components/dashboard/admin/faculty/FacultyStatsBar'
 import AddFacultyModal       from '@/components/dashboard/admin/faculty/AddFacultyModal'
@@ -14,6 +15,13 @@ type AnyRecord = Record<string, unknown>
 function getStringField(row: AnyRecord, key: string): string | undefined {
   const value = row[key]
   return typeof value === 'string' ? value : undefined
+}
+
+function mapRoleTypeToAssignment(role: FacultyRoleType | null): string {
+  if (role === 'professional') { return 'Full-time' }
+  if (role === 'major') { return 'Part-time' }
+  if (role === 'minor') { return 'Adjunct' }
+  return 'Emeritus'
 }
 
 // Derive unique departments from the faculty list for tab filters
@@ -55,7 +63,11 @@ export default function FacultyPage() {
   const filtered = useMemo(() => {
     return faculty.filter((f: AnyRecord) => {
       const department = getStringField(f, 'department')
-      const role = getStringField(f, 'role')
+      const roleTypeRaw = f.role_type
+      const roleType = (roleTypeRaw === 'professional' || roleTypeRaw === 'major' || roleTypeRaw === 'minor' || roleTypeRaw === null)
+        ? (roleTypeRaw as FacultyRoleType | null)
+        : null
+      const role = mapRoleTypeToAssignment(roleType)
       const matchesDept = activeDept === 'All' || department === activeDept
       const matchesRole = roleFilter === 'All' || role === roleFilter
       const q = search.toLowerCase()
