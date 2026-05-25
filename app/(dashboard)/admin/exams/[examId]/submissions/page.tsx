@@ -146,7 +146,7 @@ function handleGradeSubmission() {
         loading={subs.loading}
         takeSort={subs.takeSort}
         onTakeSort={subs.setTakeSort}
-        onView={details.openModal}
+        onView={(sub, mode) => void details.openModal(sub, examId, mode)}
         onForceSubmit={subs.forceSubmit}
       />
 
@@ -159,26 +159,15 @@ function handleGradeSubmission() {
 
       {details.viewTarget && (
         <ViewSubmissionModal
+          examId={examId}
           target={details.viewTarget}
-          answers={details.answers}
-          answersLoading={details.answersLoading}
-          answerStats={details.answerStats}
+          mode={details.modalMode}
           previewScore={preview}
           examInfo={subs.examInfo}
           gradingMode={grading.gradingMode}
           gradingSubmission={grading.gradingSubmission}
-          answerKey={key.answerKey}
           onClose={details.closeModal}
           onGrade={handleGradeSubmission}
-          onCorrectToggle={(id, correct) =>
-            grading.handleAnswerCorrectToggle(id, correct, details.answers, details.setAnswers)
-          }
-          onPointsChange={(id, pts) =>
-            grading.handlePointsChange(id, pts, details.answers, details.setAnswers)
-          }
-          onFeedbackChange={(id, fb) =>
-            grading.handleFeedbackChange(id, fb, details.answers, details.setAnswers)
-          }
         />
       )}
     </div>

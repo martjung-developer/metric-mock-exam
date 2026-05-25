@@ -60,6 +60,20 @@ CREATE TABLE public.approval_events (
   CONSTRAINT approval_events_pkey PRIMARY KEY (id),
   CONSTRAINT approval_events_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.profiles(id)
 );
+CREATE TABLE public.exam_approvals (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  exam_id uuid NOT NULL,
+  submitted_by uuid NOT NULL,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])),
+  reviewer_id uuid,
+  review_note text,
+  submitted_at timestamp with time zone NOT NULL DEFAULT now(),
+  reviewed_at timestamp with time zone,
+  CONSTRAINT exam_approvals_pkey PRIMARY KEY (id),
+  CONSTRAINT exam_approvals_exam_id_fkey FOREIGN KEY (exam_id) REFERENCES public.exams(id),
+  CONSTRAINT exam_approvals_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES public.profiles(id),
+  CONSTRAINT exam_approvals_reviewer_id_fkey FOREIGN KEY (reviewer_id) REFERENCES public.profiles(id)
+);
 CREATE TABLE public.exam_assignments (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   exam_id uuid,
@@ -352,8 +366,6 @@ CREATE TABLE public.users (
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
-
-
 
 
 

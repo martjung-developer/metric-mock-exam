@@ -20,11 +20,138 @@ import { uploadMaterialFile } from './storage.service'
 
 type SupabaseDB = SupabaseClient<Database>
 
+type AdminRole = 'admin' | 'faculty'
+
+interface StudyMaterialScope {
+  role: AdminRole | null
+  schoolId: string | null
+  programIds: string[]
+  lockedProgramId: string | null
+}
+
+async function resolveStudyMaterialScope(
+  supabase: SupabaseDB,
+): Promise<StudyMaterialScope> {
+  const { data: authRes } = await supabase.auth.getUser()
+  const userId = authRes.user?.id ?? null
+  if (!userId) {
+    return { role: null, schoolId: null, programIds: [], lockedProgramId: null }
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (profile?.role === 'faculty') {
+    const { data: facultyRow } = await supabase
+      .from('faculty')
+      .select('school_id, program_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    const facultyProgramId = facultyRow?.program_id ?? null
+    return {
+      role: 'faculty',
+      schoolId: facultyRow?.school_id ?? null,
+      programIds: facultyProgramId ? [facultyProgramId] : [],
+      lockedProgramId: facultyProgramId,
+    }
+  }
+
+  if (profile?.role === 'admin') {
+    const { data: adminRow } = await supabase
+      .from('admins')
+      .select('school_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    const schoolId = adminRow?.school_id ?? null
+    if (!schoolId) {
+      return { role: 'admin', schoolId: null, programIds: [], lockedProgramId: null }
+    }
+
+    const { data: programRows } = await supabase
+      .from('programs')
+      .select('id')
+      .eq('school_id', schoolId)
+
+    return {
+      role: 'admin',
+      schoolId,
+      programIds: (programRows ?? []).map((row) => row.id),
+      lockedProgramId: null,
+    }
+  }
+
+  return { role: null, schoolId: null, programIds: [], lockedProgramId: null }
+}
+
+async function assertAllowedProgramId(
+  supabase: SupabaseDB,
+  scope: StudyMaterialScope,
+  requestedProgramId: string | null,
+): Promise<string | null> {
+  if (scope.role === 'faculty') {
+    if (!scope.lockedProgramId) {
+      throw new Error('Faculty program scope is not configured.')
+    }
+    return scope.lockedProgramId
+  }
+
+  if (!requestedProgramId) {
+    return null
+  }
+
+  if (!scope.programIds.includes(requestedProgramId)) {
+    throw new Error('You can only manage study materials within your assigned department.')
+  }
+
+  const { data: programRow, error } = await supabase
+    .from('programs')
+    .select('id')
+    .eq('id', requestedProgramId)
+    .maybeSingle()
+
+  if (error || !programRow) {
+    throw new Error('Selected program is invalid or unavailable.')
+  }
+
+  return requestedProgramId
+}
+
+async function ensureMaterialWithinScope(
+  supabase: SupabaseDB,
+  scope: StudyMaterialScope,
+  materialId: string,
+): Promise<void> {
+  const { data: materialRow, error } = await supabase
+    .from('study_materials')
+    .select('id, program_id')
+    .eq('id', materialId)
+    .maybeSingle()
+
+  if (error || !materialRow) {
+    throw new Error('Study material not found.')
+  }
+
+  const materialProgramId = materialRow.program_id
+  if (!materialProgramId || !scope.programIds.includes(materialProgramId)) {
+    throw new Error('You can only manage study materials within your assigned department.')
+  }
+}
+
 // ── SELECT ────────────────────────────────────────────────────────────────────
 
 export async function fetchStudyMaterials(
   supabase: SupabaseDB,
 ): Promise<StudyMaterial[]> {
+  const scope = await resolveStudyMaterialScope(supabase)
+  if (scope.programIds.length === 0) {
+    return []
+  }
+
   const { data, error } = await supabase
     .from('study_materials')
     .select(`
@@ -44,6 +171,7 @@ export async function fetchStudyMaterials(
       link_type,
       programs:program_id ( id, code, name )
     `)
+    .in('program_id', scope.programIds)
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -61,10 +189,21 @@ export async function fetchStudyMaterials(
 export async function fetchPrograms(
   supabase: SupabaseDB,
 ): Promise<ProgramOption[]> {
-  const { data, error } = await supabase
+  const scope = await resolveStudyMaterialScope(supabase)
+  if (!scope.schoolId) {
+    return []
+  }
+
+  let query = supabase
     .from('programs')
     .select('id, code, name')
-    .order('name')
+    .eq('school_id', scope.schoolId)
+
+  if (scope.role === 'faculty' && scope.lockedProgramId) {
+    query = query.eq('id', scope.lockedProgramId)
+  }
+
+  const { data, error } = await query.order('name')
 
   if (error) {
     throw new Error(error.message)
@@ -124,9 +263,16 @@ export interface CreateMaterialArgs {
 export async function createStudyMaterial(
   args: CreateMaterialArgs,
 ): Promise<void> {
+  const scope = await resolveStudyMaterialScope(args.supabase)
+  const scopedProgramId = await assertAllowedProgramId(
+    args.supabase,
+    scope,
+    args.form.program_id || null,
+  )
+
   const payload = await buildPayload({
     supabase:        args.supabase,
-    form:            args.form,
+    form:            { ...args.form, program_id: scopedProgramId ?? '' },
     file:            args.file,
     existingFileUrl: null,
   })
@@ -153,9 +299,17 @@ export interface UpdateMaterialArgs {
 export async function updateStudyMaterial(
   args: UpdateMaterialArgs,
 ): Promise<void> {
+  const scope = await resolveStudyMaterialScope(args.supabase)
+  await ensureMaterialWithinScope(args.supabase, scope, args.id)
+  const scopedProgramId = await assertAllowedProgramId(
+    args.supabase,
+    scope,
+    args.form.program_id || null,
+  )
+
   const payload = await buildPayload({
     supabase:        args.supabase,
-    form:            args.form,
+    form:            { ...args.form, program_id: scopedProgramId ?? '' },
     file:            args.file,
     existingFileUrl: args.existingFileUrl,
   })
@@ -176,6 +330,9 @@ export async function deleteStudyMaterial(
   supabase: SupabaseDB,
   id: string,
 ): Promise<void> {
+  const scope = await resolveStudyMaterialScope(supabase)
+  await ensureMaterialWithinScope(supabase, scope, id)
+
   const { error } = await supabase
     .from('study_materials')
     .delete()
@@ -193,6 +350,9 @@ export async function toggleMaterialPublish(
   id: string,
   isPublished: boolean,
 ): Promise<void> {
+  const scope = await resolveStudyMaterialScope(supabase)
+  await ensureMaterialWithinScope(supabase, scope, id)
+
   const { error } = await supabase
     .from('study_materials')
     .update({ is_published: isPublished })

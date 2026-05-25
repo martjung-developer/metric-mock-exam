@@ -61,7 +61,7 @@ export async function fetchAssignmentsForExam(
   examId:  string,
 ): Promise<FetchAssignmentsResult> {
   // Phase 1: fire all independent queries in parallel
-  const [asnRes, progRes, subRes, programRuleRes] = await Promise.all([
+  const [asnRes, progRes, subRes] = await Promise.all([
     client
       .from('exam_assignments')
       .select(`
@@ -88,10 +88,6 @@ export async function fetchAssignmentsForExam(
       .select('student_id, status, score, percentage')
       .eq('exam_id', examId),
 
-    client
-      .from('program_exam_assignments')
-      .select('program_code, year_level')
-      .eq('exam_id', examId),
   ])
 
   if (asnRes.error) {
@@ -101,11 +97,6 @@ export async function fetchAssignmentsForExam(
   const programs   = (progRes.data ?? []) as Program[]
   const rawList    = (asnRes.data ?? []) as unknown as AssignmentQueryRow[]
   const subRows    = (subRes.data   ?? []) as SubmissionProjection[]
-  const programRules = (programRuleRes.data ?? []) as Array<{
-    program_code: string
-    year_level: number | null
-  }>
-
   // Phase 2: build submission lookup (handles retakes via priority merge)
   const bestSubmission = buildBestSubmissionMap(subRows)
 
@@ -182,12 +173,7 @@ export async function fetchAssignmentsForExam(
     const profile = a.student_id ? profileMap[a.student_id]  : undefined
     const student = a.student_id ? studentMap[a.student_id]  : undefined
     const sub     = a.student_id ? bestSubmission[a.student_id] : undefined
-    const isProgramAssignment =
-      !!student?.program_code &&
-      programRules.some((rule) =>
-        rule.program_code === student.program_code &&
-        (rule.year_level === null || rule.year_level === student.year_level),
-      )
+    const isProgramAssignment = a.program_id !== null
 
     return {
       id: a.id,
@@ -284,9 +270,9 @@ export async function assignStudentsToExam(
  */
 export async function assignProgramToExam(
   client:  AppClient,
-  payload: AssignProgramPayload,
+  payload: AssignProgramPayload & { assignedBy: string | null },
 ): Promise<MutationResult> {
-  const { examId, programId, deadline } = payload
+  const { examId, programId, assignedBy, deadline } = payload
   const examProgramId = await fetchExamProgramId(client, examId)
   if (!examProgramId) {
     return { error: 'This exam has no designated degree program.' }
@@ -295,41 +281,10 @@ export async function assignProgramToExam(
     return { error: 'Cannot assign this exam to a different degree program.' }
   }
 
-  const { data: programRow, error: programErr } = await client
-    .from('programs')
-    .select('code')
-    .eq('id', programId)
-    .single()
-
-  if (programErr || !programRow) {
-    return { error: 'Program not found.' }
-  }
-
-  const { error: ruleErr } = await client
-    .from('program_exam_assignments')
-    .upsert(
-      {
-        exam_id: examId,
-        program_code: programRow.code,
-        year_level: yearLevel,
-      },
-      { onConflict: 'exam_id,program_code,year_level' },
-    )
-
-  if (ruleErr) {
-    return { error: ruleErr.message }
-  }
-
-  let studentQuery = client
+  const { data: students, error: studentErr } = await client
     .from('students')
     .select('id')
     .eq('program_id', programId)
-
-  if (yearLevel !== null) {
-    studentQuery = studentQuery.eq('year_level', yearLevel)
-  }
-
-  const { data: students, error: studentErr } = await studentQuery
   if (studentErr) {
     return { error: studentErr.message }
   }
@@ -361,6 +316,8 @@ export async function assignProgramToExam(
     .map((studentId) => ({
       exam_id: examId,
       student_id: studentId,
+      program_id: programId,
+      assigned_by: assignedBy,
       deadline,
       is_active: true,
     }))

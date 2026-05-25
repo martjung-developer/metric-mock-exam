@@ -115,14 +115,12 @@ export function useMockExams() {
 
           if (!isAssigned) {
             status = 'coming_soon'
-          } else if (attemptCount >= MAX_ATTEMPTS) {
-            status = 'locked'
-          } else if (sub?.status === 'graded' || sub?.status === 'reviewed' || sub?.status === 'released') {
-            status = 'completed'
-          } else if (sub?.status === 'submitted') {
-            status = attemptCount < MAX_ATTEMPTS ? 'available' : 'completed'
           } else if (sub?.status === 'in_progress') {
             status = 'in_progress'
+          } else if (attemptCount >= MAX_ATTEMPTS) {
+            status = 'locked'
+          } else if (sub?.status === 'submitted' || sub?.status === 'graded' || sub?.status === 'reviewed') {
+            status = 'completed'
           } else {
             status = 'available'
           }
@@ -137,6 +135,7 @@ export function useMockExams() {
             duration:     formatDuration(exam.duration_minutes),
             durationMins: exam.duration_minutes,
             submissionId: sub?.submissionId,
+            inProgressAttemptNo: sub?.status === 'in_progress' ? sub.attemptNo : undefined,
             attemptCount,
           }
         })

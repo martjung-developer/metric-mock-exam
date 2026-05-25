@@ -124,7 +124,7 @@ export function ImportModal({ q }: ImportModalProps) {
                   <button
                     className={styles.btnPrimary}
                     onClick={() => void q.handleImportSave()}
-                    disabled={q.importSaving || !q.importExamId}
+                    disabled={q.importSaving || !q.importExamId || !q.canImport}
                   >
                     {q.importSaving
                       ? <Loader2 size={14} className={styles.spinner} />
@@ -161,11 +161,18 @@ function ImportSuccess({ q }: { q: Q }) {
       </p>
       <p style={{ fontSize: '0.82rem', color: '#64748b' }}>
         <strong style={{ color: '#059669' }}>{q.importCounts.inserted}</strong>{' '}
-        question{q.importCounts.inserted !== 1 ? 's' : ''} imported
-        {q.importCounts.skipped > 0 && (
-          <>, <strong style={{ color: '#dc2626' }}>{q.importCounts.skipped}</strong> skipped</>
-        )}
+        question{q.importCounts.inserted !== 1 ? 's' : ''} imported successfully
       </p>
+      <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: 4 }}>
+        <strong style={{ color: '#d97706' }}>{q.importCounts.skippedDuplicates}</strong>{' '}
+        question{q.importCounts.skippedDuplicates !== 1 ? 's' : ''} skipped - already exist in this bank
+      </p>
+      {q.importCounts.failedToParse > 0 && (
+        <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: 4 }}>
+          <strong style={{ color: '#dc2626' }}>{q.importCounts.failedToParse}</strong>{' '}
+          question{q.importCounts.failedToParse !== 1 ? 's' : ''} failed to parse
+        </p>
+      )}
       <button className={styles.btnPrimary} onClick={q.closeImport} style={{ marginTop: '1.25rem' }}>
         Done
       </button>
@@ -387,6 +394,25 @@ function ParsedRowsSection({ q }: { q: Q }) {
       </div>
 
       <ParseSummary rows={q.importRows} />
+      {!!q.importExamId && q.existingDuplicateCount > 0 && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          border: '1px solid #fcd34d',
+          background: '#fffbeb',
+          color: '#92400e',
+          borderRadius: 10,
+          padding: '0.55rem 0.7rem',
+          fontSize: '0.76rem',
+          fontWeight: 600,
+        }}>
+          <AlertTriangle size={13} />
+          {q.existingDuplicateCount === q.validCount
+            ? 'This file matches existing questions in the selected exam. Upload is blocked to prevent questionnaire reuse.'
+            : `${q.existingDuplicateCount} question${q.existingDuplicateCount !== 1 ? 's are' : ' is'} already in this exam and will be skipped.`}
+        </div>
+      )}
 
       {/* Preview table */}
       <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden', maxHeight: 210, overflowY: 'auto' }}>

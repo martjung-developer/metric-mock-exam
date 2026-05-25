@@ -129,13 +129,13 @@ export function ExamCard({ exam, onStart, onContinue, onViewAttempt }: Props) {
         {isAvailable && (
           <button className={styles.startBtn} onClick={() => onStart(exam.id)}>
             <PlayCircle size={15} strokeWidth={2} />
-            {exam.attemptCount > 0 ? 'Retake Exam' : 'Start Exam'}
+            Start Attempt {exam.attemptCount + 1}
           </button>
         )}
 
         {isInProgress && (
           <button className={styles.continueBtn} onClick={() => onContinue(exam.id)}>
-            <RotateCcw size={15} strokeWidth={2} /> Resume Exam
+            <RotateCcw size={15} strokeWidth={2} /> Resume Attempt {exam.inProgressAttemptNo ?? (exam.attemptCount + 1)}
           </button>
         )}
 

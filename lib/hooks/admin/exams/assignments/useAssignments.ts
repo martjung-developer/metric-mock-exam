@@ -237,9 +237,24 @@ export function useAssignments(examId: string): UseAssignmentsReturn {
     setAssigning(true)
     setError(null)
 
+    const selectedProgramExists = programs.some((program) => program.id === selectedProg)
+    if (!selectedProgramExists) {
+      setError('Please select a valid program.')
+      setAssigning(false)
+      return
+    }
+
+    const { data: { user }, error: userErr } = await supabase.auth.getUser()
+    if (userErr || !user) {
+      setError('Could not identify the assigning user.')
+      setAssigning(false)
+      return
+    }
+
     const result = await assignProgramToExam(supabase, {
       examId,
       programId: selectedProg,
+      assignedBy: user.id,
       deadline:  progDeadline || null,
     })
 
@@ -254,7 +269,7 @@ export function useAssignments(examId: string): UseAssignmentsReturn {
     setShowPanel(false)
     setAssigning(false)
     void load()
-  }, [supabase, examId, selectedProg, progDeadline, load])
+  }, [supabase, examId, selectedProg, progDeadline, programs, load])
 
   // ── Unassign ──────────────────────────────────────────────────────────────
   const handleUnassign = useCallback(async () => {

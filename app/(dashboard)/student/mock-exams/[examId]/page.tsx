@@ -24,8 +24,10 @@ import {
 } from 'lucide-react'
 import { useMockExamSession } from '@/lib/hooks/student/mock-exams/useMockExamSession'
 import { resolveQState } from '@/lib/utils/student/mock-exams/mock-exams'
+import { MAX_TAB_VIOLATIONS } from '@/lib/constants/student/mock-exams/mock-exams'
 import { LockedScreen } from '@/components/dashboard/student/mock-exams/LockedScreen'
 import { bubbleVariants, questionVariants, timerVariants } from '@/animations/student/exam-portal'
+import { cheatingWarningBannerVariants } from '@/animations/student/anti-cheat'
 import styles from './mock.module.css'
 
 function formatHms(totalSeconds: number): string {
@@ -49,8 +51,16 @@ export default function MockExamPage() {
   const [timeUpToast, setTimeUpToast] = useState(false)
   const [navDirection, setNavDirection] = useState<-1 | 0 | 1>(0)
   const [poppingBubbles, setPoppingBubbles] = useState<Record<string, boolean>>({})
+  const [antiCheatViolations, setAntiCheatViolations] = useState(0)
+  const [showAntiCheatBanner, setShowAntiCheatBanner] = useState(false)
+  const [showAntiCheatSubmitModal, setShowAntiCheatSubmitModal] = useState(false)
+  const [antiCheatSubmitReason, setAntiCheatSubmitReason] = useState('')
+  const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(false)
   const prefersReducedMotion = useReducedMotion()
   const prevStatesRef = useRef<Record<string, string>>({})
+  const antiCheatSubmittedRef = useRef(false)
+  const tabSwitchIncidentRef = useRef(false)
+  const antiCheatBannerTimerRef = useRef<number | null>(null)
 
   const {
     loading,
@@ -91,6 +101,20 @@ export default function MockExamPage() {
     }
     return
   }, [submitted, timeLeft])
+
+  useEffect(() => {
+    if (!submitted) {
+      return
+    }
+
+    setShowAntiCheatBanner(false)
+    setAntiCheatViolations(0)
+
+    if (antiCheatBannerTimerRef.current !== null) {
+      window.clearTimeout(antiCheatBannerTimerRef.current)
+      antiCheatBannerTimerRef.current = null
+    }
+  }, [submitted])
 
   useEffect(() => {
     if (typeof window === 'undefined') {return}
@@ -159,6 +183,171 @@ export default function MockExamPage() {
 
     return () => clearTimeout(timer)
   }, [questions, answers, qStates, prefersReducedMotion])
+
+  useEffect(() => {
+    if (loading || submitted || questions.length === 0 || isLocked) {
+      return
+    }
+
+    const requestFullscreen = async () => {
+      if (document.fullscreenElement) {
+        return
+      }
+      try {
+        await document.documentElement.requestFullscreen()
+      } catch {
+        setShowFullscreenPrompt(true)
+      }
+    }
+
+    void requestFullscreen()
+  }, [loading, submitted, questions.length, isLocked])
+
+  useEffect(() => {
+    if (loading || submitted || questions.length === 0 || isLocked) {
+      return
+    }
+
+    let mounted = true
+
+    const showViolationBanner = () => {
+      setShowAntiCheatBanner(true)
+
+      if (antiCheatBannerTimerRef.current !== null) {
+        window.clearTimeout(antiCheatBannerTimerRef.current)
+      }
+
+      antiCheatBannerTimerRef.current = window.setTimeout(() => {
+        setShowAntiCheatBanner(false)
+        antiCheatBannerTimerRef.current = null
+      }, 5000)
+    }
+
+    const registerViolation = (reason: string) => {
+      if (!mounted || antiCheatSubmittedRef.current) {
+        return
+      }
+
+      setAntiCheatViolations((prev) => {
+        const next = prev + 1
+
+        showViolationBanner()
+
+        if (next >= MAX_TAB_VIOLATIONS && !antiCheatSubmittedRef.current) {
+          antiCheatSubmittedRef.current = true
+          setAntiCheatSubmitReason(reason)
+          setShowAntiCheatSubmitModal(true)
+          void doSubmit()
+        }
+
+        return next
+      })
+    }
+
+    const registerTabSwitchViolation = (reason: string) => {
+      if (tabSwitchIncidentRef.current) {
+        return
+      }
+      tabSwitchIncidentRef.current = true
+      registerViolation(reason)
+    }
+
+    const resetTabSwitchIncident = () => {
+      if (!document.hidden && document.hasFocus()) {
+        tabSwitchIncidentRef.current = false
+      }
+    }
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        registerTabSwitchViolation('Tab switch or page hidden was detected.')
+        return
+      }
+      resetTabSwitchIncident()
+    }
+
+    const onWindowBlur = () => {
+      registerTabSwitchViolation('Window focus was lost during the exam.')
+    }
+
+    const onWindowFocus = () => {
+      resetTabSwitchIncident()
+    }
+
+    const onContextMenu = (event: MouseEvent) => {
+      event.preventDefault()
+    }
+
+    const onClipboardBlock = (event: ClipboardEvent) => {
+      event.preventDefault()
+      registerViolation('Copy, paste, or cut action was detected.')
+    }
+
+    const onPasteInputDetection = (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target === null) {return}
+      const tag = target.tagName.toLowerCase()
+      if (tag === 'textarea' || tag === 'input') {
+        registerViolation('Pasting into an answer field was detected.')
+      }
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase()
+      const blocked =
+        event.key === 'F12' ||
+        event.key === 'PrintScreen' ||
+        (event.ctrlKey && key === 'c') ||
+        (event.ctrlKey && key === 'v') ||
+        (event.ctrlKey && key === 'u') ||
+        (event.ctrlKey && event.shiftKey && key === 'i')
+
+      if (!blocked) {return}
+
+      event.preventDefault()
+      registerViolation('Restricted keyboard shortcut was detected.')
+    }
+
+    const onFullscreenChange = () => {
+      const exitedFullscreen = document.fullscreenElement === null
+      if (!exitedFullscreen) {
+        setShowFullscreenPrompt(false)
+        return
+      }
+
+      registerViolation('Exiting fullscreen was detected.')
+      setShowFullscreenPrompt(true)
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('blur', onWindowBlur)
+    window.addEventListener('focus', onWindowFocus)
+    window.addEventListener('contextmenu', onContextMenu)
+    window.addEventListener('copy', onClipboardBlock)
+    window.addEventListener('cut', onClipboardBlock)
+    window.addEventListener('paste', onClipboardBlock)
+    window.addEventListener('paste', onPasteInputDetection)
+    window.addEventListener('keydown', onKeyDown)
+    document.addEventListener('fullscreenchange', onFullscreenChange)
+
+    return () => {
+      mounted = false
+      if (antiCheatBannerTimerRef.current !== null) {
+        window.clearTimeout(antiCheatBannerTimerRef.current)
+        antiCheatBannerTimerRef.current = null
+      }
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('blur', onWindowBlur)
+      window.removeEventListener('focus', onWindowFocus)
+      window.removeEventListener('contextmenu', onContextMenu)
+      window.removeEventListener('copy', onClipboardBlock)
+      window.removeEventListener('cut', onClipboardBlock)
+      window.removeEventListener('paste', onClipboardBlock)
+      window.removeEventListener('paste', onPasteInputDetection)
+      window.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('fullscreenchange', onFullscreenChange)
+    }
+  }, [loading, submitted, questions.length, isLocked, doSubmit])
 
   if (loading) {
     return <div className={styles.center}>Loading exam...</div>
@@ -510,8 +699,64 @@ export default function MockExamPage() {
 
   return (
     <div className={styles.shell}>
+      <AnimatePresence>
+        {showAntiCheatBanner && !submitted ? (
+          <motion.div
+            className={styles.antiCheatBanner}
+            variants={cheatingWarningBannerVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            transition={prefersReducedMotion ? { duration: 0 } : undefined}
+          >
+            Cheating warning: suspicious activity detected ({antiCheatViolations}/{MAX_TAB_VIOLATIONS}).
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
       {timeUpToast ? <div className={styles.toast}>Time&apos;s up! Your exam has been submitted.</div> : null}
       {content}
+
+      {showFullscreenPrompt ? (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalCard}>
+            <div className={`${styles.modalIconWrap} ${styles.modalIconAmber}`}><AlertTriangle size={20} /></div>
+            <h3>Fullscreen Required</h3>
+            <p>Please return to fullscreen mode to continue the exam.</p>
+            <div className={styles.modalActions}>
+              <button
+                className={styles.primaryBtn}
+                onClick={async () => {
+                  try {
+                    await document.documentElement.requestFullscreen()
+                  } catch {
+                    return
+                  }
+                }}
+              >
+                Return to Fullscreen
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showAntiCheatSubmitModal ? (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalCard}>
+            <div className={`${styles.modalIconWrap} ${styles.modalIconAmber}`}><AlertTriangle size={20} /></div>
+            <h3>Exam Auto-Submitted</h3>
+            <p>
+              The anti-cheat violation limit was reached ({antiCheatViolations}/{MAX_TAB_VIOLATIONS}).
+              {` ${antiCheatSubmitReason}`}
+            </p>
+            <div className={styles.modalActions}>
+              <button className={styles.primaryBtn} onClick={() => router.push('/student/mock-exams')}>
+                <ArrowLeft size={16} /> Back to Mock Exams
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showResume ? (
         <div className={styles.modalOverlay}>

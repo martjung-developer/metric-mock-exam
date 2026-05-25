@@ -34,11 +34,14 @@ export default function ProgramsPage() {
     filteredPrograms,
     stats,
     degreeTypes,
+    departmentOptions,
+    groupedPrograms,
     loading,
     error,
     filters,
     setSearch,
     setFilterDeg,
+    setDepartment,
     selectedProgram,
     openModal,
     closeModal,
@@ -87,23 +90,59 @@ export default function ProgramsPage() {
         <ProgramsFilterBar
           filters={filters}
           degreeTypes={degreeTypes}
+          departmentOptions={departmentOptions}
           resultCount={filteredPrograms.length}
           onSearchChange={setSearch}
           onDegreeChange={setFilterDeg}
+          onDepartmentChange={setDepartment}
         />
       </motion.div>
 
-      {/* Cards grid */}
-      <ProgramGrid
-        programs={filteredPrograms}
-        loading={loading}
-        editState={editState}
-        onView={openModal}
-        onStartEdit={startEditDescription}
-        onChangeDesc={setEditDesc}
-        onSave={saveDescription}
-        onCancel={cancelEdit}
-      />
+      {/* Cards grid grouped by school/department */}
+      {loading ? (
+        <ProgramGrid
+          programs={filteredPrograms}
+          loading={loading}
+          editState={editState}
+          onView={openModal}
+          onStartEdit={startEditDescription}
+          onChangeDesc={setEditDesc}
+          onSave={saveDescription}
+          onCancel={cancelEdit}
+        />
+      ) : groupedPrograms.length === 0 ? (
+        <ProgramGrid
+          programs={filteredPrograms}
+          loading={loading}
+          editState={editState}
+          onView={openModal}
+          onStartEdit={startEditDescription}
+          onChangeDesc={setEditDesc}
+          onSave={saveDescription}
+          onCancel={cancelEdit}
+        />
+      ) : (
+        groupedPrograms.map((section) => (
+          <motion.div key={section.key} variants={cardVariants} className={styles.sectionWrap}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>{section.label}</h2>
+              <span className={styles.sectionCount}>
+                {section.programs.length} program{section.programs.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <ProgramGrid
+              programs={section.programs}
+              loading={false}
+              editState={editState}
+              onView={openModal}
+              onStartEdit={startEditDescription}
+              onChangeDesc={setEditDesc}
+              onSave={saveDescription}
+              onCancel={cancelEdit}
+            />
+          </motion.div>
+        ))
+      )}
 
       {/* Detail modal */}
       <ProgramModal

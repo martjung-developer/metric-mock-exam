@@ -11,17 +11,21 @@ import styles from '@/app/(dashboard)/admin/programs/programs.module.css'
 interface ProgramsFilterBarProps {
   filters:       ProgramFilters
   degreeTypes:   string[]
+  departmentOptions: string[]
   resultCount:   number
   onSearchChange:(q: string) => void
   onDegreeChange:(deg: string) => void
+  onDepartmentChange:(department: string) => void
 }
 
 export function ProgramsFilterBar({
   filters,
   degreeTypes,
+  departmentOptions,
   resultCount,
   onSearchChange,
   onDegreeChange,
+  onDepartmentChange,
 }: ProgramsFilterBarProps) {
   return (
     <div className={styles.filterBar}>
@@ -56,6 +60,21 @@ export function ProgramsFilterBar({
           {degreeTypes.map((d) => (
             <option key={d} value={d}>
               {d === 'all' ? 'All Degrees' : d}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className={styles.filterGroup}>
+        <Filter size={13} className={styles.filterIcon} />
+        <select
+          className={styles.filterSelect}
+          value={filters.department}
+          onChange={(e) => onDepartmentChange(e.target.value)}
+        >
+          {departmentOptions.map((d) => (
+            <option key={d} value={d}>
+              {d === 'all' ? 'All Departments' : d}
             </option>
           ))}
         </select>

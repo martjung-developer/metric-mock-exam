@@ -11,7 +11,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database }       from '@/lib/types/database'
 import type {
-  ProgramRow,
+  ProgramRowWithSchool,
   RawStudentJoin,
   RawExamRow,
   FetchAllProgramDataResult,
@@ -28,18 +28,19 @@ type AppSupabaseClient = SupabaseClient<Database>
  */
 export async function fetchPrograms(
   client: AppSupabaseClient,
-): Promise<{ data: ProgramRow[]; error: string | null }> {
+): Promise<{ data: ProgramRowWithSchool[]; error: string | null }> {
   const { data, error } = await client
     .from('programs')
     .select(
-      'id, school_id, code, name, full_name, degree_type, major, years, description, created_at',
+      'id, school_id, code, name, full_name, degree_type, major, years, description, created_at, schools(code,name,full_name)',
     )
-    .order('name')
+    .order('name', { foreignTable: 'schools', ascending: true })
+    .order('code')
 
   if (error) {
     return { data: [], error: error.message }
   }
-  return { data: (data ?? []) as ProgramRow[], error: null }
+  return { data: (data ?? []) as ProgramRowWithSchool[], error: null }
 }
 
 /**

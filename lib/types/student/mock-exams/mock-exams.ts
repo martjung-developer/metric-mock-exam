@@ -17,6 +17,7 @@ export interface MockExam {
   duration?:     string
   durationMins?: number
   submissionId?: string
+  inProgressAttemptNo?: number
   attemptCount:  number
 }
 
@@ -85,6 +86,6 @@ export type SessionCreateResult =
   | { kind: 'locked';   attemptsUsed: number }
 
 export interface AttemptCountMap {
-  /** examId → number of non-in_progress submissions */
+  /** examId → number of released submissions */
   [examId: string]: number
 }

@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import type {
   StudyMaterial,
   ProgramOption,
@@ -55,6 +56,7 @@ export function useStudyMaterials(): UseStudyMaterialsReturn {
   const [error,     setError]     = useState<string | null>(null)
 
   const abortRef = useRef<AbortController | null>(null)
+  const channelRef = useRef<RealtimeChannel | null>(null)
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
 
@@ -91,6 +93,25 @@ export function useStudyMaterials(): UseStudyMaterialsReturn {
     void refresh()
     return () => { abortRef.current?.abort() }
   }, [refresh])
+
+  // Keep list/counts in sync with non-blocking realtime updates.
+  useEffect(() => {
+    channelRef.current = supabase
+      .channel('admin_study_materials_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'study_materials' },
+        () => { void refresh() },
+      )
+      .subscribe()
+
+    return () => {
+      if (channelRef.current) {
+        void supabase.removeChannel(channelRef.current)
+      }
+      channelRef.current = null
+    }
+  }, [supabase, refresh])
 
   // ── Optimistic toggle publish ─────────────────────────────────────────────
 

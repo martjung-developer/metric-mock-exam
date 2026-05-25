@@ -52,7 +52,7 @@ export function useApprovalQueue(): UseApprovalQueueReturn {
   const [acting,         setActing]         = useState(false)
   const [history,        setHistory]        = useState<ApprovalEvent[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
-  const [filterType,     setFilterType]     = useState<ApprovalEntityType | 'all'>('all')
+  const [filterType,     setFilterType]     = useState<ApprovalEntityType | 'all'>('question_bank')
   const [reviewDetail,   setReviewDetail]   = useState<ApprovalReviewDetail | null>(null)
   const [detailLoading,  setDetailLoading]  = useState(false)
   const [noteError,      setNoteError]      = useState<string | null>(null)

@@ -213,15 +213,17 @@ export async function fetchPendingReviewItems(
       .from('question_banks')
       .select(`
         id, title, submitted_by, submitted_at, review_notes, approval_status,
-        programs ( code )
+        programs ( code, name ),
+        profiles!question_banks_submitted_by_fkey ( full_name )
       `)
       .eq('approval_status', 'pending_review')
-      .order('submitted_at', { ascending: true }) as {
+      .order('submitted_at', { ascending: false }) as {
         data: Array<{
           id: string; title: string; submitted_by: string | null
           submitted_at: string | null; review_notes: string | null
           approval_status: ApprovalStatus
-          programs: { code: string } | null
+          programs: { code: string; name: string } | null
+          profiles: { full_name: string | null } | { full_name: string | null }[] | null
         }> | null
         error: unknown
       },
@@ -257,14 +259,20 @@ export async function fetchPendingReviewItems(
       programCode: Array.isArray(row.programs)
         ? (row.programs[0]?.code ?? null)
         : (row.programs?.code ?? null),
+      programName: Array.isArray(row.programs)
+        ? (row.programs[0]?.name ?? null)
+        : (row.programs?.name ?? null),
       status:      row.approval_status,
       reviewNotes: row.review_notes,
+      submittedByName: Array.isArray(row.profiles)
+        ? (row.profiles[0]?.full_name ?? null)
+        : (row.profiles?.full_name ?? null),
     })
   }
 
-  // Sort by oldest first (fairness)
+  // Sort by most recent submission first
   return items.sort((a, b) =>
-    (a.submittedAt ?? '').localeCompare(b.submittedAt ?? ''),
+    (b.submittedAt ?? '').localeCompare(a.submittedAt ?? ''),
   )
 }
 

@@ -221,7 +221,7 @@ export function useMockExamSession(examId: string): ExamSessionState {
           setExam(examRow as ExamMeta)
           setQuestions(qs)
           setSubmissionId(sessionResult.submissionId)
-          setAttemptsUsed(attemptsData.filter((a) => a.status !== 'in_progress').length)
+          setAttemptsUsed(attemptsData.filter((a) => a.status === 'released').length)
 
           const totalSecs = (examRow as ExamMeta).duration_minutes * 60
           const elapsed   = Math.floor(

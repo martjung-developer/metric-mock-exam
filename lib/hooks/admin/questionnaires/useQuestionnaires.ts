@@ -105,7 +105,7 @@ export interface UseQuestionnairesReturn {
   importError:             string
   importSaving:            boolean
   importDone:              boolean
-  importCounts:            { inserted: number; skipped: number }
+  importCounts:            { inserted: number; skippedDuplicates: number; failedToParse: number }
   dragOver:                boolean
   importedFileName:        string
   linkUrl:                 string
@@ -113,6 +113,8 @@ export interface UseQuestionnairesReturn {
   linkFetching:            boolean
   validCount:              number
   invalidCount:            number
+  existingDuplicateCount:  number
+  canImport:               boolean
   examsForImport:          ExamOption[]
   openImport:              () => void
   closeImport:             () => void
@@ -162,9 +164,10 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
   const [importError,      setImportError]      = useState('')
   const [importSaving,     setImportSaving]     = useState(false)
   const [importDone,       setImportDone]       = useState(false)
-  const [importCounts,     setImportCounts]     = useState({ inserted: 0, skipped: 0 })
+  const [importCounts,     setImportCounts]     = useState({ inserted: 0, skippedDuplicates: 0, failedToParse: 0 })
   const [dragOver,         setDragOver]         = useState(false)
   const [importedFileName, setImportedFileName] = useState('')
+  const [importedFileMeta, setImportedFileMeta] = useState<{ fileType: string; fileSize: number; fingerprint: string } | null>(null)
   const [linkUrl,          setLinkUrl]          = useState('')
   const [linkSource,       setLinkSource]       = useState<ReturnType<typeof detectLinkSource> | null>(null)
   const [linkFetching,     setLinkFetching]     = useState(false)
@@ -393,11 +396,12 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
     setImportExamId('')
     setImportProgramId('')
     setImportDone(false)
-    setImportCounts({ inserted: 0, skipped: 0 })
+    setImportCounts({ inserted: 0, skippedDuplicates: 0, failedToParse: 0 })
     setImportTab('file')
     setLinkUrl('')
     setLinkSource(null)
     setImportedFileName('')
+    setImportedFileMeta(null)
   }
 
   function closeImport(): void {
@@ -407,6 +411,14 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
     setImportDone(false)
     setLinkUrl('')
     setLinkSource(null)
+    setImportedFileMeta(null)
+  }
+
+  async function computeFileFingerprint(file: File): Promise<string> {
+    const buf = await file.arrayBuffer()
+    const digest = await crypto.subtle.digest('SHA-256', buf)
+    const bytes = Array.from(new Uint8Array(digest))
+    return bytes.map((b) => b.toString(16).padStart(2, '0')).join('')
   }
 
   async function handleFileDrop(file: File): Promise<void> {
@@ -414,8 +426,33 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
     setImportRows([])
     setImportParsing(true)
     setImportedFileName(file.name)
+    setImportedFileMeta(null)
 
     try {
+      const fingerprint = await computeFileFingerprint(file)
+      const fingerprintPath = `questionnaire-fingerprint/${fingerprint}`
+      const { data: duplicateFiles, error: duplicateLookupError } = await supabase
+        .from('storage_files')
+        .select('id')
+        .eq('purpose', 'exam_questions')
+        .eq('file_path', fingerprintPath)
+        .limit(1)
+
+      if (duplicateLookupError !== null) {
+        throw new Error(`Could not verify duplicate file: ${duplicateLookupError.message}`)
+      }
+      if ((duplicateFiles ?? []).length > 0) {
+        setImportRows([])
+        setImportError('This exact questionnaire file was already uploaded before. Please upload a different file.')
+        return
+      }
+
+      setImportedFileMeta({
+        fileType: file.type || 'application/octet-stream',
+        fileSize: file.size,
+        fingerprint,
+      })
+
       const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
 
       if (ext === 'docx' || ext === 'doc' || ext === 'pdf') {
@@ -505,6 +542,24 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
     if (!importProgramId) { return exams }
     return exams.filter((e) => e.program_id === importProgramId)
   }, [exams, importProgramId])
+  const validCount   = importRows.filter((r) =>  r._valid).length
+  const invalidCount = importRows.filter((r) => !r._valid).length
+
+  const existingDuplicateCount = useMemo(() => {
+    if (!importExamId) { return 0 }
+    const existingTexts = new Set(
+      questions
+        .filter((q) => q.exam_id === importExamId)
+        .map((q) => q.question_text.trim().toLowerCase()),
+    )
+    return importRows
+      .filter((r) => r._valid)
+      .reduce((count, row) => (
+        existingTexts.has(row.question_text.trim().toLowerCase()) ? count + 1 : count
+      ), 0)
+  }, [questions, importRows, importExamId])
+
+  const canImport = validCount > 0 && existingDuplicateCount < validCount
 
   async function handleImportSave(): Promise<void> {
     if (!importExamId) {
@@ -514,6 +569,10 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
 
     const validRows = importRows.filter((r) => r._valid)
     if (validRows.length === 0) { setImportError('No valid rows to import.'); return }
+    if (existingDuplicateCount >= validRows.length) {
+      setImportError('This questionnaire appears to be already imported for the selected exam. Re-upload blocked to prevent duplicates.')
+      return
+    }
 
     setImportSaving(true)
     setImportError('')
@@ -546,7 +605,7 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
         }
       })
 
-      await bulkInsertQuestions(supabase, payloads)
+      const importResult = await bulkInsertQuestions(supabase, payloads)
       if (profile?.role === 'faculty') {
         const submitRes = await fetch('/api/admin/approvals/submit', {
           method: 'POST',
@@ -563,10 +622,26 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
           throw new Error(submitJson?.error ?? 'Questions imported, but submission for approval failed.')
         }
       }
+      if (importedFileMeta !== null) {
+        const filePath = `questionnaire-fingerprint/${importedFileMeta.fingerprint}`
+        const { error: fileLogError } = await supabase
+          .from('storage_files')
+          .insert({
+            file_name: importedFileName || 'questionnaire-upload',
+            file_path: filePath,
+            file_type: importedFileMeta.fileType,
+            file_size: importedFileMeta.fileSize,
+            purpose: 'exam_questions',
+          })
+        if (fileLogError !== null) {
+          throw new Error(`Questions imported, but file fingerprint could not be saved: ${fileLogError.message}`)
+        }
+      }
       setImportDone(true)
       setImportCounts({
-        inserted: validRows.length,
-        skipped:  importRows.length - validRows.length,
+        inserted: importResult.inserted,
+        skippedDuplicates: importResult.skippedDuplicates,
+        failedToParse: importRows.length - validRows.length,
       })
       await fetchAll(true)
     } catch (err) {
@@ -575,9 +650,6 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
       setImportSaving(false)
     }
   }
-
-  const validCount   = importRows.filter((r) =>  r._valid).length
-  const invalidCount = importRows.filter((r) => !r._valid).length
 
   return {
     questions, exams, programs,
@@ -594,7 +666,7 @@ export function useQuestionnaires(): UseQuestionnairesReturn {
     importRows, importParsing, importError, importSaving,
     importDone, importCounts, dragOver, importedFileName,
     linkUrl, linkSource, linkFetching,
-    validCount, invalidCount, examsForImport,
+    validCount, invalidCount, existingDuplicateCount, canImport, examsForImport,
     openImport, closeImport, setImportTab,
     setImportExamId, setImportProgramId,
     handleFileDrop, handleLinkChange, handleFetchLink, handleImportSave,

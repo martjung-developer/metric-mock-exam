@@ -11,6 +11,17 @@ import type { Database } from '@/lib/types/database'
 
 export type ProgramRow = Database['public']['Tables']['programs']['Row']
 export type ExamRow    = Database['public']['Tables']['exams']['Row']
+export type ProgramRowWithSchool = ProgramRow & {
+  schools: {
+    code: string
+    name: string
+    full_name: string
+  } | {
+    code: string
+    name: string
+    full_name: string
+  }[] | null
+}
 
 // ── Subset of ExamRow used in program lists ───────────────────────────────────
 
@@ -56,6 +67,10 @@ export interface ProgramDisplay extends ProgramRow {
   examCount:    number
   students:     StudentRow[]
   exams:        ProgramExamSummary[]
+  school_code: string | null
+  school_name: string | null
+  school_full_name: string | null
+  departmentCode: string
 }
 
 // ── Filter / search state ─────────────────────────────────────────────────────
@@ -63,6 +78,7 @@ export interface ProgramDisplay extends ProgramRow {
 export interface ProgramFilters {
   search:    string
   filterDeg: string   // 'all' | any degree_type string
+  department: string  // 'all' | department code
 }
 
 // ── Derived statistics shown in the stat strip ───────────────────────────────
@@ -89,7 +105,7 @@ export interface DescriptionEditState {
 // ── Service-layer return shapes ───────────────────────────────────────────────
 
 export interface FetchAllProgramDataResult {
-  programs: ProgramRow[]
+  programs: ProgramRowWithSchool[]
   students: RawStudentJoin[]
   exams:    RawExamRow[]
   error:    string | null

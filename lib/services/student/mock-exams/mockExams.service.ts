@@ -140,7 +140,7 @@ export async function fetchQuestionCounts(
 export async function fetchStudentSubmissionStatuses(
   userId:  string,
   examIds: string[],
-): Promise<Record<string, { status: string; submissionId: string }>> {
+): Promise<Record<string, { status: string; submissionId: string; attemptNo: number }>> {
   if (examIds.length === 0) {return {}}
 
   const supabase = getSupabase()
@@ -155,11 +155,11 @@ export async function fetchStudentSubmissionStatuses(
 
   if (error !== null) {return {}}
 
-  const map: Record<string, { status: string; submissionId: string }> = {}
+  const map: Record<string, { status: string; submissionId: string; attemptNo: number }> = {}
 
-  ;(data ?? []).forEach((s: { id: string; exam_id: string | null; status: string }) => {
+  ;(data ?? []).forEach((s: { id: string; exam_id: string | null; status: string; attempt_no: number }) => {
     if (s.exam_id !== null && map[s.exam_id] === undefined) {
-      map[s.exam_id] = { status: s.status, submissionId: s.id }
+      map[s.exam_id] = { status: s.status, submissionId: s.id, attemptNo: s.attempt_no }
     }
   })
 
@@ -167,8 +167,8 @@ export async function fetchStudentSubmissionStatuses(
 }
 
 /**
- * For each examId, returns the count of submissions that are NOT in_progress.
- * These are "used attempts" (submitted / graded / released).
+ * For each examId, returns the count of submissions that are RELEASED.
+ * Attempt progression is based on released attempts only.
  */
 export async function fetchAttemptCounts(
   userId:  string,
@@ -183,7 +183,7 @@ export async function fetchAttemptCounts(
     .select('exam_id, status')
     .eq('student_id', userId)
     .in('exam_id', examIds)
-    .neq('status', 'in_progress')   // only count completed attempts
+    .eq('status', 'released')
 
   if (error !== null) {return {}}
 
@@ -263,10 +263,10 @@ export async function checkTerminalSubmission(
 }
 
 /**
- * Counts ALL submissions for this student + exam (any status).
+ * Counts RELEASED submissions for this student + exam.
  * Used to derive attempt_no for next insert.
  */
-async function countAllSubmissions(
+async function countReleasedSubmissions(
   supabase:  ReturnType<typeof getSupabase>,
   userId:    string,
   examId:    string,
@@ -276,8 +276,9 @@ async function countAllSubmissions(
     .select('id', { count: 'exact', head: true })
     .eq('exam_id', examId)
     .eq('student_id', userId)
+    .eq('status', 'released')
 
-  if (error !== null) {throw new Error('Could not count existing attempts.')}
+  if (error !== null) {throw new Error('Could not count released attempts.')}
   return count ?? 0
 }
 
@@ -286,29 +287,15 @@ async function countAllSubmissions(
  *
  * Priority:
  *   1. Resume in_progress if one exists (no new row)
- *   2. If all submissions are terminal → count them:
- *      - count < MAX_ATTEMPTS  → insert new row with correct attempt_no
- *      - count >= MAX_ATTEMPTS → return { kind: 'locked' }
+ *   2. Count released attempts only:
+ *      - releasedCount < MAX_ATTEMPTS  → insert new row with attempt_no = releasedCount + 1
+ *      - releasedCount >= MAX_ATTEMPTS → return { kind: 'locked' }
  */
 export async function fetchOrCreateSubmission(
   userId:  string,
   examId:  string,
 ): Promise<SessionCreateResult> {
   const supabase = getSupabase()
-
-  // Block resume/retake once any graded/reviewed/released record exists.
-  const { data: gradedLock, error: gradedLockErr } = await supabase
-    .from('submissions')
-    .select('id')
-    .eq('exam_id', examId)
-    .eq('student_id', userId)
-    .in('status', ['graded', 'reviewed', 'released'])
-    .limit(1)
-    .maybeSingle()
-  if (gradedLockErr !== null) {throw new Error('Could not verify grading lock state.')}
-  if (gradedLock !== null) {
-    throw new Error('This exam has already been graded and can no longer be resumed.')
-  }
 
   // 1. Check for an existing in_progress session → resume it
   const { data: inProg, error: inProgError } = await supabase
@@ -332,15 +319,15 @@ export async function fetchOrCreateSubmission(
     }
   }
 
-  // 2. Count ALL submissions (terminal + in_progress that might exist from race)
-  const totalCount = await countAllSubmissions(supabase, userId, examId)
+  // 2. Count released attempts only
+  const releasedCount = await countReleasedSubmissions(supabase, userId, examId)
 
-  if (totalCount >= MAX_ATTEMPTS) {
-    return { kind: 'locked', attemptsUsed: totalCount }
+  if (releasedCount >= MAX_ATTEMPTS) {
+    return { kind: 'locked', attemptsUsed: releasedCount }
   }
 
   // 3. Derive the next attempt_no (1-indexed)
-  const nextAttemptNo = totalCount + 1
+  const nextAttemptNo = releasedCount + 1
   const now           = new Date().toISOString()
 
   const { data: newSub, error: insertError } = await supabase
@@ -489,26 +476,13 @@ export async function submitExam(
 
 /**
  * FIXED: createNewSubmission — used by "Start Fresh" flow.
- * Guards against exceeding MAX_ATTEMPTS before inserting.
+ * Reuses an active attempt; otherwise creates next attempt from released count.
  */
 export async function createNewSubmission(
   userId:  string,
   examId:  string,
 ): Promise<SessionCreateResult> {
   const supabase = getSupabase()
-
-  const { data: gradedLock, error: gradedLockErr } = await supabase
-    .from('submissions')
-    .select('id')
-    .eq('exam_id', examId)
-    .eq('student_id', userId)
-    .in('status', ['graded', 'reviewed', 'released'])
-    .limit(1)
-    .maybeSingle()
-  if (gradedLockErr !== null) {throw new Error('Could not verify grading lock state.')}
-  if (gradedLock !== null) {
-    throw new Error('This exam has already been graded and can no longer be resumed.')
-  }
 
   // Reuse any existing active session to enforce one in_progress record.
   const { data: inProg, error: inProgErr } = await supabase
@@ -530,13 +504,13 @@ export async function createNewSubmission(
     }
   }
 
-  const totalCount = await countAllSubmissions(supabase, userId, examId)
+  const releasedCount = await countReleasedSubmissions(supabase, userId, examId)
 
-  if (totalCount >= MAX_ATTEMPTS) {
-    return { kind: 'locked', attemptsUsed: totalCount }
+  if (releasedCount >= MAX_ATTEMPTS) {
+    return { kind: 'locked', attemptsUsed: releasedCount }
   }
 
-  const nextAttemptNo = totalCount + 1
+  const nextAttemptNo = releasedCount + 1
   const now           = new Date().toISOString()
 
   const { data, error } = await supabase

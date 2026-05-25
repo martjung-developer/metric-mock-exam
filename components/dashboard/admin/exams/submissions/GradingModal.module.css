@@ -1,0 +1,397 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 780px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #F1F5F9;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #1D2951;
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.studentInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.studentName {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 2px;
+}
+
+.studentMeta {
+  font-size: 12px;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.studentIdBadge {
+  background: #F1F5F9;
+  color: #475569;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scoreBadgePass {
+  background: #DCFCE7;
+  color: #16A34A;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.scoreBadgeFail {
+  background: #FEE2E2;
+  color: #DC2626;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.statusBadge {
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.statusInProgress {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.statusSubmitted {
+  background: #DBEAFE;
+  color: #1D4ED8;
+}
+
+.statusGraded {
+  background: #E0F2FE;
+  color: #0369A1;
+}
+
+.statusReviewed {
+  background: #EDE9FE;
+  color: #7C3AED;
+}
+
+.statusReleased {
+  background: #DCFCE7;
+  color: #16A34A;
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: #F8FAFC;
+  color: #64748B;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.closeBtn:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+.summaryBar {
+  padding: 12px 24px;
+  border-bottom: 1px solid #F1F5F9;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #FAFAFA;
+  flex-shrink: 0;
+}
+
+.summaryItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.summaryCorrect { color: #16A34A; }
+.summaryWrong { color: #DC2626; }
+.summaryPending { color: #D97706; }
+.summaryTotal { color: #64748B; margin-left: auto; }
+
+.autoModeToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748B;
+  background: #F1F5F9;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.questionList {
+  overflow-y: auto;
+  flex: 1;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.questionCard {
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.questionCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.questionNumber {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1D2951;
+  background: #E8ECF8;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+.pointsBadge {
+  font-size: 11px;
+  color: #64748B;
+  background: #F1F5F9;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.statusIconCorrect { color: #16A34A; }
+.statusIconWrong { color: #DC2626; }
+.statusIconPending { color: #D97706; }
+
+.scenarioBlock {
+  margin: 12px 16px 0;
+  background: #F0F4FF;
+  border-left: 3px solid #6366F1;
+  border-radius: 0 8px 8px 0;
+  padding: 12px 14px;
+}
+
+.scenarioLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6366F1;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.scenarioText {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.questionStem {
+  padding: 14px 16px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0F172A;
+  line-height: 1.5;
+}
+
+.choices {
+  padding: 0 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.choiceRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #E2E8F0;
+  background: #FFFFFF;
+}
+
+.choiceRowCorrect {
+  background: #DCFCE7;
+  border-color: #16A34A;
+}
+
+.choiceRowWrong {
+  background: #FEE2E2;
+  border-color: #DC2626;
+}
+
+.choiceLetter {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #F1F5F9;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.choiceLetterCorrect {
+  background: #16A34A;
+  color: white;
+}
+
+.choiceLetterWrong {
+  background: #DC2626;
+  color: white;
+}
+
+.choiceText {
+  flex: 1;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.choiceTextCorrect { color: #15803D; font-weight: 500; }
+.choiceTextWrong { color: #B91C1C; }
+
+.choiceIcon {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.unansweredBanner {
+  margin: 0 16px 12px;
+  background: #FEF3C7;
+  border: 1px solid #FDE68A;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #D97706;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pointsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px 12px;
+  font-size: 12px;
+  color: #64748B;
+  border-top: 1px solid #F1F5F9;
+  margin-top: 4px;
+}
+
+.pointsEarned {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.footer {
+  padding: 14px 24px;
+  border-top: 1px solid #F1F5F9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  background: #FAFAFA;
+}
+
+.footerPreview {
+  font-size: 13px;
+  color: #475569;
+}
+
+.footerPreview strong {
+  color: #0F172A;
+}
+
+.footerPass { color: #16A34A; font-weight: 700; }
+.footerFail { color: #DC2626; font-weight: 700; }
+
+.footerCloseBtn {
+  padding: 8px 20px;
+  background: #1D2951;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.footerCloseBtn:hover {
+  background: #253570;
+}

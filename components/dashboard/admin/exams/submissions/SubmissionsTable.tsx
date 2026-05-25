@@ -1,6 +1,6 @@
 // components/dashboard/admin/exams/submissions/SubmissionsTable.tsx
 'use client'
-import { Eye, Pencil, PlayCircle, Loader2, ArrowUpDown } from 'lucide-react'
+import { Eye, ClipboardPenLine, PlayCircle, Loader2, ArrowUpDown } from 'lucide-react'
 import { useState }                  from 'react'
 import type { Submission }           from '@/lib/types/admin/exams/submissions/submission.types'
 import { STATUS_CONFIG }             from '@/lib/utils/admin/submissions/constants'
@@ -13,7 +13,7 @@ interface SubmissionsTableProps {
   loading:      boolean
   takeSort:     'asc' | 'desc'
   onTakeSort:   (v: 'asc' | 'desc') => void
-  onView:       (sub: Submission) => void
+  onView:       (sub: Submission, mode: 'grade' | 'view') => void
   onForceSubmit?: (submissionId: string, startedAt: string) => Promise<string | null>
 }
 
@@ -119,9 +119,7 @@ export function SubmissionsTable({
                   <td>
                     {sub.score !== null
                       ? <span className={`${s.scoreChip} ${sub.passed ? s.scorePass : s.scoreFail}`}>
-                          {sub.percentage !== null
-                            ? `${sub.percentage.toFixed(1)}%`
-                            : `${sub.score} pts`}
+                          {`${sub.score}/100 (${(sub.percentage ?? 0).toFixed(1)}%)`}
                         </span>
                       : <span className={s.na}>—</span>}
                   </td>
@@ -143,13 +141,23 @@ export function SubmissionsTable({
                         </button>
                       )}
 
-                      {/* View / Grade */}
+                      {/* Grade */}
                       <button
-                        className={canGrade ? s.actionGrade : s.actionView}
-                        title={canGrade ? 'View & Grade' : 'View'}
-                        onClick={() => onView(sub)}
+                        className={s.actionGrade}
+                        title="Grade"
+                        onClick={() => onView(sub, 'grade')}
+                        disabled={!canGrade}
                       >
-                        {canGrade ? <Pencil size={13} /> : <Eye size={13} />}
+                        <ClipboardPenLine size={13} />
+                      </button>
+
+                      {/* View */}
+                      <button
+                        className={s.actionView}
+                        title="View"
+                        onClick={() => onView(sub, 'view')}
+                      >
+                        <Eye size={13} />
                       </button>
                     </div>
                   </td>

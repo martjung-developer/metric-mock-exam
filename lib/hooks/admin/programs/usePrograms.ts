@@ -36,6 +36,25 @@ import type {
 import type { FetchAllProgramDataResult } from '@/lib/types/admin/programs/programs.types'
 
 function mapToDisplayPrograms(raw: FetchAllProgramDataResult): ProgramDisplay[] {
+  const DEPARTMENT_MAP: Record<string, string> = {
+    BLIS: 'SBIT',
+    BSPSYCH: 'SSLATE',
+    'BS-PSYCH': 'SSLATE',
+    BEED: 'SSLATE',
+    BSEDMATH: 'SSLATE',
+    'BSED-MATH': 'SSLATE',
+    BSEDSCI: 'SSLATE',
+    'BSED-SCI': 'SSLATE',
+    BSEDENG: 'SSLATE',
+    'BSED-ENG': 'SSLATE',
+    BSEDFIL: 'SSLATE',
+    'BSED-FIL': 'SSLATE',
+    BSARCH: 'SARFAID',
+    'BS-ARCH': 'SARFAID',
+    BSID: 'SARFAID',
+    'BS-ID': 'SARFAID',
+  }
+
   return raw.programs.map((prog) => {
     const progStudents = raw.students
       .filter((s) => s.program_id === prog.id)
@@ -55,12 +74,21 @@ function mapToDisplayPrograms(raw: FetchAllProgramDataResult): ProgramDisplay[] 
         exam_type:    e.exam_type,
       }))
 
+    const school = Array.isArray(prog.schools) ? prog.schools[0] : prog.schools
+    const normalizedCode = prog.code.toUpperCase().replace(/\s+/g, '')
+    const fallbackDepartment = DEPARTMENT_MAP[normalizedCode] ?? 'UNASSIGNED'
+    const departmentCode = school?.code ?? fallbackDepartment
+
     return {
       ...prog,
       studentCount: progStudents.length,
       examCount:    progExams.length,
       students:     progStudents,
       exams:        progExams,
+      school_code: school?.code ?? null,
+      school_name: school?.name ?? null,
+      school_full_name: school?.full_name ?? null,
+      departmentCode,
     }
   })
 }
@@ -73,6 +101,8 @@ export interface UseProgramsReturn {
   filteredPrograms: ProgramDisplay[]
   stats:            ProgramStats
   degreeTypes:      string[]   // ['all', ...unique degree_type values]
+  departmentOptions: string[]  // ['all', ...department codes]
+  groupedPrograms: Array<{ key: string; label: string; programs: ProgramDisplay[] }>
 
   // Async state
   loading: boolean
@@ -82,6 +112,7 @@ export interface UseProgramsReturn {
   filters:        ProgramFilters
   setSearch:      (q: string) => void
   setFilterDeg:   (deg: string) => void
+  setDepartment:  (department: string) => void
 
   // Modal
   selectedProgram: ProgramDisplay | null
@@ -103,7 +134,7 @@ export interface UseProgramsReturn {
 
 export function usePrograms(): UseProgramsReturn {
   const router              = useRouter()
-  const { user, loading: authLoading } = useUser()
+  const { user, profile, loading: authLoading } = useUser()
 
   // Stable client instance for the lifetime of this hook
   const supabase = useMemo(() => createClient(), [])
@@ -112,11 +143,13 @@ export function usePrograms(): UseProgramsReturn {
   const [programs, setPrograms] = useState<ProgramDisplay[]>([])
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState<string | null>(null)
+  const [viewerSchoolId, setViewerSchoolId] = useState<string | null>(null)
 
   // ── Filter state ──────────────────────────────────────────────────────────
   const [filters, setFilters] = useState<ProgramFilters>({
     search:    '',
     filterDeg: 'all',
+    department: 'all',
   })
 
   // ── Modal state ───────────────────────────────────────────────────────────
@@ -150,6 +183,55 @@ export function usePrograms(): UseProgramsReturn {
     }
   }, [user, authLoading, router])
 
+  useEffect(() => {
+    if (authLoading || !user) {
+      return
+    }
+
+    const role =
+      (user.user_metadata?.role as string | undefined) ??
+      (user.app_metadata?.role  as string | undefined) ??
+      profile?.role
+
+    if (role !== 'faculty' && role !== 'admin') {
+      setViewerSchoolId(null)
+      return
+    }
+
+    let cancelled = false
+
+    void (async () => {
+      const metaSchoolId =
+        (user.user_metadata?.school_id as string | undefined) ??
+        (user.app_metadata?.school_id  as string | undefined) ??
+        profile?.school_id ??
+        null
+
+      if (metaSchoolId) {
+        if (!cancelled) { setViewerSchoolId(metaSchoolId) }
+        return
+      }
+
+      const { data } = role === 'faculty'
+        ? await supabase
+            .from('faculty')
+            .select('school_id')
+            .eq('user_id', user.id)
+            .single()
+        : await supabase
+            .from('admins')
+            .select('school_id')
+            .eq('user_id', user.id)
+            .single()
+
+      if (!cancelled) {
+        setViewerSchoolId(data?.school_id ?? null)
+      }
+    })()
+
+    return () => { cancelled = true }
+  }, [authLoading, user, profile?.role, profile?.school_id, supabase])
+
   // ── Data fetching ─────────────────────────────────────────────────────────
   const loadPrograms = useCallback(async () => {
     setLoading(true)
@@ -174,17 +256,37 @@ export function usePrograms(): UseProgramsReturn {
   }, [loadPrograms])
 
   // ── Derived: degree type list ─────────────────────────────────────────────
+  const scopedPrograms = useMemo<ProgramDisplay[]>(() => {
+    const role =
+      (user?.user_metadata?.role as string | undefined) ??
+      (user?.app_metadata?.role  as string | undefined) ??
+      profile?.role
+
+    if (role !== 'faculty' && role !== 'admin') {
+      return programs
+    }
+
+    if (!viewerSchoolId) {
+      return role === 'faculty' ? [] : programs
+    }
+
+    return programs.filter((p) => p.school_id === viewerSchoolId)
+  }, [programs, user, profile?.role, viewerSchoolId])
+
   const degreeTypes = useMemo<string[]>(() => {
-    const types = Array.from(new Set(programs.map((p) => p.degree_type))).sort()
+    const types = Array.from(new Set(scopedPrograms.map((p) => p.degree_type))).sort()
     return ['all', ...types]
-  }, [programs])
+  }, [scopedPrograms])
 
   // ── Derived: filtered programs ────────────────────────────────────────────
   const filteredPrograms = useMemo<ProgramDisplay[]>(() => {
     const q = filters.search.toLowerCase().trim()
 
-    return programs.filter((p) => {
+    return scopedPrograms.filter((p) => {
       if (filters.filterDeg !== 'all' && p.degree_type !== filters.filterDeg) {
+        return false
+      }
+      if (filters.department !== 'all' && p.departmentCode !== filters.department) {
         return false
       }
       if (
@@ -197,17 +299,44 @@ export function usePrograms(): UseProgramsReturn {
       }
       return true
     })
-  }, [programs, filters])
+  }, [scopedPrograms, filters])
+
+  const departmentOptions = useMemo<string[]>(() => {
+    const base = ['all', 'SBIT', 'SSLATE', 'SARFAID']
+    const hasUnassigned = scopedPrograms.some((p) => p.departmentCode === 'UNASSIGNED')
+    return hasUnassigned ? [...base, 'UNASSIGNED'] : base
+  }, [scopedPrograms])
+
+  const groupedPrograms = useMemo<Array<{ key: string; label: string; programs: ProgramDisplay[] }>>(() => {
+    const grouped = new Map<string, { label: string; programs: ProgramDisplay[] }>()
+
+    filteredPrograms.forEach((program) => {
+      const key = program.departmentCode || 'UNASSIGNED'
+      const label = program.school_full_name ?? (key === 'UNASSIGNED' ? 'Unassigned' : key)
+      const existing = grouped.get(key)
+      if (existing) {
+        existing.programs.push(program)
+      } else {
+        grouped.set(key, { label, programs: [program] })
+      }
+    })
+
+    return Array.from(grouped.entries()).map(([key, value]) => ({
+      key,
+      label: value.label,
+      programs: value.programs,
+    }))
+  }, [filteredPrograms])
 
   // ── Derived: stats ────────────────────────────────────────────────────────
   const stats = useMemo<ProgramStats>(
     () => ({
-      total:    programs.length,
-      students: programs.reduce((s, p) => s + p.studentCount, 0),
-      exams:    programs.reduce((s, p) => s + p.examCount,    0),
-      active:   programs.filter((p) => p.studentCount > 0).length,
+      total:    scopedPrograms.length,
+      students: scopedPrograms.reduce((s, p) => s + p.studentCount, 0),
+      exams:    scopedPrograms.reduce((s, p) => s + p.examCount,    0),
+      active:   scopedPrograms.filter((p) => p.studentCount > 0).length,
     }),
-    [programs],
+    [scopedPrograms],
   )
 
   // ── Filter actions ────────────────────────────────────────────────────────
@@ -217,6 +346,10 @@ export function usePrograms(): UseProgramsReturn {
 
   const setFilterDeg = useCallback((deg: string) => {
     setFilters((prev) => ({ ...prev, filterDeg: deg }))
+  }, [])
+
+  const setDepartment = useCallback((department: string) => {
+    setFilters((prev) => ({ ...prev, department }))
   }, [])
 
   // ── Modal actions ─────────────────────────────────────────────────────────
@@ -309,6 +442,8 @@ export function usePrograms(): UseProgramsReturn {
     filteredPrograms,
     stats,
     degreeTypes,
+    departmentOptions,
+    groupedPrograms,
 
     loading,
     error,
@@ -316,6 +451,7 @@ export function usePrograms(): UseProgramsReturn {
     filters,
     setSearch,
     setFilterDeg,
+    setDepartment,
 
     selectedProgram,
     openModal,

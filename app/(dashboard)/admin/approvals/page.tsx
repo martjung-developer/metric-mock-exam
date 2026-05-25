@@ -107,7 +107,7 @@ export default function ApprovalsPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Exam Title</th>
+                <th>Title</th>
                 <th>Faculty Name</th>
                 <th>Program</th>
                 <th>Submitted</th>
@@ -165,7 +165,7 @@ export default function ApprovalsPage() {
                     <span className={styles.metaChip}>Total: {q.reviewDetail?.metadata.questionCount ?? 0}</span>
                   </div>
                   <div className={styles.previewList}>
-                    {q.detailLoading ? <p className={styles.emptySub}>Loading questions...</p> : (q.reviewDetail?.questions.length ?? 0) === 0 ? <p className={styles.emptySub}>No questions found for this exam.</p> : q.reviewDetail?.questions.map((question) => (
+                    {q.detailLoading ? <p className={styles.emptySub}>Loading questions...</p> : (q.reviewDetail?.questions.length ?? 0) === 0 ? <p className={styles.emptySub}>No questions found for this questionnaire.</p> : q.reviewDetail?.questions.map((question) => (
                       <div key={question.id} className={styles.questionCard}>
                         <div className={styles.questionHeader}>
                           <span className={styles.questionNumber}>Question {question.questionNumber}</span>

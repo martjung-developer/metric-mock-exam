@@ -311,12 +311,55 @@ export async function deleteQuestion(
 export async function bulkInsertQuestions(
   client:   TypedClient,
   payloads: QuestionInsertPayload[],
-): Promise<void> {
-  const { error } = await client
-    .from('questions')
-    .insert(asMutationPayload(payloads))
+): Promise<{ inserted: number; skippedDuplicates: number }> {
+  let inserted = 0
+  let skippedDuplicates = 0
 
-  if (error !== null) {
-    throw new Error(getErrorMessage(error))
+  for (const payload of payloads) {
+    const normalizedText = payload.question_text.trim()
+    if (!normalizedText) {
+      continue
+    }
+
+    let duplicateQuery = client
+      .from('questions')
+      .select('id')
+      .eq('question_text', normalizedText)
+      .limit(1)
+
+    if (payload.question_bank_id) {
+      duplicateQuery = duplicateQuery.eq('question_bank_id', payload.question_bank_id)
+    } else if (payload.exam_id) {
+      duplicateQuery = duplicateQuery.eq('exam_id', payload.exam_id)
+    }
+
+    const { data: duplicateRows, error: duplicateError } = await duplicateQuery as {
+      data: Array<{ id: string }> | null
+      error: unknown
+    }
+
+    if (duplicateError !== null) {
+      throw new Error(getErrorMessage(duplicateError))
+    }
+
+    if ((duplicateRows ?? []).length > 0) {
+      skippedDuplicates += 1
+      continue
+    }
+
+    const insertPayload: QuestionInsertPayload = {
+      ...payload,
+      question_text: normalizedText,
+    }
+    const { error } = await client
+      .from('questions')
+      .insert(asMutationPayload([insertPayload]))
+
+    if (error !== null) {
+      throw new Error(getErrorMessage(error))
+    }
+    inserted += 1
   }
+
+  return { inserted, skippedDuplicates }
 }
