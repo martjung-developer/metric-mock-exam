@@ -45,7 +45,7 @@ export type ExamType = 'mock' | 'practice'
 
 export const EXAM_TYPE_META: Record<ExamType, { label: string; description: string }> = {
   mock:     { label: 'Mock Exam',     description: 'Timed, board-style exam that simulates the actual licensure exam.'   },
-  practice: { label: 'Practice Exam', description: 'Self-paced reviewer set for studying individual topics or subjects.' },
+  practice: { label: 'Reviewer',      description: 'Self-paced reviewer set for studying individual topics or subjects.' },
 }
 
 // ── Convenience / App-Level Types ─────────────────────────────────────────────
@@ -85,6 +85,11 @@ export type GradingMode = 'auto' | 'manual'
 // ── Link type ─────────────────────────────────────────────────────────────────
 // Matches: CHECK (link_type IS NULL OR link_type = ANY (ARRAY[...]))
 export type LinkType = 'video' | 'meeting' | 'drive' | 'other'
+
+// ── Faculty role type ─────────────────────────────────────────────────────────
+// Matches: faculty.role_types text[] — a faculty member may hold more than
+// one role type at once (e.g. Professional Education + Major Education).
+export type FacultyRoleTypeEnum = 'professional' | 'major' | 'minor'
 
 type TableShape = {
   Row: Record<string, unknown>
@@ -270,6 +275,7 @@ export type Database = {
           name:        string
           description: string | null
           icon:        string | null
+          program_id:  string | null
           created_at:  string
         }
         Insert: {
@@ -277,12 +283,14 @@ export type Database = {
           name:         string
           description?: string | null
           icon?:        string | null
+          program_id?:  string | null
           created_at?:  string
         }
         Update: {
           name?:        string
           description?: string | null
           icon?:        string | null
+          program_id?:  string | null
         }
       }
 
@@ -300,6 +308,7 @@ export type Database = {
           total_points:     number
           is_published:     boolean
           grading_mode:     GradingMode
+          approval_status:  string
           created_by:       string | null
           created_at:       string
           updated_at:       string
@@ -319,6 +328,7 @@ export type Database = {
           total_points:     number
           is_published?:    boolean
           grading_mode?:    GradingMode
+          approval_status?: string
           created_by?:      string | null
           created_at?:      string
           updated_at?:      string
@@ -337,9 +347,97 @@ export type Database = {
           total_points?:     number
           is_published?:     boolean
           grading_mode?:     GradingMode
+          approval_status?:  string
           updated_at?:       string
           allowed_programs?:    string[] | null
           allowed_year_levels?: number[] | null
+        }
+      }
+
+      exam_tos_areas: {
+        Row: {
+          id: string
+          exam_id: string
+          area_title: string
+          weight_percent: number
+          expected_items: number
+          min_percent: number
+          is_temporary: boolean
+        }
+        Insert: {
+          id?: string
+          exam_id: string
+          area_title: string
+          weight_percent: number
+          expected_items: number
+          min_percent: number
+          is_temporary?: boolean
+        }
+        Update: {
+          area_title?: string
+          weight_percent?: number
+          expected_items?: number
+          min_percent?: number
+          is_temporary?: boolean
+        }
+        Relationships: []
+      }
+
+      question_banks: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          program_id: string | null
+          exam_id: string | null
+          approval_status: string
+          submitted_by: string | null
+          submitted_at: string | null
+          approved_by: string | null
+          approved_at: string | null
+          rejected_at: string | null
+          published_at: string | null
+          review_notes: string | null
+          last_modified_by: string | null
+          last_modified_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          program_id?: string | null
+          exam_id?: string | null
+          approval_status?: string
+          submitted_by?: string | null
+          submitted_at?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          rejected_at?: string | null
+          published_at?: string | null
+          review_notes?: string | null
+          last_modified_by?: string | null
+          last_modified_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          title?: string
+          description?: string | null
+          program_id?: string | null
+          exam_id?: string | null
+          approval_status?: string
+          submitted_by?: string | null
+          submitted_at?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          rejected_at?: string | null
+          published_at?: string | null
+          review_notes?: string | null
+          last_modified_by?: string | null
+          last_modified_at?: string | null
+          updated_at?: string
         }
       }
 
@@ -352,11 +450,23 @@ export type Database = {
           points:         number
           options:        Json | null
           correct_answer: string | null
+          image_url:      string | null
           scenario:       string | null
+          section_title:  string | null
+          section_number: number | null
           explanation:    string | null
           order_number:   number | null
           created_by:     string | null
+          last_modified_by: string | null
+          last_modified_at: string | null
           created_at:     string
+          approval_status: string
+          submitted_by: string | null
+          submitted_at: string | null
+          approved_by: string | null
+          approved_at: string | null
+          review_notes: string | null
+          question_bank_id: string | null
         }
         Insert: {
           id?:             string
@@ -366,11 +476,23 @@ export type Database = {
           points?:         number
           options?:        Json | null
           correct_answer?: string | null
+          image_url?:      string | null
           scenario?:       string | null
+          section_title?:  string | null
+          section_number?: number | null
           explanation?:    string | null
           order_number?:   number | null
           created_by?:     string | null
+          last_modified_by?: string | null
+          last_modified_at?: string | null
           created_at?:     string
+          approval_status?: string
+          submitted_by?: string | null
+          submitted_at?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          review_notes?: string | null
+          question_bank_id?: string | null
         }
         Update: {
           exam_id?:        string | null
@@ -379,11 +501,23 @@ export type Database = {
           points?:         number
           options?:        Json | null
           correct_answer?: string | null
+          image_url?:      string | null
           scenario?:       string | null
+          section_title?:  string | null
+          section_number?: number | null
           explanation?:    string | null
           order_number?:   number | null
           created_by?:     string | null
+          last_modified_by?: string | null
+          last_modified_at?: string | null
           created_at?:     string
+          approval_status?: string
+          submitted_by?: string | null
+          submitted_at?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          review_notes?: string | null
+          question_bank_id?: string | null
         }
       }
 
@@ -513,6 +647,7 @@ export type Database = {
           title:        string
           description:  string | null
           category_id:  string | null
+          program_id:   string | null
           content:      string | null
           file_url:     string | null
           created_by:   string | null
@@ -526,6 +661,7 @@ export type Database = {
           title:         string
           description?:  string | null
           category_id?:  string | null
+          program_id?:   string | null
           content?:      string | null
           file_url?:     string | null
           created_by?:   string | null
@@ -538,6 +674,7 @@ export type Database = {
           title?:        string
           description?:  string | null
           category_id?:  string | null
+          program_id?:   string | null
           content?:      string | null
           file_url?:     string | null
           is_published?: boolean
@@ -553,6 +690,7 @@ export type Database = {
           file_path:   string
           file_type:   string
           file_size:   number | null
+          file_hash:   string | null
           uploaded_by: string | null
           purpose:     StoragePurpose | null
           created_at:  string
@@ -563,6 +701,7 @@ export type Database = {
           file_path:     string
           file_type:     string
           file_size?:    number | null
+          file_hash?:    string | null
           uploaded_by?:  string | null
           purpose?:      StoragePurpose | null
           created_at?:   string
@@ -572,6 +711,7 @@ export type Database = {
           file_path?:  string
           file_type?:  string
           file_size?:  number | null
+          file_hash?:  string | null
           purpose?:    StoragePurpose | null
         }
       }
@@ -751,6 +891,9 @@ export type Database = {
       }
 
       // ── faculty ───────────────────────────────────────────────────────────────
+      // role_types: array of role types a faculty member holds — a faculty
+      // member (or program head) may hold more than one at once, e.g.
+      // ['professional', 'major'] or ['professional', 'major', 'minor'].
       faculty: {
         Row: {
           id:         string
@@ -762,7 +905,8 @@ export type Database = {
           program_id: string | null
           email:      string
           department: string | null
-          role_type:  'professional' | 'major' | 'minor' | null
+          role_types: FacultyRoleTypeEnum[]
+          is_program_head: boolean
           is_active:  boolean
           created_by: string | null
           created_at: string
@@ -778,7 +922,8 @@ export type Database = {
           program_id?:  string | null
           email:       string
           department?:  string | null
-          role_type?:  'professional' | 'major' | 'minor' | null
+          role_types?: FacultyRoleTypeEnum[]
+          is_program_head?: boolean
           is_active?:  boolean
           created_by?: string | null
           created_at?: string
@@ -793,7 +938,8 @@ export type Database = {
           program_id?:  string | null
           email?:      string
           department?:  string | null
-          role_type?:  'professional' | 'major' | 'minor' | null
+          role_types?: FacultyRoleTypeEnum[]
+          is_program_head?: boolean
           is_active?:  boolean
           updated_at?: string
         }
@@ -900,4 +1046,3 @@ export type TablesUpdate<T extends keyof Database['public']['Tables']> =
 //   type PublishedMaterialRow = ViewRow<'published_study_materials'>
 export type ViewRow<V extends keyof Database['public']['Views']> =
   Database['public']['Views'][V]['Row']
-

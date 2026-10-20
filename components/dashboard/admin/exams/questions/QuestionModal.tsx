@@ -2,7 +2,8 @@
 // Pure UI — fully controlled form modal.
 // Receives all state + handlers from useQuestionForm via props.
 
-import { AlertCircle, CheckCircle2, Loader2, Pencil, Plus, Save, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, ImageIcon, Loader2, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import type {
   QuestionForm,
@@ -27,6 +28,10 @@ interface QuestionModalProps {
   onPointsChange:   (v: number)                    => void
   onExplChange:     (v: string)                    => void
   onAnswerChange:   (v: string)                    => void
+  onImageFile:      (file: File)                   => void
+  onImageRemove:    ()                             => void
+  imageUploading:   boolean
+  imageUploadError: string | null
   onOptionText:     (index: number, text: string)  => void
   onAddOption:      ()                             => void
   onRemoveOption:   (index: number)                => void
@@ -45,6 +50,10 @@ export function QuestionModal({
   onPointsChange,
   onExplChange,
   onAnswerChange,
+  onImageFile,
+  onImageRemove,
+  imageUploading,
+  imageUploadError,
   onOptionText,
   onAddOption,
   onRemoveOption,
@@ -139,6 +148,53 @@ export function QuestionModal({
           </div>
 
           {/* ── MCQ options ── */}
+          <div className={s.formGroup}>
+            <label className={s.label}>
+              Question Image <span className={s.optional}>(optional)</span>
+            </label>
+            {form.image_url ? (
+              <div className={s.imagePreviewWrap}>
+                <Image className={s.imagePreview} src={form.image_url} alt="Question image preview" width={1200} height={800} unoptimized />
+                <button className={s.btnSecondary} type="button" onClick={onImageRemove} disabled={saving || imageUploading}>
+                  <Trash2 size={13} /> Remove
+                </button>
+              </div>
+            ) : (
+              <label className={`${s.imageUploadBox} ${imageUploading ? s.imageUploadBoxBusy : ''}`}>
+                {imageUploading ? <Loader2 size={16} className={s.spinner} /> : <ImageIcon size={16} />}
+                <span>{imageUploading ? 'Uploading image...' : 'Upload JPG, PNG, or WebP'}</span>
+                <input
+                  className={s.imageInput}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={saving || imageUploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    e.target.value = ''
+                    if (file) {onImageFile(file)}
+                  }}
+                />
+              </label>
+            )}
+            {form.image_url && (
+              <label className={s.replaceImageBtn}>
+                <Upload size={12} /> Replace image
+                <input
+                  className={s.imageInput}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={saving || imageUploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    e.target.value = ''
+                    if (file) {onImageFile(file)}
+                  }}
+                />
+              </label>
+            )}
+            {imageUploadError && <p className={s.imageUploadError}>{imageUploadError}</p>}
+          </div>
+
           {form.question_type === 'multiple_choice' && (
             <div className={s.formGroup}>
               <label className={s.label}>

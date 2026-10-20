@@ -103,7 +103,7 @@ export default function TermsPage() {
             <motion.div {...legalHeroPanelLeft} className={styles.heroLeft}>
               <div className={styles.heroEyebrow}>
                 <span className={styles.heroEyebrowLine} />
-                VeriPraxis Legal
+                M.E.T.R.I.C. Legal
                 <span className={styles.heroEyebrowLine} />
               </div>
 
@@ -185,8 +185,8 @@ export default function TermsPage() {
               <div className={styles.tocCardText}>
                 Our legal team is available for questions about how these Terms apply to you.
               </div>
-              <a href="mailto:legal@veripraxis.ph" className={styles.tocCardLink}>
-                legal@veripraxis.ph
+              <a href="mailto:legal@metric.ph" className={styles.tocCardLink}>
+                legal@metric.ph
                 <ArrowRight size={12} strokeWidth={2.4} />
               </a>
             </motion.div>
@@ -204,7 +204,7 @@ export default function TermsPage() {
             >
               <Info size={17} strokeWidth={2} className={styles.highlightIcon} />
               <span>
-                Please read these Terms of Service carefully before using Veripraxis. By accessing or
+                Please read these Terms of Service carefully before using Metric. By accessing or
                 using our platform, you agree to be bound by these terms.
               </span>
             </motion.div>
@@ -219,7 +219,7 @@ export default function TermsPage() {
                 </div>
               </div>
               <p className={styles.paragraph}>
-                By creating an account or using any feature of Veripraxis (&quot;the Platform&quot;), you agree
+                By creating an account or using any feature of Metric (&quot;the Platform&quot;), you agree
                 to these Terms and our Privacy Policy. If you do not agree, please do not use the Platform.
               </p>
             </motion.section>
@@ -239,7 +239,7 @@ export default function TermsPage() {
                 <li>You must provide accurate and complete information during registration.</li>
                 <li>
                   Notify us immediately at{' '}
-                  <a href="mailto:support@veripraxis.ph" className={styles.email}>support@veripraxis.ph</a>
+                  <a href="mailto:support@metric.ph" className={styles.email}>support@metric.ph</a>
                   {' '}if you suspect unauthorized access.
                 </li>
               </ul>
@@ -255,7 +255,7 @@ export default function TermsPage() {
                 </div>
               </div>
               <p className={styles.paragraph}>
-                Veripraxis is licensed to you for personal, non-commercial use to prepare for PRC
+                Metric is licensed to you for personal, non-commercial use to prepare for PRC
                 licensure examinations only. Any other use requires our prior written consent.
               </p>
             </motion.section>
@@ -290,8 +290,8 @@ export default function TermsPage() {
                 </div>
               </div>
               <p className={styles.paragraph}>
-                All content on Veripraxis — including exam questions, rationales, software, design, and
-                branding — is the exclusive property of Veripraxis Inc. You may not reproduce or distribute
+                All content on Metric — including exam questions, rationales, software, design, and
+                branding — is the exclusive property of Metric Inc. You may not reproduce or distribute
                 any content without prior written permission.
               </p>
             </motion.section>
@@ -337,7 +337,7 @@ export default function TermsPage() {
                 </div>
               </div>
               <p className={styles.paragraph}>
-                Veripraxis is not affiliated with, endorsed by, or an official product of the Professional
+                Metric is not affiliated with, endorsed by, or an official product of the Professional
                 Regulation Commission (PRC). Passing a mock exam does not guarantee passing the actual board
                 examination. The Platform is provided &quot;as is&quot; without warranties of any kind.
               </p>
@@ -353,7 +353,7 @@ export default function TermsPage() {
                 </div>
               </div>
               <p className={styles.paragraph}>
-                To the maximum extent permitted by Philippine law, Veripraxis Inc. shall not be liable for
+                To the maximum extent permitted by Philippine law, Metric Inc. shall not be liable for
                 any indirect, incidental, or consequential damages arising from your use of the Platform.
                 Our total aggregate liability shall not exceed the amount you paid us in the three months
                 preceding the claim.
@@ -403,13 +403,13 @@ export default function TermsPage() {
               </div>
               <p className={styles.paragraph}>
                 Questions about these Terms? Email{' '}
-                <a href="mailto:legal@veripraxis.ph" className={styles.email}>legal@veripraxis.ph</a>.
+                <a href="mailto:legal@metric.ph" className={styles.email}>legal@metric.ph</a>.
               </p>
               <p className={styles.paragraph}>
                 For account or support issues, visit our{' '}
                 <Link href="/contact" className={styles.email}>Contact page</Link>
                 {' '}or email{' '}
-                <a href="mailto:support@veripraxis.ph" className={styles.email}>support@veripraxis.ph</a>.
+                <a href="mailto:support@metric.ph" className={styles.email}>support@metric.ph</a>.
               </p>
             </motion.section>
 

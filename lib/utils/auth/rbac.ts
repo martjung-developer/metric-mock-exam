@@ -1,7 +1,7 @@
 // lib/utils/auth/rbac.ts
 import type { UserRole } from '@/lib/types/auth'
 
-export type StaffRole = Extract<UserRole, 'admin' | 'faculty'>
+export type StaffRole = Extract<UserRole, 'admin' | 'faculty'> | 'program_head'
 
 type StaffNavKey =
   | 'dashboard'
@@ -45,11 +45,32 @@ const STAFF_ROUTE_RULES: Record<StaffRole, StaffRouteRules> = {
     home: '/faculty/dashboard',
     allowedPaths: [
       '/faculty',
+      '/admin/exams',
+      '/admin/notifications',
+      '/admin/questionnaires',
+      '/admin/analytics',
+      '/admin/settings',
+      '/admin/study-materials',
+    ],
+    nav: [
+      'dashboard',
+      'notifications',
+      'exams',
+      'questionnaires',
+      'study-materials',
+      'analytics',
+      'settings',
+    ],
+  },
+  program_head: {
+    home: '/admin/dashboard',
+    allowedPaths: [
+      '/faculty',
       '/admin/dashboard',
+      '/admin/approvals',
+      '/admin/faculty',
       '/admin/exams',
       '/admin/questionnaires',
-      '/admin/students',
-      '/admin/study-materials',
       '/admin/notifications',
       '/admin/analytics',
       '/admin/settings',
@@ -57,11 +78,10 @@ const STAFF_ROUTE_RULES: Record<StaffRole, StaffRouteRules> = {
     nav: [
       'dashboard',
       'notifications',
-      'students',
+      'approvals',
+      'faculty',
       'exams',
       'questionnaires',
-      'questionnaires',
-      'study-materials',
       'analytics',
       'settings',
     ],
@@ -92,15 +112,42 @@ export const STAFF_NAV_HREF: Record<StaffRole, Record<StaffNavKey, string>> = {
     questionnaires: '/faculty/questionnaires',
     programs: '/faculty/dashboard',
     'study-materials': '/faculty/study-materials',
-    analytics: '/faculty/dashboard',
+    analytics: '/faculty/analytics',
     approvals: '/faculty/submissions',
     submissions: '/faculty/submissions',
     settings: '/faculty/settings',
   },
+  program_head: {
+    dashboard: '/admin/dashboard',
+    notifications: '/admin/notifications',
+    students: '/admin/dashboard',
+    faculty: '/admin/faculty',
+    exams: '/admin/exams',
+    questionnaires: '/admin/questionnaires',
+    programs: '/admin/dashboard',
+    'study-materials': '/admin/dashboard',
+    analytics: '/admin/analytics',
+    approvals: '/admin/approvals',
+    submissions: '/admin/approvals',
+    settings: '/admin/settings',
+  },
 }
 
-export function isStaffRole(role: UserRole | null | undefined): role is StaffRole {
-  return role === 'admin' || role === 'faculty'
+export function isStaffRole(role: UserRole | StaffRole | null | undefined): role is StaffRole {
+  return role === 'admin' || role === 'faculty' || role === 'program_head'
+}
+
+export function getEffectiveStaffRole(
+  role: UserRole | null | undefined,
+  isProgramHead?: boolean,
+): StaffRole | null {
+  if (role === 'admin') {
+    return 'admin'
+  }
+  if (role === 'faculty') {
+    return isProgramHead ? 'program_head' : 'faculty'
+  }
+  return null
 }
 
 export function getStaffHomePath(role: StaffRole): string {

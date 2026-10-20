@@ -62,6 +62,7 @@ export function parseQuestionRow(row: QuestionRow): Question {
     order_number:   row.order_number,
     options:        parseOptions(row.options),
     correct_answer: row.correct_answer,
+    image_url:      row.image_url,
     explanation:    row.explanation,
     created_at:     row.created_at,
   }
@@ -89,9 +90,10 @@ export function filterQuestions(
   search:    string,
   typeFilter: TypeFilter,
 ): Question[] {
-  const q = search.toLowerCase()
+  const q = search.trim().toLowerCase()
   return questions.filter((qn) => {
-    const matchSearch = !search || qn.question_text.toLowerCase().includes(q)
+    const matchSearch = !q || qn.question_text.toLowerCase().includes(q) ||
+      (qn.options?.some((option) => option.text.toLowerCase().includes(q)) ?? false)
     const matchType   = typeFilter === 'all' || qn.question_type === typeFilter
     return matchSearch && matchType
   })

@@ -2,6 +2,7 @@
 import { FileText, TrendingUp, Trophy, CheckCircle2, Clock } from 'lucide-react'
 import type { SummaryStats } from '@/lib/types/student/results/results.types'
 import styles from '@/app/(dashboard)/student/results/results.module.css'
+import { formatDuration } from '@/lib/utils/formatDuration'
 
 interface Props {
   stats:    SummaryStats
@@ -29,15 +30,17 @@ export function ResultsStats({ stats, passRate }: Props) {
     },
     {
       Icon: CheckCircle2, iconColor: '#dc2626', iconBg: '#fef2f2',
-      label: 'Pass Rate',        sub: `${stats.passed} of ${stats.totalExams} passed`,
-      value: passRate !== null ? `${passRate}%` : '—',
+      label: 'Pass Rate',        sub: passRate !== null ? `${passRate}% pass rate` : 'No released results',
+      value: stats.totalExams > 0 ? `${stats.passed}/${stats.totalExams} passed` : '—',
       empty: stats.totalExams === 0,
     },
     {
       Icon: Clock,        iconColor: '#7c3aed', iconBg: '#f5f3ff',
-      label: 'Total Time',       sub: 'combined exam time',
-      value: stats.totalTimeMinutes > 0 ? `${stats.totalTimeMinutes}m` : '—',
-      empty: stats.totalTimeMinutes === 0,
+      label: 'Total Time',       sub: (stats.validTimeCount ?? 0) > 0 ? 'combined valid time' : 'no valid time data',
+      value: stats.totalTimeSeconds !== undefined && stats.totalTimeSeconds !== null
+        ? formatDuration(stats.totalTimeSeconds)
+        : '—',
+      empty: stats.totalTimeSeconds === null || stats.totalTimeSeconds === undefined,
     },
   ] as const
 

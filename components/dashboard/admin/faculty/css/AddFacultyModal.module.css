@@ -19,6 +19,7 @@
   border-radius: 14px;
   width: 100%;
   max-width: 520px;
+  max-height: 88vh;                 
   box-shadow: 0 24px 64px rgba(2, 22, 46, 0.2), 0 4px 16px rgba(0,0,0,0.08);
   overflow: hidden;
   display: flex;
@@ -98,6 +99,9 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  overflow-y: auto;                
+  flex: 1;
+  min-height: 0;
 }
 
 .row {
@@ -199,12 +203,40 @@
   font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
 }
 
+.checkboxField {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: fit-content;
+  color: var(--admin-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+  cursor: pointer;
+}
+
+.checkboxField input {
+  width: 16px;
+  height: 16px;
+  accent-color: #3b82f6;
+}
+
+.checkboxFieldDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ── Actions ──────────────────────────────────────────────────────────────── */
 .actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.65rem;
   margin-top: 0.25rem;
+  position: sticky;                 
+  bottom: -1.5rem;
+  padding: 0.9rem 0 0.25rem;
+  background: var(--admin-card-bg);
+  border-top: 1px solid var(--admin-border);
 }
 
 .cancelBtn {
@@ -256,6 +288,71 @@
 .submitBtn:disabled {
   background: #93c5fd;
   cursor: not-allowed;
+}
+
+/* ── Role type checkbox group ──────────────────────────────────────────── */
+.roleCheckGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;                   
+  border: 1.5px solid var(--admin-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.875rem;
+  max-height: 260px;                /* NEW — long program lists scroll internally too */
+  overflow-y: auto;
+}
+
+.roleCheckGroupError {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.roleCheckItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--admin-text);
+  font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+  cursor: pointer;
+}
+
+.roleCheckItem input {
+  width: 16px;
+  height: 16px;
+  accent-color: #3b82f6;
+}
+
+.programRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  padding: 0.4rem 0.1rem;
+  border-bottom: 1px dashed var(--admin-border);
+}
+.programRow:last-child { border-bottom: none; }
+
+.programHeadInline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #475569;
+  white-space: nowrap;
+  cursor: pointer;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  background: var(--admin-page-bg);
+  flex-shrink: 0;
+}
+.programHeadInline input {
+  width: 14px;
+  height: 14px;
+  accent-color: #3b82f6;
 }
 
 @keyframes spin {

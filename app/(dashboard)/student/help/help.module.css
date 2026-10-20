@@ -53,6 +53,7 @@
   border-radius: 50%;
   background: rgba(74, 127, 165, 0.10);
   pointer-events: none;
+  z-index: 1;
 }
 .hero::after {
   content: '';
@@ -62,11 +63,31 @@
   border-radius: 50%;
   background: rgba(30, 58, 95, 0.18);
   pointer-events: none;
+  z-index: 1;
+}
+
+.heroImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+  z-index: 0;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(to right, rgba(20, 30, 60, 0.93) 0%, rgba(20, 30, 60, 0.78) 45%, rgba(20, 30, 60, 0.45) 100%);
+  pointer-events: none;
 }
 
 .heroInner {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   max-width: 620px;
 }
 
@@ -643,3 +664,21 @@
   .ticketBox    { padding: 1.25rem 1rem; }
 }
 
+:global(html.dark) .catLabel,
+:global(html.dark) .faqQText,
+:global(html.dark) .contactTitle,
+:global(html.dark) .formInput,
+:global(html.dark) .formSelect,
+:global(html.dark) .formTextarea {
+  color: #e6edf7;
+}
+
+:global(html.dark) .faqItem,
+:global(html.dark) .ticketBox {
+  border-color: #243247;
+}
+
+:global(html.dark) .faqQuestion,
+:global(html.dark) .skeletonLine {
+  background: #172338;
+}

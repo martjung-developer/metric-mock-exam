@@ -50,14 +50,14 @@ const ENDORSERS: Endorser[] = [
     initials: 'MR', name: 'Dr. Maria Reyes',
     role: 'Licensed Physician · PRC Reg. No. 012345',
     type: 'prc-professional', stars: 5,
-    quote: 'VeriPraxis questions are remarkably close to the actual board format. I recommend it to all my interns preparing for their licensure.',
+    quote: 'M.E.T.R.I.C. questions are remarkably close to the actual board format. I recommend it to all my interns preparing for their licensure.',
     verifiedAs: 'Verified PRC license holder',
   },
   {
     initials: 'JC', name: 'Prof. Jose Cruz',
     role: 'Dean, College of Education · LCCB Bacolod',
     type: 'faculty-head', stars: 5,
-    quote: "Our students who used VeriPraxis consistently outperform in the LET. The question quality and subject alignment to PRC's syllabus is excellent. This is now part of our official review toolkit.",
+    quote: "Our students who used M.E.T.R.I.C. consistently outperform in the LET. The question quality and subject alignment to PRC's syllabus is excellent. This is now part of our official review toolkit.",
     verifiedAs: 'Verified school department head',
   },
   {
@@ -71,7 +71,7 @@ const ENDORSERS: Endorser[] = [
     initials: 'SP', name: 'Sir. Samuel Perez',
     role: 'Lead Instructor · Leyte Review Center',
     type: 'review-center', stars: 5,
-    quote: "I've seen dozens of review platforms. VeriPraxis stands out because the rationale per question actually teaches — not just tells — the correct answer. My reviewees love it.",
+    quote: "I've seen dozens of review platforms. M.E.T.R.I.C. stands out because the rationale per question actually teaches — not just tells — the correct answer. My reviewees love it.",
     verifiedAs: 'Verified review center instructor',
   },
   {
@@ -85,7 +85,7 @@ const ENDORSERS: Endorser[] = [
     initials: 'RB', name: 'Engr. Rico Bautista',
     role: 'HR Manager · Aboitiz Construction Group',
     type: 'hiring-partner', stars: 4,
-    quote: 'We actively encourage fresh graduates to use VeriPraxis before applying. Candidates who pass their boards on the first attempt stand out significantly in our hiring process.',
+    quote: 'We actively encourage fresh graduates to use M.E.T.R.I.C. before applying. Candidates who pass their boards on the first attempt stand out significantly in our hiring process.',
     verifiedAs: 'Verified company representative',
   },
   {
@@ -206,7 +206,7 @@ export default function BlogPage() {
             <motion.div {...heroContainer} className={styles.heroContent}>
               <motion.span {...heroItem} className={styles.heroBadge}>
                 <Rss size={11} strokeWidth={2.5} />
-                VeriPraxis Blog
+                M.E.T.R.I.C. Blog
               </motion.span>
               <motion.h1 {...heroItem} className={styles.heroTitle}>
                 Insights for the{' '}

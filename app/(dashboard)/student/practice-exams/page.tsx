@@ -1,4 +1,4 @@
-// app/(dashboard)/student/practice-exams/page.tsx - This is Practice Exam / Review Mode
+// app/(dashboard)/student/practice-exams/page.tsx - Reviewer / Review Mode
 'use client'
 
 import { useCallback }  from 'react'
@@ -19,7 +19,7 @@ export default function ReviewsPage() {
   } = useReviewsList()
 
   const handleStartReview = useCallback(
-    (examId: string) => router.push(`/student/practice-exams/${examId}`),
+    (examId: string) => router.push(`/student/reviewer/${examId}`),
     [router],
   )
   const setPageIfNumber = useCallback(
@@ -35,7 +35,7 @@ export default function ReviewsPage() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Reviewers</h1>
-          <p className={styles.subtitle}>Self-paced practice exams to sharpen your skills</p>
+          <p className={styles.subtitle}>Self-paced reviewers organized by program</p>
         </div>
         <span className={styles.availablePill}>
           <span className={styles.dot} />

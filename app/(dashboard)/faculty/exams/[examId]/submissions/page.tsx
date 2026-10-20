@@ -144,6 +144,8 @@ export default function FacultyExamSubmissionsPage() {
 
   useEffect(() => {
     if (!authLoading && user && examId) {
+      // Initial request state belongs to this auth and route synchronization effect.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -179,6 +181,8 @@ export default function FacultyExamSubmissionsPage() {
 
   // Reset page when filter/search changes
   useEffect(() => {
+    // Reset pagination when filters change so the current page remains valid.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1)
   }, [statusFilter, search])
 

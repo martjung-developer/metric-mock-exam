@@ -167,7 +167,7 @@ export default function FeaturesPage() {
     </motion.h1>
 
     <motion.p className={styles.heroSub} {...heroFadeUp}>
-      Every feature in VeriPraxis exists because Filipino reviewees needed it.
+      Every feature in M.E.T.R.I.C. exists because Filipino reviewees needed it.
       No bloat. No filler. Just the tools that actually move your score.
     </motion.p>
 
@@ -218,7 +218,7 @@ export default function FeaturesPage() {
                 <span className={styles.sectionLabel}>Smart Exam Engine</span>
                 <h2 className={styles.sectionTitle}>Questions that adapt to you</h2>
                 <p className={styles.sectionSub}>
-                  Not everyone starts at the same level. VeriPraxis reads your performance
+                  Not everyone starts at the same level. M.E.T.R.I.C. reads your performance
                   in real time and adjusts question difficulty so you&#39;re always being
                   challenged—never bored, never overwhelmed.
                 </p>
@@ -255,7 +255,7 @@ export default function FeaturesPage() {
               <span className={styles.sectionLabel}>Performance Analytics</span>
               <h2 className={styles.sectionTitle}>Know exactly where you stand</h2>
               <p className={styles.sectionSub}>
-                Gut feeling isn&#39;t a study strategy. VeriPraxis gives you hard
+                Gut feeling isn&#39;t a study strategy. M.E.T.R.I.C. gives you hard
                 numbers — per-subject scores, time-per-question, and a trend line
                 that shows whether your preparation is actually working.
               </p>
@@ -292,7 +292,7 @@ export default function FeaturesPage() {
                 <span className={styles.sectionLabel}>Review Paths</span>
                 <h2 className={styles.sectionTitle}>A roadmap, not just random drills</h2>
                 <p className={styles.sectionSub}>
-                  Random practice only goes so far. VeriPraxis structures your review
+                  Random practice only goes so far. M.E.T.R.I.C. structures your review
                   around the actual coverage of your board exam — ordered, progressive,
                   and complete.
                 </p>
@@ -332,7 +332,7 @@ export default function FeaturesPage() {
             <div className={styles.proofDivider} />
             <div className={styles.proofStat}>
               <span className={styles.proofValue}>5,000+</span>
-              <span className={styles.proofLabel}>Practice Questions</span>
+              <span className={styles.proofLabel}>Reviewer Questions</span>
             </div>
             <div className={styles.proofDivider} />
             <div className={styles.proofStat}>
@@ -351,9 +351,9 @@ export default function FeaturesPage() {
         <section className={styles.comparisonSection}>
           <div className={styles.sectionHeaderCenter}>
             <span className={styles.sectionLabel}>How We Compare</span>
-            <h2 className={styles.sectionTitle}>VeriPraxis vs Other Review Tools</h2>
+            <h2 className={styles.sectionTitle}>M.E.T.R.I.C. vs Other Review Tools</h2>
             <p className={styles.sectionSub} style={{ margin: '0 auto' }}>
-              Not all review tools are built the same. Here&#39;s how VeriPraxis
+              Not all review tools are built the same. Here&#39;s how M.E.T.R.I.C.
               stands out to help you succeed.
             </p>
           </div>
@@ -362,7 +362,7 @@ export default function FeaturesPage() {
               <thead>
                 <tr>
                   <th>Feature</th>
-                  <th>VeriPraxis</th>
+                  <th>M.E.T.R.I.C.</th>
                   <th>Others</th>
                 </tr>
               </thead>
@@ -394,7 +394,7 @@ export default function FeaturesPage() {
             <div className={styles.testimonialContent}>
               <span className={styles.testimonialQuoteMark}>{'\u201C'}</span>
               <p className={styles.testimonialText}>
-                I failed twice before VeriPraxis. The analytics showed me I was losing
+                I failed twice before M.E.T.R.I.C.. The analytics showed me I was losing
                 points in Pharmacology every single time. Three months of targeted review
                 later, I passed with 87%.
               </p>

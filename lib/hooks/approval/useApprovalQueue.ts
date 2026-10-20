@@ -75,7 +75,11 @@ export function useApprovalQueue(): UseApprovalQueueReturn {
     }
   }, [])
 
-  useEffect(() => { void fetchAll() }, [fetchAll])
+  useEffect(() => {
+    // Populate the queue before opening its real-time subscription.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchAll()
+  }, [fetchAll])
   useEffect(() => {
     const es = new EventSource('/api/admin/approvals/stream')
     es.addEventListener('approval', () => {

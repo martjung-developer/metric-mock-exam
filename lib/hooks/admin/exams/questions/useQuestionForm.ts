@@ -35,6 +35,7 @@ export interface UseQuestionFormReturn {
   setPoints:        (v: number)      => void
   setExplanation:   (v: string)      => void
   setCorrectAnswer: (v: string)      => void
+  setImageUrl:      (v: string)      => void
   handleTypeChange: (t: QuestionType) => void
 
   // Option management
@@ -73,6 +74,7 @@ export function useQuestionForm(): UseQuestionFormReturn {
         { label: 'D', text: '' },
       ],
       correct_answer: question.correct_answer ?? '',
+      image_url:      question.image_url      ?? '',
       explanation:    question.explanation    ?? '',
     })
     setFormError(null)
@@ -110,6 +112,7 @@ export function useQuestionForm(): UseQuestionFormReturn {
   const setPoints        = useCallback((v: number) => setForm((p) => ({ ...p, points: v })), [])
   const setExplanation   = useCallback((v: string) => setForm((p) => ({ ...p, explanation: v })), [])
   const setCorrectAnswer = useCallback((v: string) => setForm((p) => ({ ...p, correct_answer: v })), [])
+  const setImageUrl      = useCallback((v: string) => setForm((p) => ({ ...p, image_url: v })), [])
 
   // ── Option management ────────────────────────────────────────────────────
 
@@ -168,6 +171,7 @@ export function useQuestionForm(): UseQuestionFormReturn {
     setPoints,
     setExplanation,
     setCorrectAnswer,
+    setImageUrl,
     handleTypeChange,
 
     handleOptionText,

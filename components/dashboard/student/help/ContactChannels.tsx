@@ -23,8 +23,8 @@ const CONTACT_CHANNELS: ContactChannel[] = [
     bg:     '#dce8f5',
     title:  'Email Support',
     desc:   'For exam issues, score disputes, or account problems. Response within 1–2 business days.',
-    action: 'examsupport@veripraxis.edu.ph',
-    href:   'mailto:examsupport@veripraxis.edu.ph',
+    action: 'examsupport@metric.edu.ph',
+    href:   'mailto:examsupport@metric.edu.ph',
   },
   {
     icon:   MessageSquare,

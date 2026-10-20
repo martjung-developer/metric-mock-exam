@@ -191,7 +191,11 @@ export function useProgress(): UseProgressReturn {
   }, [user, supabase])
 
   useEffect(() => {
-    if (!authLoading && user) {void refetch()}
+    if (!authLoading && user) {
+      // Load current progress after auth resolves and refresh it on realtime events.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      void refetch()
+    }
     return () => { abortRef.current?.abort() }
   }, [authLoading, user, refetch])
 

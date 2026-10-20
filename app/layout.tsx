@@ -19,8 +19,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'VeriPraxis',
-    template: '%s | VeriPraxis',
+    default: 'M.E.T.R.I.C.',
+    template: '%s | M.E.T.R.I.C.',
   },
   description:
     'PRC licensure exam reviewer and mock exam platform for Filipino students.',
@@ -28,17 +28,17 @@ export const metadata: Metadata = {
 
   // ── Open Graph (important for Messenger / iMessage previews) ──
   openGraph: {
-    title: 'VeriPraxis',
+    title: 'M.E.T.R.I.C.',
     description:
       'Ace your PRC licensure exam with mock exams, reviewers, and progress tracking.',
     type: 'website',
     locale: 'en_PH',
     images: [
       {
-        url: '/images/veripraxislogo-title.png',
+        url: '/images/metriclogo-title.png',
         width: 1200,
         height: 630,
-        alt: 'VeriPraxis Logo',
+        alt: 'M.E.T.R.I.C. Logo',
       },
     ],
   },
@@ -47,13 +47,13 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: '/images/veripraxislogo-title.png',
+        url: '/images/metriclogo-title.png',
         type: 'image/png',
       },
     ],
     apple: [
       {
-        url: '/images/veripraxislogo-title.png',
+        url: '/images/metriclogo-title.png',
         sizes: '180x180',
         type: 'image/png',  
       },

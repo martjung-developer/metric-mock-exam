@@ -14,23 +14,40 @@ export function useScrollReveal() {
     const container = containerRef.current
     if (!container) {return}
 
-    const elements = container.querySelectorAll('.reveal')
+    let observer: IntersectionObserver | null = null
+    let cancelled = false
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible')
-            observer.unobserve(entry.target)
-          }
-        })
-      },
-      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
-    )
+    const setupObserver = () => {
+      if (cancelled) { return }
 
-    elements.forEach((el) => observer.observe(el))
+      const elements = container.querySelectorAll('.reveal')
 
-    return () => observer.disconnect()
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible')
+              observer?.unobserve(entry.target)
+            }
+          })
+        },
+        { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+      )
+
+      elements.forEach((el) => observer?.observe(el))
+    }
+
+    if (document.readyState === 'complete') {
+      setupObserver()
+    } else {
+      window.addEventListener('load', setupObserver, { once: true })
+    }
+
+    return () => {
+      cancelled = true
+      window.removeEventListener('load', setupObserver)
+      observer?.disconnect()
+    }
   }, [])
 
   return containerRef

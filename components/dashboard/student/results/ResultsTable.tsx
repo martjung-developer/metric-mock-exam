@@ -1,4 +1,6 @@
 // components/dashboard/student/results/ResultsTable.tsx
+'use client'
+
 import type { ResultRow }  from '@/lib/types/student/results/results.types'
 import { ResultsRow }      from './ResultsRow'
 import { ResultsSkeleton } from './ResultsSkeleton'
@@ -10,28 +12,10 @@ interface Props {
 }
 
 export function ResultsTable({ results, loading }: Props) {
+  if (loading) {return <ResultsSkeleton />}
   return (
-    <div className={styles.tableCard}>
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Exam</th>
-              <th>Score</th>
-              <th>Percentage</th>
-              <th>Status</th>
-              <th>Time Spent</th>
-              <th>Date</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading
-              ? <ResultsSkeleton />
-              : results.map((row) => <ResultsRow key={row.id} row={row} />)}
-          </tbody>
-        </table>
-      </div>
+    <div className={styles.resultGrid}>
+      {results.map((row) => <ResultsRow key={row.id} row={row} />)}
     </div>
   )
 }

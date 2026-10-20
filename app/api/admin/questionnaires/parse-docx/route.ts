@@ -36,6 +36,7 @@ import {
 }                                    from '@/lib/utils/admin/questionnaires/docx.parser'
 import type { DocxParagraph }        from '@/lib/utils/admin/questionnaires/docx.parser'
 import type { DocxExtractResult }    from '@/lib/utils/admin/questionnaires/docx.extractor'
+import { extractEmbeddedImagesFromHtml } from '@/lib/utils/admin/questionnaires/docx.extractor'
 import type { ImportRow }            from '@/lib/types/admin/questionnaires/questionnaires-types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -103,7 +104,7 @@ function collectParagraphsFromHtml(html: string): DocxParagraph[] {
   return paragraphs
 }
 
-async function extractDocx(buffer: Buffer): Promise<DocxExtractResult & { paragraphs: DocxParagraph[] }> {
+async function extractDocx(buffer: Buffer): Promise<DocxExtractResult & { paragraphs: DocxParagraph[]; embeddedImages: Array<{ fileName: string; dataUrl: string }> }> {
   let html = ''
   let plainText = ''
   let extractionFailed = false
@@ -142,7 +143,7 @@ async function extractDocx(buffer: Buffer): Promise<DocxExtractResult & { paragr
   const boldSet = collectBoldStringsFromHtml(html)
   const paragraphs = collectParagraphsFromHtml(html)
 
-  return { html, plainText, boldSet, paragraphs }
+  return { html, plainText, boldSet, paragraphs, embeddedImages: extractEmbeddedImagesFromHtml(html) }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -205,6 +206,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     )
   }
 
+  if (formData.get('imagesOnly') === 'true') {
+    return NextResponse.json({ embeddedImages: extracted.embeddedImages })
+  }
+
   // ── 4. Parse into rows ────────────────────────────────────────────────────
   let rows: ImportRow[]
   try {
@@ -229,5 +234,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   // ── 5. Return rows ────────────────────────────────────────────────────────
-  return NextResponse.json({ rows })
+  return NextResponse.json({
+    rows: rows.map((row, index) => {
+      const embeddedImage = extracted.embeddedImages[index]
+      return embeddedImage ? { ...row, embeddedImage } : row
+    }),
+    embeddedImages: extracted.embeddedImages,
+  })
 }

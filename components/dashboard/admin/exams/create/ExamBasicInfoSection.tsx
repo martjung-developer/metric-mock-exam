@@ -8,8 +8,8 @@
 //  3. option value={p.id} (UUID) — matches program_id FK column
 //  4. Binds to form.program_id / errors.program_id
 
-import React from 'react'
-import { BookOpen, FileText, Tag, AlignLeft, Layers, AlertCircle } from 'lucide-react'
+import React, { useState } from 'react'
+import { BookOpen, FileText, Tag, AlignLeft, Layers, AlertCircle, Plus } from 'lucide-react'
 import { EXAM_TYPE_META, type ExamType } from '@/lib/types/database'
 import type { ExamFormData, ExamFormErrors, CategoryOption } from '@/lib/types/admin/exams/create/exam.types'
 import s from '@/app/(dashboard)/admin/exams/create/create.module.css'
@@ -28,6 +28,7 @@ interface ExamBasicInfoSectionProps {
   programs:    ProgramOption[]        // ← NEW: from DB via useExamCategories
   catLoading:  boolean
   setField:    <K extends keyof ExamFormData>(field: K, value: ExamFormData[K]) => void
+  addCategory: (name: string, programId: string) => Promise<CategoryOption>
 }
 
 export default function ExamBasicInfoSection({
@@ -37,8 +38,55 @@ export default function ExamBasicInfoSection({
   programs,
   catLoading,
   setField,
+  addCategory,
 }: ExamBasicInfoSectionProps) {
   const examTypes: ExamType[] = ['mock', 'practice']
+  const [showAddCategory, setShowAddCategory] = useState(false)
+  const [categoryName, setCategoryName]       = useState('')
+  const [categorySaving, setCategorySaving]   = useState(false)
+  const [categoryError, setCategoryError]     = useState<string | null>(null)
+
+  const visibleCategories = categories.filter((c) => {
+    if (!form.program_id) {return c.program_id === null}
+    return c.program_id === null || c.program_id === form.program_id
+  })
+
+  function handleProgramChange(programId: string) {
+    const selectedCategory = categories.find((c) => c.id === form.category_id)
+    setField('program_id', programId)
+    if (
+      selectedCategory !== undefined &&
+      selectedCategory.program_id !== null &&
+      selectedCategory.program_id !== programId
+    ) {
+      setField('category_id', '')
+    }
+  }
+
+  async function handleAddCategory() {
+    const trimmed = categoryName.trim()
+    if (!form.program_id) {
+      setCategoryError('Select a program before adding a category.')
+      return
+    }
+    if (!trimmed) {
+      setCategoryError('Enter a category name.')
+      return
+    }
+
+    setCategorySaving(true)
+    setCategoryError(null)
+    try {
+      const created = await addCategory(trimmed, form.program_id)
+      setField('category_id', created.id)
+      setCategoryName('')
+      setShowAddCategory(false)
+    } catch (err) {
+      setCategoryError(err instanceof Error ? err.message : 'Could not create category.')
+    } finally {
+      setCategorySaving(false)
+    }
+  }
 
   return (
     <div className={s.card}>
@@ -108,11 +156,47 @@ export default function ExamBasicInfoSection({
               <option value="">
                 {catLoading ? 'Loading categories…' : 'Select a category…'}
               </option>
-              {categories.map((c) => (
+              {visibleCategories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </div>
+          <button
+            type="button"
+            className={s.inlineAddBtn}
+            onClick={() => {
+              setShowAddCategory((value) => !value)
+              setCategoryError(null)
+            }}
+            disabled={!form.program_id || catLoading}
+          >
+            <Plus size={12} /> Add category
+          </button>
+          {showAddCategory && (
+            <div className={s.inlineAddPanel}>
+              <input
+                type="text"
+                className={s.input}
+                placeholder="Subject or topic area"
+                value={categoryName}
+                onChange={(e) => setCategoryName(e.target.value)}
+                maxLength={120}
+              />
+              <button
+                type="button"
+                className={s.btnSecondary}
+                onClick={() => { void handleAddCategory() }}
+                disabled={categorySaving}
+              >
+                {categorySaving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          )}
+          {categoryError && (
+            <p className={s.fieldError}>
+              <AlertCircle size={11} /> {categoryError}
+            </p>
+          )}
           {errors.category_id && (
             <p className={s.fieldError}>
               <AlertCircle size={11} /> {errors.category_id}
@@ -130,7 +214,7 @@ export default function ExamBasicInfoSection({
               id="program"
               className={s.select}
               value={form.program_id}
-              onChange={(e) => setField('program_id', e.target.value)}
+              onChange={(e) => handleProgramChange(e.target.value)}
               disabled={catLoading}
             >
               <option value="">
@@ -210,7 +294,7 @@ export default function ExamBasicInfoSection({
             tabIndex={-1}
           >
             <option value="mock">Mock Exam</option>
-            <option value="practice">Practice Exam</option>
+            <option value="practice">Reviewer</option>
           </select>
         </div>
 

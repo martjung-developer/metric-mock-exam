@@ -7,6 +7,7 @@ import {
   Save, Clock, Target, TrendingDown,
 } from 'lucide-react'
 import { useEffect, useCallback, useMemo, useState } from 'react'
+import Image from 'next/image'
 import type { UsePracticeExamReturn } from '@/lib/hooks/student/practice-exams/usePracticeExam'
 import { stripDiffTag } from '@/lib/utils/student/practice-exams/practiceExam.utils'
 import { formatSeconds } from '@/lib/utils/student/practice-exams/practiceExam.utils'
@@ -19,6 +20,23 @@ interface Props {
 }
 
 const TRUE_FALSE_CHOICES: readonly ('true' | 'false')[] = ['true', 'false']
+
+function toRoman(value: number): string {
+  const pairs: Array<[number, string]> = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+  ]
+  let n = Math.max(1, Math.floor(value))
+  let out = ''
+  for (const [num, roman] of pairs) {
+    while (n >= num) {
+      out += roman
+      n -= num
+    }
+  }
+  return out
+}
 
 function parseMatchingAnswer(raw: string | undefined): Record<string, string> {
   if (!raw) {return {}}
@@ -47,7 +65,7 @@ function HistoryScreen({ hook, onBack }: Props) {
           <BookOpen size={28} color="#0d2540" />
         </div>
         <h1 className={styles.completionTitle}>{exam?.title}</h1>
-        <p className={styles.completionSub}>Practice Exam · Review Mode</p>
+        <p className={styles.completionSub}>Reviewer · Review Mode</p>
 
         {pastAttempts.length > 0 && (
           <div className={styles.attemptsTable}>
@@ -125,6 +143,8 @@ function CompletionScreen({ hook, onBack }: Props) {
   const accuracy  = gradable > 0 ? Math.round((correctCount / gradable) * 100) : null
   const [nowTs, setNowTs] = useState(0)
   useEffect(() => {
+    // The clock baseline must reset when a resumed attempt's start time changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNowTs(Date.now())
   }, [startedAt])
   const timeSpent = useMemo(
@@ -212,14 +232,53 @@ export default function PracticeExamShell({ hook, onBack }: Props) {
     answers, feedbacks, saveStatus,
     handleAnswer, handleCheck, handleRetry, finishReview,
   } = hook
+  const [pendingSectionStart, setPendingSectionStart] = useState<number | null>(null)
+  const hasSections = questions.some((item) => Boolean(item.section_title?.trim()))
+  const sectionGroups = useMemo(() => {
+    if (!hasSections) {return [] as Array<{start: number; end: number; section_number: number; section_title: string; count: number}>}
+    const groups: Array<{start: number; end: number; section_number: number; section_title: string; count: number}> = []
+    for (let idx = 0; idx < questions.length; idx += 1) {
+      const item = questions[idx]
+      const title = item.section_title?.trim()
+      if (!title) {continue}
+      const num = typeof item.section_number === 'number' ? item.section_number : (groups.length + 1)
+      const last = groups[groups.length - 1]
+      if (!last || last.section_number !== num || last.section_title !== title) {
+        groups.push({ start: idx, end: idx, section_number: num, section_title: title, count: 1 })
+      } else {
+        last.end = idx
+        last.count += 1
+      }
+    }
+    return groups
+  }, [questions, hasSections])
+  const pendingSection = pendingSectionStart === null ? null : sectionGroups.find((group) => group.start === pendingSectionStart) ?? null
+
+  const goToIndex = useCallback((target: number) => {
+    const safe = Math.max(0, Math.min(questions.length - 1, target))
+    if (hasSections && safe === current + 1) {
+      const from = questions[current]
+      const to = questions[safe]
+      const fromTitle = from?.section_title?.trim()
+      const toTitle = to?.section_title?.trim()
+      const fromNum = from?.section_number ?? null
+      const toNum = to?.section_number ?? null
+      if (fromTitle && toTitle && (fromTitle !== toTitle || fromNum !== toNum)) {
+        setPendingSectionStart(safe)
+        return
+      }
+    }
+    setPendingSectionStart(null)
+    setCurrent(safe)
+  }, [current, hasSections, questions, setCurrent])
 
   // ── Keyboard navigation ────────────────────────────────────────────────────
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (phase !== 'exam') {return}
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {return}
-    if (e.key === 'ArrowLeft')  {setCurrent(Math.max(0, current - 1))}
-    if (e.key === 'ArrowRight') {setCurrent(Math.min(questions.length - 1, current + 1))}
-  }, [phase, current, questions.length, setCurrent])
+    if (e.key === 'ArrowLeft')  {goToIndex(current - 1)}
+    if (e.key === 'ArrowRight') {goToIndex(current + 1)}
+  }, [phase, current, goToIndex])
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown)
@@ -266,7 +325,7 @@ export default function PracticeExamShell({ hook, onBack }: Props) {
       <div className={styles.topBar}>
         <div className={styles.topLeft}>
           <span className={styles.examTitle}>{exam.title}</span>
-          <span className={styles.practiceBadge}>Practice</span>
+          <span className={styles.practiceBadge}>Reviewer</span>
         </div>
         <div className={styles.topRight}>
           {/* Save indicator */}
@@ -334,7 +393,16 @@ export default function PracticeExamShell({ hook, onBack }: Props) {
           </div>
 
           <div className={styles.palette}>
-            {questions.map((pq, idx) => {
+            {questions.flatMap((pq, idx) => {
+              const sectionLabel = hasSections && pq.section_title?.trim() && (
+                idx === 0 ||
+                pq.section_title?.trim() !== questions[idx - 1]?.section_title?.trim() ||
+                pq.section_number !== questions[idx - 1]?.section_number
+              ) ? (
+                <div key={`section-${pq.id}`} className={styles.sectionMarker}>
+                  {toRoman(pq.section_number ?? 1)}
+                </div>
+              ) : null;
               const pfb   = feedbacks[pq.id]
               const isCur = idx === current
               const tooltip =
@@ -352,22 +420,37 @@ export default function PracticeExamShell({ hook, onBack }: Props) {
                 pfb?.submitted           ? styles.palChecked :
                 ''
 
-              return (
+              const button = (
                 <button
                   key={pq.id}
                   className={`${styles.palBtn} ${cls}`}
-                  onClick={() => setCurrent(idx)}
+                  onClick={() => goToIndex(idx)}
                   title={tooltip}
                 >
                   {idx + 1}
                 </button>
               )
+              return sectionLabel === null ? [button] : [sectionLabel, button]
             })}
           </div>
         </div>
 
         {/* ── Question card ── */}
         <div className={styles.content}>
+          {pendingSection !== null ? (
+            <div className={styles.sectionTransitionCard}>
+              <p className={styles.sectionTransitionOverline}>Section {toRoman(pendingSection.section_number)}</p>
+              <h2 className={styles.sectionTransitionTitle}>{pendingSection.section_title}</h2>
+              <p className={styles.sectionTransitionMeta}>{pendingSection.count} question{pendingSection.count !== 1 ? 's' : ''}</p>
+              <button className={styles.btnNav} onClick={() => {
+                setCurrent(pendingSection.start)
+                setPendingSectionStart(null)
+              }}>
+                Continue <ChevronRight size={15} />
+              </button>
+            </div>
+          ) : null}
+          {pendingSection === null ? (
           <div className={styles.questionCard} key={q.id}>
             <div className={styles.questionMeta}>
               <span className={styles.qNumber}>Question {current + 1} of {questions.length}</span>
@@ -388,6 +471,13 @@ export default function PracticeExamShell({ hook, onBack }: Props) {
             ) : null}
 
             <p className={styles.questionText}>{q.question_text}</p>
+
+            {/* ── Image (ADDED) — mirrors QuestionCard.tsx's mock-exam pattern.
+                This block was previously missing entirely, so even after the
+                data-layer fix, reviewer questions would never show images. */}
+            {q.image_url ? (
+              <Image className={styles.questionImage} src={q.image_url} alt="Question reference" width={1200} height={800} unoptimized />
+            ) : null}
 
             {/* MCQ */}
             {q.question_type === 'multiple_choice' && q.options && (
@@ -533,6 +623,7 @@ export default function PracticeExamShell({ hook, onBack }: Props) {
               </div>
             )}
           </div>
+          ) : null}
         </div>
       </div>
 
@@ -541,7 +632,7 @@ export default function PracticeExamShell({ hook, onBack }: Props) {
         <div className={styles.navLeft}>
           <button
             className={styles.btnNav}
-            onClick={() => setCurrent(Math.max(0, current - 1))}
+            onClick={() => goToIndex(current - 1)}
             disabled={current === 0}
           >
             <ChevronLeft size={15} /> Previous
@@ -555,7 +646,7 @@ export default function PracticeExamShell({ hook, onBack }: Props) {
 
         <div className={styles.navRight}>
           {current < questions.length - 1 ? (
-            <button className={styles.btnNav} onClick={() => setCurrent(current + 1)}>
+            <button className={styles.btnNav} onClick={() => goToIndex(current + 1)}>
               Next <ChevronRight size={15} />
             </button>
           ) : (

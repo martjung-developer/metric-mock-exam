@@ -28,13 +28,19 @@ type AppSupabaseClient = SupabaseClient<Database>
  */
 export async function fetchPrograms(
   client: AppSupabaseClient,
+  schoolId?: string | null,
 ): Promise<{ data: ProgramRowWithSchool[]; error: string | null }> {
-  const { data, error } = await client
+  let query = client
     .from('programs')
     .select(
-      'id, school_id, code, name, full_name, degree_type, major, years, description, created_at, schools(code,name,full_name)',
+      'id, school_id, code, name, full_name, degree_type, major, years, description, created_at, school:schools!programs_school_id_fkey(code,name,full_name)',
     )
-    .order('name', { foreignTable: 'schools', ascending: true })
+
+  if (schoolId) {
+    query = query.eq('school_id', schoolId)
+  }
+
+  const { data, error } = await query
     .order('code')
 
   if (error) {
@@ -56,10 +62,17 @@ export async function fetchPrograms(
  */
 export async function fetchStudents(
   client: AppSupabaseClient,
+  schoolId?: string | null,
 ): Promise<{ data: RawStudentJoin[]; error: string | null }> {
-  const { data, error } = await client
+  let query = client
     .from('students')
     .select('id, program_id, year_level, profiles!inner(id, full_name, email)')
+
+  if (schoolId) {
+    query = query.eq('school_id', schoolId)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     return { data: [], error: error.message }
@@ -75,10 +88,21 @@ export async function fetchStudents(
  */
 export async function fetchExams(
   client: AppSupabaseClient,
+  programIds?: string[],
 ): Promise<{ data: RawExamRow[]; error: string | null }> {
-  const { data, error } = await client
+  if (programIds && programIds.length === 0) {
+    return { data: [], error: null }
+  }
+
+  let query = client
     .from('exams')
     .select('id, title, is_published, exam_type, program_id')
+
+  if (programIds) {
+    query = query.in('program_id', programIds)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     return { data: [], error: error.message }
@@ -95,11 +119,14 @@ export async function fetchExams(
  */
 export async function fetchAllProgramData(
   client: AppSupabaseClient,
+  schoolId?: string | null,
 ): Promise<FetchAllProgramDataResult> {
-  const [programsResult, studentsResult, examsResult] = await Promise.all([
-    fetchPrograms(client),
-    fetchStudents(client),
-    fetchExams(client),
+  const programsResult = await fetchPrograms(client, schoolId)
+  const programIds = programsResult.data.map((program) => program.id)
+
+  const [studentsResult, examsResult] = await Promise.all([
+    fetchStudents(client, schoolId),
+    fetchExams(client, schoolId ? programIds : undefined),
   ])
 
   const error =

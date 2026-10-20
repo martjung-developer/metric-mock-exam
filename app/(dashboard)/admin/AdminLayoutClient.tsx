@@ -9,8 +9,8 @@ import AdminSidebar from "@/components/dashboard/admin/AdminSidebar";
 import AdminTopbar  from "@/components/dashboard/admin/AdminTopbar";
 import {
   canAccessStaffPath,
+  getEffectiveStaffRole,
   getStaffHomePath,
-  isStaffRole,
 } from '@/lib/utils/auth/rbac'
 import styles from "./layout.module.css";
 
@@ -31,14 +31,17 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   }, [authLoading, isReady])
 
   useEffect(() => {
-    if (authLoading || !profile || !isStaffRole(profile.role)) {
+    const staffRole = getEffectiveStaffRole(profile?.role, profile?.is_program_head)
+    if (authLoading || !staffRole) {
       return
     }
 
-    if (!canAccessStaffPath(profile.role, pathname)) {
-      router.replace(getStaffHomePath(profile.role))
+    if (!canAccessStaffPath(staffRole, pathname)) {
+      router.replace(getStaffHomePath(staffRole))
     }
   }, [authLoading, pathname, profile, router])
+
+  const staffRole = getEffectiveStaffRole(profile?.role, profile?.is_program_head) ?? 'admin'
 
   if (authLoading || !isReady) {
     return (
@@ -56,7 +59,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       data-collapsed={collapsed ? "true" : "false"}
     >
       <AdminSidebar
-        role={isStaffRole(profile?.role) ? profile.role : 'admin'}
+        role={staffRole}
         collapsed={collapsed}
         onCollapse={setCollapsed}
       />

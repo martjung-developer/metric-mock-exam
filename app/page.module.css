@@ -1144,6 +1144,106 @@
 }
 
 /* ============================================================
+   WELCOME PAGE
+   ============================================================ */
+.welcomeWrapper {
+  background:
+    linear-gradient(180deg, #f8fbff 0%, #ffffff 18rem, #ffffff 100%);
+}
+
+.welcomeWrapper .hero {
+  min-height: 88svh;
+  padding-bottom: 3rem;
+}
+
+.welcomeWrapper .heroContent {
+  gap: 1.25rem;
+  padding-top: 2.5rem;
+}
+
+.welcomeWrapper .heroTitle {
+  max-width: 11ch;
+}
+
+.welcomeWrapper .heroSub {
+  max-width: 38rem;
+}
+
+.welcomeWrapper .heroVisual {
+  transform: scale(0.96);
+  transform-origin: center right;
+}
+
+.welcomeWrapper .section,
+.welcomeWrapper .sectionAltInner {
+  padding-top: 4.5rem;
+  padding-bottom: 4.5rem;
+}
+
+.welcomeWrapper .sectionAlt {
+  background: #f6f8fc;
+  border-block: 1px solid #e8eef7;
+}
+
+.welcomeWrapper .sectionHeader {
+  margin-bottom: 2.75rem;
+}
+
+.welcomeWrapper .sectionLabel {
+  margin-bottom: 0.7rem;
+}
+
+.welcomeWrapper .sectionTitle {
+  margin-bottom: 0.8rem;
+}
+
+.welcomeWrapper .featuresLayout {
+  gap: 4rem;
+}
+
+.welcomeWrapper .featuresImage {
+  height: 420px;
+}
+
+.welcomeWrapper .featuresList {
+  gap: 1rem;
+}
+
+.welcomeWrapper .featureItem {
+  padding: 1rem;
+  background: #ffffff;
+  border-color: #e5edf7;
+}
+
+.welcomeWrapper .programsGrid,
+.welcomeWrapper .testimonialGrid {
+  gap: 1rem;
+}
+
+.welcomeWrapper .programCard,
+.welcomeWrapper .testimonialCard,
+.welcomeWrapper .faqItem {
+  border-color: #dbe5f2;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.04);
+}
+
+.welcomeWrapper .programCard {
+  padding: 1.4rem;
+}
+
+.welcomeWrapper .programImg {
+  height: 128px;
+}
+
+.welcomeWrapper .faqList {
+  max-width: 760px;
+}
+
+.welcomeWrapper .footerInner {
+  padding-top: 3rem;
+}
+
+/* ============================================================
    RESPONSIVE
    ============================================================ */
 @media (max-width: 1024px) {

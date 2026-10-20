@@ -1,7 +1,8 @@
 // lib/services/student/practice-exams/practiceExamList.service.ts
+
 import { createClient } from '@/lib/supabase/client'
 
-type CategoryShape = { id: string; name: string; icon: string | null }
+type CategoryShape = { id: string; name: string; icon: string | null; program_id: string | null }
 type ProgramShape  = { id: string; code: string; name: string } | null
 
 export type ExamStatus = 'available' | 'coming_soon'
@@ -10,7 +11,10 @@ export interface ReviewItem {
   id:         string
   title:      string
   shortCode:  string
+  programCode?: string
   category:   string
+  categoryProgramId: string | null
+  program:    string
   status:     ExamStatus
   questions?: number
   duration?:  string
@@ -22,6 +26,7 @@ type ExamRaw = {
   duration_minutes: number
   is_published:     boolean
   exam_type:        string | null
+  program_id:       string | null
   exam_categories:  CategoryShape | CategoryShape[] | null
   programs:         ProgramShape  | ProgramShape[]  | null
 }
@@ -71,33 +76,38 @@ export async function fetchReviewsForStudent(
       return { reviews: [], error: 'No degree program is assigned to your student account.' }
     }
 
-    // ── 1. Fetch only exams that belong to this student's program ─────────
-    const { data: examData, error: examErr } = await supabase
+    const baseSelect = `
+      id, title, duration_minutes, is_published, exam_type, program_id,
+      exam_categories ( id, name, icon, program_id ),
+      programs ( id, code, name )
+    `
+
+    const { data: programExamData, error: programExamErr } = await supabase
       .from('exams')
-      .select(`
-        id, title, duration_minutes, is_published, exam_type,
-        exam_categories ( id, name, icon ),
-        programs ( id, code, name )
-      `)
+      .select(baseSelect)
       .eq('is_published', true)
       .eq('exam_type', 'practice')
-      .eq('program_id', programId)          // ← strict: only this program
+      .eq('program_id', programId)
       .order('created_at', { ascending: false })
       .abortSignal(signal)
 
-    if (examErr) { return { reviews: [], error: 'Could not load practice exams.' } }
+    if (programExamErr) { return { reviews: [], error: 'Could not load reviewers.' } }
 
-    const exams: ExamRaw[] = examData ?? []
+    // ── CHANGED: no more cross-program fallback. If this program has zero
+    // published reviewers, `exams` stays empty and the UI shows the normal
+    // "No reviewers found" empty state — it must never show another
+    // program's reviewers.
+    const exams: ExamRaw[] = programExamData ?? []
+
     if (exams.length === 0) { return { reviews: [], error: null } }
 
     const examIds = exams.map(e => e.id)
 
-    // ── 2. Check which of those exams are assigned to this student ────────
     const { data: assignments, error: asnErr } = await supabase
       .from('exam_assignments')
       .select('exam_id')
       .eq('is_active', true)
-      .in('exam_id', examIds)               // ← only check relevant exams
+      .in('exam_id', examIds)
       .or(`student_id.eq.${studentId},program_id.eq.${programId}`)
       .abortSignal(signal)
 
@@ -109,7 +119,6 @@ export async function fetchReviewsForStudent(
         .filter((id): id is string => id !== null),
     )
 
-    // ── 3. Question counts ────────────────────────────────────────────────
     const qCountMap: Record<string, number> = {}
     const { data: qRows } = await supabase
       .from('questions')
@@ -121,7 +130,6 @@ export async function fetchReviewsForStudent(
       if (q.exam_id) { qCountMap[q.exam_id] = (qCountMap[q.exam_id] ?? 0) + 1 }
     })
 
-    // ── 4. Build review items ─────────────────────────────────────────────
     const reviews: ReviewItem[] = exams.map(exam => {
       const cat  = unwrapCategory(exam.exam_categories)
       const prog = unwrapProgram(exam.programs)
@@ -129,7 +137,10 @@ export async function fetchReviewsForStudent(
         id:        exam.id,
         title:     exam.title,
         shortCode: prog?.code ?? (cat?.name?.match(/\b([A-Z])/g)?.join('') ?? 'EXAM'),
+        programCode: prog?.code,
         category:  cat?.name ?? 'Uncategorized',
+        categoryProgramId: cat?.program_id ?? null,
+        program:   prog?.code ?? prog?.name ?? 'Unassigned Program',
         status:    assignedIds.has(exam.id) ? 'available' : 'coming_soon',
         questions: qCountMap[exam.id],
         duration:  formatDuration(exam.duration_minutes),
@@ -137,7 +148,6 @@ export async function fetchReviewsForStudent(
     })
 
     return { reviews, error: null }
-
   } catch (err) {
     if ((err as Error).name === 'AbortError') { return { reviews: [], error: null } }
     return { reviews: [], error: 'Unexpected error loading reviews.' }

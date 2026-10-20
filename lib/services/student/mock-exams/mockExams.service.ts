@@ -5,7 +5,12 @@
 //  2. createNewSubmission      → same guard + correct attempt_no
 //  3. checkSubmittedExam       → blocks graded/released too (not just "submitted")
 //  4. fetchStudentSubmissionStatuses → typed, no `any`
-//  5. fetchQuestions           → typed, no `any`
+//  5. fetchQuestions           → typed, no `any`.
+//     CHANGE (this pass): `image_url` restored to the select and row mapping.
+//     A previous pass removed it under the mistaken belief that `questions`
+//     has no such column — it does (see lib/types/database.ts) — which
+//     silently nulled out every uploaded question image on the mock-exam
+//     exam-taking page even though import and storage upload worked fine.
 //  6. fetchAttemptCounts       → new helper for list page
 //  7. All inserts properly awaited and validated
 // ─────────────────────────────────────────────────────────────────────────────
@@ -35,18 +40,22 @@ interface SubmissionSelectRow {
 }
 
 interface AnswerSelectRow {
-  question_id:  string
+  question_id:  string | null
   answer_text:  string | null
 }
 
+// ── CHANGED: image_url restored — `questions.image_url` is a real column.
 interface QuestionRow {
   id:             string
   question_text:  string
   scenario:       string | null
+  section_title:  string | null
+  section_number: number | null
   question_type:  string
   points:         number
   options:        unknown
   correct_answer: string | null
+  image_url:      string | null
   explanation:    string | null
   order_number:   number | null
 }
@@ -105,7 +114,7 @@ export async function fetchPublishedMockExams(programId: string) {
       duration_minutes,
       is_published,
       exam_type,
-      exam_categories ( id, name, icon ),
+      exam_categories ( id, name, icon, program_id ),
       programs ( id, code, name )
     `)
     .eq('is_published', true)
@@ -217,23 +226,34 @@ export async function fetchQuestions(examId: string): Promise<Question[]> {
 
   const { data, error } = await supabase
     .from('questions')
+    // ── CHANGED: image_url restored. It is a real column (lib/types/database.ts
+    // already declares it, and the ALTER TABLE for it has already been run) —
+    // removing it here was based on a mistaken assumption and caused every
+    // question image to silently disappear from mock exams.
     .select(
-      'id, question_text, scenario, question_type, points, options, correct_answer, explanation, order_number',
+      'id, question_text, scenario, section_title, section_number, question_type, points, options, correct_answer, image_url, explanation, order_number',
     )
     .eq('exam_id', examId)
     .order('order_number', { ascending: true })
 
-  if (error !== null || data === null || data.length === 0)
-    {throw new Error('No questions found for this exam.')}
+  if (error !== null) {
+    throw new Error(`Could not load questions: ${error.message}`)
+  }
+  if (data === null || data.length === 0) {
+    throw new Error('No questions found for this exam.')
+  }
 
   return (data as QuestionRow[]).map((q) => ({
     id:             q.id,
     question_text:  q.question_text,
     scenario:       q.scenario,
+    section_title:  q.section_title,
+    section_number: q.section_number,
     question_type:  q.question_type,
     points:         q.points,
     options:        Array.isArray(q.options) ? (q.options as Question['options']) : null,
     correct_answer: q.correct_answer,
+    image_url:      q.image_url ?? null,   // ── CHANGED — was hardcoded to null
     explanation:    q.explanation,
     order_number:   q.order_number,
   }))

@@ -16,6 +16,7 @@ import type {
   ProgramOption,
 } from '@/lib/types/admin/study-materials/study-materials'
 import type { RawFormState } from '@/lib/utils/admin/study-materials/validators'
+import type { UploadProgressHandler } from '@/lib/services/admin/study-materials/storage.service'
 import {
   fetchStudyMaterials,
   fetchPrograms,
@@ -34,12 +35,13 @@ export interface UseStudyMaterialsReturn {
   error:         string | null
   refresh:       () => Promise<void>
   clearError:    () => void
-  create:        (form: RawFormState, file: File | null) => Promise<void>
+  create:        (form: RawFormState, file: File | null, onUploadProgress?: UploadProgressHandler) => Promise<void>
   update:        (
     id: string,
     form: RawFormState,
     file: File | null,
     existingFileUrl: string | null,
+    onUploadProgress?: UploadProgressHandler,
   ) => Promise<void>
   remove:        (id: string) => Promise<void>
   togglePublish: (id: string, currentValue: boolean) => Promise<void>
@@ -90,6 +92,8 @@ export function useStudyMaterials(): UseStudyMaterialsReturn {
   }, [supabase])
 
   useEffect(() => {
+    // Fetch initial materials and cancel that request on unmount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh()
     return () => { abortRef.current?.abort() }
   }, [refresh])
@@ -157,8 +161,12 @@ export function useStudyMaterials(): UseStudyMaterialsReturn {
 
   // ── Create ────────────────────────────────────────────────────────────────
 
-  const create = useCallback(async (form: RawFormState, file: File | null) => {
-    await createStudyMaterial({ supabase, form, file })
+  const create = useCallback(async (
+    form: RawFormState,
+    file: File | null,
+    onUploadProgress?: UploadProgressHandler,
+  ) => {
+    await createStudyMaterial({ supabase, form, file, onUploadProgress })
     await refresh()
   }, [supabase, refresh])
 
@@ -169,8 +177,9 @@ export function useStudyMaterials(): UseStudyMaterialsReturn {
     form: RawFormState,
     file: File | null,
     existingFileUrl: string | null,
+    onUploadProgress?: UploadProgressHandler,
   ) => {
-    await updateStudyMaterial({ supabase, id, form, file, existingFileUrl })
+    await updateStudyMaterial({ supabase, id, form, file, existingFileUrl, onUploadProgress })
     await refresh()
   }, [supabase, refresh])
 

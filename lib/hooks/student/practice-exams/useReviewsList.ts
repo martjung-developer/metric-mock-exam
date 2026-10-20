@@ -83,13 +83,19 @@ export function useReviewsList(): UseReviewsListReturn {
 
   // Load reviews
   useEffect(() => {
+    // Fetch the initial review page when the query callback is ready.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refetch()
   }, [refetch])
 
   const categories = useMemo(() => {
-    const unique = Array.from(new Set(allReviews.map(r => r.category))).sort()
+    const hasProgramCategories = allReviews.some(r => r.categoryProgramId === programId)
+    const categorySource = hasProgramCategories
+      ? allReviews.filter(r => r.categoryProgramId === null || r.categoryProgramId === programId)
+      : allReviews
+    const unique = Array.from(new Set(categorySource.map(r => r.category))).sort()
     return [ALL_CATEGORIES, ...unique]
-  }, [allReviews])
+  }, [allReviews, programId])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()

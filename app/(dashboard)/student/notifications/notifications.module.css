@@ -740,3 +740,12 @@
   .notifTitle { font-size: 0.8125rem; }
 }
 
+:global(html.dark) .notifTitle {
+  color: #e6edf7;
+}
+
+:global(html.dark) .notifCta,
+:global(html.dark) .emptyIcon {
+  background: #172338;
+}
+

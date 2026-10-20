@@ -19,8 +19,79 @@ import type {
   ResultsError,
 } from '@/lib/types/admin/exams/results/results.types'
 import { computeAnalyticsFromResults } from '@/lib/utils/admin/results/results.utils'
+import { computeTosBreakdown } from '@/lib/utils/admin/results/tosBreakdown'
+import type { TosAreaBreakdown, TosBreakdownQuestion, TosBreakdownWeight } from '@/lib/utils/admin/results/tosBreakdown'
 
 type DB = SupabaseClient<Database>
+
+export interface ExamTosBreakdownsSuccess {
+  ok: true
+  bySubmissionId: Map<string, TosAreaBreakdown[]>
+  releasedSubmissionIds: string[]
+}
+export interface ExamTosBreakdownsFailure {
+  ok: false
+  error: ResultsError
+}
+export type ExamTosBreakdownsOutcome = ExamTosBreakdownsSuccess | ExamTosBreakdownsFailure
+
+export async function fetchExamTosBreakdowns(
+  supabase: DB,
+  examId: string,
+): Promise<ExamTosBreakdownsOutcome> {
+  const [questionsRes, submissionsRes, areasRes] = await Promise.all([
+    supabase.from('questions')
+      .select('id, question_text, section_title, points, correct_answer, options')
+      .eq('exam_id', examId),
+    supabase.from('submissions')
+      .select('id, status')
+      .eq('exam_id', examId)
+      .in('status', ['reviewed', 'released']),
+    supabase.from('exam_tos_areas')
+      .select('area_title, weight_percent, expected_items, min_percent')
+      .eq('exam_id', examId),
+  ])
+
+  const queryError = questionsRes.error ?? submissionsRes.error ?? areasRes.error
+  if (queryError) {
+    return { ok: false, error: { code: 'FETCH_SUBMISSIONS_FAILED', message: queryError.message } }
+  }
+
+  const questions = (questionsRes.data ?? []) as TosBreakdownQuestion[]
+  const submissionIds = (submissionsRes.data ?? []).map((row) => row.id)
+  const weights = (areasRes.data ?? []) as TosBreakdownWeight[]
+  if (submissionIds.length === 0) {
+    return { ok: true, bySubmissionId: new Map(), releasedSubmissionIds: [] }
+  }
+
+  const { data: answerRows, error: answersError } = await supabase
+    .from('answers')
+    .select('submission_id, question_id, answer_text')
+    .in('submission_id', submissionIds)
+
+  if (answersError) {
+    return { ok: false, error: { code: 'FETCH_SUBMISSIONS_FAILED', message: answersError.message } }
+  }
+
+  const answersBySubmission = new Map<string, Array<{ question_id: string; answer_text: string | null }>>()
+  for (const row of answerRows ?? []) {
+    if (!row.submission_id || !row.question_id) {continue}
+    const list = answersBySubmission.get(row.submission_id) ?? []
+    list.push({ question_id: row.question_id, answer_text: row.answer_text })
+    answersBySubmission.set(row.submission_id, list)
+  }
+
+  return {
+    ok: true,
+    releasedSubmissionIds: (submissionsRes.data ?? [])
+      .filter((row) => row.status === 'released')
+      .map((row) => row.id),
+    bySubmissionId: new Map(submissionIds.map((id) => [
+      id,
+      computeTosBreakdown(questions, answersBySubmission.get(id) ?? [], weights),
+    ])),
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal projection types — narrowly typed so we never carry unknown fields
@@ -37,6 +108,7 @@ interface FlatSubmissionRow {
   score:              number | null
   percentage:         number | null
   passed:             boolean | null
+  started_at:         string | null
   submitted_at:       string | null
   time_spent_seconds: number | null
   status:             string
@@ -90,7 +162,7 @@ export async function fetchResults(
   const { data: subData, error: subErr } = await supabase
     .from('submissions')
     .select(
-      'id, student_id, score, percentage, passed, submitted_at, time_spent_seconds, status, attempt_no',
+      'id, student_id, score, percentage, passed, started_at, submitted_at, time_spent_seconds, status, attempt_no',
     )
     .eq('exam_id', examId)
     .in('status', ['reviewed', 'released'])
@@ -109,9 +181,10 @@ export async function fetchResults(
     ...new Set(rows.map(r => r.student_id).filter((id): id is string => id !== null)),
   ]
 
-  const [profilesRes, studentsRes] = await Promise.all([
+  const [profilesRes, studentsRes, examRes] = await Promise.all([
     supabase.from('profiles').select('id, full_name, email').in('id', studentIds),
     supabase.from('students').select('id, student_id').in('id', studentIds),
+    supabase.from('exams').select('duration_minutes').eq('id', examId).maybeSingle(),
   ])
 
   const profileMap = new Map<string, FlatProfileRow>()
@@ -142,6 +215,8 @@ export async function fetchResults(
         percentage:         r.percentage ?? 0,
         passed:             r.passed     ?? false,
         submitted_at:       r.submitted_at ?? new Date(0).toISOString(),
+        started_at:         r.started_at,
+        duration_minutes:   examRes.data?.duration_minutes ?? null,
         time_spent_seconds: r.time_spent_seconds ?? 0,
         status:             toResultStatus(r.status),
       }
@@ -182,7 +257,7 @@ export async function getExamResultsWithAttempts(
   const { data: subData, error: subErr } = await supabase
     .from('submissions')
     .select(
-      'id, student_id, score, percentage, passed, submitted_at, time_spent_seconds, status, attempt_no',
+      'id, student_id, score, percentage, passed, started_at, submitted_at, time_spent_seconds, status, attempt_no',
     )
     .eq('exam_id', examId)
     .in('status', ['reviewed', 'released'])
@@ -204,9 +279,10 @@ export async function getExamResultsWithAttempts(
     ...new Set(rows.map(r => r.student_id).filter((id): id is string => id !== null)),
   ]
 
-  const [profilesRes, studentsRes] = await Promise.all([
+  const [profilesRes, studentsRes, examRes] = await Promise.all([
     supabase.from('profiles').select('id, full_name, email').in('id', studentIds),
     supabase.from('students').select('id, student_id').in('id', studentIds),
+    supabase.from('exams').select('duration_minutes').eq('id', examId).maybeSingle(),
   ])
 
   const profileMap = new Map<string, FlatProfileRow>()
@@ -264,6 +340,8 @@ export async function getExamResultsWithAttempts(
         passed:             r.passed     ?? false,
         status:             toResultStatus(r.status),
         submitted_at:       r.submitted_at ?? new Date(0).toISOString(),
+        started_at:         r.started_at,
+        duration_minutes:   examRes.data?.duration_minutes ?? null,
         time_spent_seconds: r.time_spent_seconds ?? 0,
       }))
 

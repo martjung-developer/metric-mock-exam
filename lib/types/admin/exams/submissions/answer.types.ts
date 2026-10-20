@@ -12,6 +12,8 @@ export interface RawQuestionJoin {
   correct_answer: string | null
   explanation:    string | null
   order_number:   number | null
+  section_title?: string | null
+  section_number?: number | null
 } 
 
 export interface AnswerRaw {
@@ -34,6 +36,8 @@ export interface QuestionDetail {
   correct_answer: string | null
   explanation:    string | null
   order_number:   number | null
+  section_title?: string | null
+  section_number?: number | null
 }
 
 export interface AnswerDetail {

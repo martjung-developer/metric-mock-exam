@@ -22,6 +22,14 @@
   overflow: hidden;
 }
 
+.tosBreakdown{padding:12px 20px;border-bottom:1px solid #e2e8f0;background:#f8fafc}
+.tosBreakdown h3{margin:0 0 8px;font-size:13px;color:#0f172a}
+.tosTableWrap{overflow-x:auto}
+.tosTable{width:100%;border-collapse:collapse;font-size:11px;color:#334155;white-space:nowrap}
+.tosTable th,.tosTable td{padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:left}
+.tosTable th{font-weight:700;color:#64748b}
+.tosInlineNotice{margin:0 0 8px;padding:7px 9px;border-left:3px solid #d97706;background:#fffbeb;color:#92400e;font-size:11px}
+
 .header {
   padding: 20px 24px 16px;
   border-bottom: 1px solid #F1F5F9;

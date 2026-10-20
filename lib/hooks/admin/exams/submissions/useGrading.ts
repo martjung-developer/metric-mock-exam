@@ -13,7 +13,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { createClient }             from '@/lib/supabase/client'
 import * as ExamService             from '@/lib/services/admin/exams/submissions/exam.service'
 import * as SubmissionService       from '@/lib/services/admin/exams/submissions/submission.service'
-import { gradeAnswer, sumPoints, computeScore } from '@/lib/utils/admin/submissions/grading'
+import { gradeAnswer, sumPoints, computeScore, computeTosScore } from '@/lib/utils/admin/submissions/grading'
 import { AUTO_TYPES }               from '@/lib/utils/admin/submissions/constants'
 import type { GradingMode, Submission } from '@/lib/types/admin/exams/submissions/submission.types'
 import type { AnswerDetail }        from '@/lib/types/admin/exams/submissions/answer.types'
@@ -23,6 +23,7 @@ import type { Database }            from '@/lib/types/database'
 type SubmissionUpdate = Database['public']['Tables']['submissions']['Update']
 
 export interface UseGradingReturn {
+  tosErrors:          string[]
   gradingMode:        GradingMode
   savingMode:         boolean
   gradingSubmission:  boolean
@@ -69,6 +70,7 @@ export function useGrading(examId: string): UseGradingReturn {
   const [gradingMode,       setGradingMode]      = useState<GradingMode>('auto')
   const [savingMode,        setSavingMode]        = useState(false)
   const [gradingSubmission, setGradingSubmission] = useState(false)
+  const [tosErrors, setTosErrors] = useState<string[]>([])
 
   const handleModeChange = useCallback(async (
     mode:      GradingMode,
@@ -96,6 +98,7 @@ const gradeSubmission = useCallback(async (
   onClose: () => void,
 ) => {
   setGradingSubmission(true)
+  setTosErrors([])
 
   const gradedAnswers = answers.map((ans: AnswerDetail) => {
     if (!ans.question) {return ans}
@@ -122,9 +125,52 @@ const gradeSubmission = useCallback(async (
   })
 
   const earned = sumPoints(gradedAnswers.map((a: AnswerDetail) => a.points_earned))
-  const { percentage, passed } = computeScore(
-    earned, examInfo.total_points, examInfo.passing_score,
-  )
+  const tosAreasResult = await ExamService.getTosAreas(supabase, examId)
+  if (tosAreasResult.error) {
+    setTosErrors([tosAreasResult.error])
+    setGradingSubmission(false)
+    return
+  }
+  const tosAreas = tosAreasResult.data ?? []
+
+  let percentage: number
+  let passed: boolean
+  if (tosAreas.length > 0) {
+    const missingQuestionCount = gradedAnswers.filter((answer) => answer.question === null).length
+    const questions = gradedAnswers.flatMap((answer) => answer.question
+      ? [{
+          question_text: answer.question.question_text,
+          section_title: answer.question.section_title,
+          section_number: answer.question.section_number,
+          points: answer.question.points,
+          points_earned: answer.points_earned,
+        }]
+      : [])
+    const tosScore = computeTosScore(
+      questions,
+      tosAreas,
+      examInfo.total_points,
+      examInfo.passing_score,
+    )
+    const validationErrors = [...tosScore.validation_errors]
+    if (missingQuestionCount > 0) {
+      validationErrors.push(`${missingQuestionCount} answer(s) could not be matched to a question area.`)
+    }
+    if (validationErrors.length > 0 || tosScore.weighted_percentage === null || tosScore.passed === null) {
+      const errors = validationErrors.length > 0
+        ? validationErrors
+        : ['TOS scoring could not produce a valid result.']
+      setTosErrors(errors)
+      setGradingSubmission(false)
+      return
+    }
+    percentage = tosScore.weighted_percentage
+    passed = tosScore.passed
+  } else {
+    const legacyScore = computeScore(earned, examInfo.total_points, examInfo.passing_score)
+    percentage = legacyScore.percentage
+    passed = legacyScore.passed
+  }
 
   // Persist answers
   await Promise.all(
@@ -156,7 +202,7 @@ const gradeSubmission = useCallback(async (
   onSubmissionUpdate({ score: earned, percentage, passed, status: 'reviewed' })
   setGradingSubmission(false)
   onClose()
-}, [supabase, gradingMode])
+}, [supabase, examId, gradingMode])
 
   const handleAnswerCorrectToggle = useCallback((
     id: string, isCorrect: boolean,
@@ -199,7 +245,7 @@ const gradeSubmission = useCallback(async (
   }, [])
 
   return {
-    gradingMode, savingMode, gradingSubmission,
+    gradingMode, savingMode, gradingSubmission, tosErrors,
     handleModeChange, gradeSubmission,
     handleAnswerCorrectToggle, handlePointsChange, handleFeedbackChange,
     previewScore, setGradingMode,

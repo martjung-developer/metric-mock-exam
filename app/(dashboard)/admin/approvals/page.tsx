@@ -5,7 +5,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ClipboardCheck, RefreshCw, X,
-  CheckCircle2, XCircle, Rocket,
+  CheckCircle2, XCircle,
   FileText, Database, Filter,
   MessageSquare, AlertTriangle, Check, UserCircle2,
 } from 'lucide-react'
@@ -16,6 +16,7 @@ import { useApprovalQueue } from '@/lib/hooks/approval/useApprovalQueue'
 import { StatusBadge } from '@/components/shared/approval/StatusBadge'
 import { ApprovalHistoryTimeline } from '@/components/shared/approval/ApprovalHistoryTimeline'
 import type { ApprovalEntityType } from '@/lib/types/approval'
+import { getEffectiveStaffRole } from '@/lib/utils/auth/rbac'
 import styles from './approvals.module.css'
 
 const ENTITY_ICONS: Record<ApprovalEntityType | 'all', React.ReactNode> = {
@@ -27,7 +28,7 @@ const ENTITY_ICONS: Record<ApprovalEntityType | 'all', React.ReactNode> = {
 
 export default function ApprovalsPage() {
   const router = useRouter()
-  const { user, loading: authLoading } = useUser()
+  const { user, profile, loading: authLoading } = useUser()
   const q = useApprovalQueue()
 
   useEffect(() => {
@@ -38,13 +39,11 @@ export default function ApprovalsPage() {
       router.replace('/login')
       return
     }
-    const role =
-      (user.user_metadata?.['role'] as string | undefined) ??
-      (user.app_metadata?.['role'] as string | undefined)
-    if (role !== 'admin') {
+    const role = getEffectiveStaffRole(profile?.role, profile?.is_program_head)
+    if (role !== 'admin' && role !== 'program_head') {
       router.replace('/unauthorized')
     }
-  }, [user, authLoading, router])
+  }, [user, profile, authLoading, router])
 
   if (authLoading) {
     return null
@@ -71,7 +70,7 @@ export default function ApprovalsPage() {
       </div>
 
       <div className={styles.filterRow}>
-        {(['all', 'exam', 'question_bank'] as const).map((type) => (
+        {(['all', 'exam'] as const).map((type) => (
           <button
             key={type}
             className={`${styles.filterTab} ${q.filterType === type ? styles.filterTabActive : ''}`}
@@ -216,8 +215,7 @@ export default function ApprovalsPage() {
                 <button className={styles.rejectBtn} onClick={q.handleReject} disabled={q.acting}><XCircle size={14} />{q.acting ? 'Processing...' : 'Reject'}</button>
                 <div style={{ flex: 1 }} />
                 <button className={styles.approveBtn} onClick={q.handleApprove} disabled={q.acting}><CheckCircle2 size={14} />{q.acting ? 'Processing...' : 'Approve'}</button>
-                <button className={styles.publishBtn} onClick={q.handlePublish} disabled={q.acting}><Rocket size={14} />{q.acting ? 'Processing...' : 'Approve & Publish'}</button>
-              </div>
+                </div>
             </motion.div>
           </motion.div>
         )}

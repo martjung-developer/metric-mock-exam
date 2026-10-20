@@ -21,6 +21,7 @@ type AuthResult = {
   success: boolean
   error?: string
   redirectTo?: string
+  emailConfirmationRequired?: boolean
 }
 
 type ResolveUserResult = {
@@ -29,11 +30,27 @@ type ResolveUserResult = {
   error?: string
 }
 
-type ProgramCode = string
 type YearLevel = number | string
 import type { Database } from '@/lib/types/database'
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row']
+type SignupProgram = Pick<
+  Database['public']['Tables']['programs']['Row'],
+  'id' | 'code' | 'name' | 'full_name' | 'major' | 'years' | 'school_id'
+>
+
+function savePendingSignup(data: Record<string, unknown>) {
+  if (typeof window === 'undefined') { return }
+  const value = JSON.stringify(data)
+  localStorage.setItem('signup_data', value)
+  document.cookie = `pending_signup=${encodeURIComponent(value)}; path=/; max-age=86400; samesite=lax`
+}
+
+function clearPendingSignup() {
+  if (typeof window === 'undefined') { return }
+  localStorage.removeItem('signup_data')
+  document.cookie = 'pending_signup=; path=/; max-age=0; samesite=lax'
+}
 
 // ── resolveUserById ───────────────────────────────────────────────────────────
 
@@ -45,11 +62,12 @@ export async function resolveUserById(rawId: string): Promise<ResolveUserResult>
       body:    JSON.stringify({ id: normaliseId(rawId) }),
     })
 
+    const payload = (await res.json()) as ResolveUserResult
     if (!res.ok) {
-      return { found: false, error: `Server error: ${res.status}` }
+      return { found: false, error: payload.error ?? `Server error: ${res.status}` }
     }
 
-    return (await res.json()) as ResolveUserResult
+    return payload
   } catch {
     return { found: false, error: 'Network error. Please try again.' }
   }
@@ -96,6 +114,11 @@ export async function signInWithId(
     return { success: false, error: 'Could not resolve your account role.' }
   }
 
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+  if (sessionError || !sessionData.session) {
+    return { success: false, error: 'Could not confirm your session. Please try again.' }
+  }
+
   return { success: true, redirectTo: getDashboardByRole(profile.role) }
 }
 
@@ -106,23 +129,29 @@ export async function signUpStudent(
   fullName:    string,
   email:       string,
   password:    string,
-  programCode: ProgramCode,
+  program:     SignupProgram,
   yearLevel:   YearLevel,
   phone?:      string,
 ): Promise<AuthResult> {
   const supabase = createClient()
+  const pendingSignup = {
+    studentId: normaliseId(studentId),
+    fullName: fullName.trim(),
+    userEmail: email,
+    programId: program.id,
+    programCode: program.code,
+    schoolId: program.school_id,
+    yearLevel: Number(yearLevel),
+    phone: phone?.trim() ?? '',
+  }
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
-        student_id:   normaliseId(studentId),
         full_name:    fullName.trim(),
         role:         'student' as const,
-        program_code: programCode,
-        year_level:   yearLevel,
-        phone:        phone?.trim() ?? '',
       },
       emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`,
     },
@@ -130,6 +159,10 @@ export async function signUpStudent(
 
   if (error)      { return { success: false, error: error.message } }
   if (!data.user) { return { success: false, error: 'Account creation failed. Please try again.' } }
+  savePendingSignup(pendingSignup)
+  if (!data.session) {
+    return { success: true, emailConfirmationRequired: true }
+  }
 
   // Create student profile row via service-role API route
   // Errors here are non-fatal — the user can still log in and we retry on
@@ -139,20 +172,26 @@ export async function signUpStudent(
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
-        studentId:   normaliseId(studentId),
-        fullName:    fullName.trim(),
-        programCode,
-        yearLevel:   String(yearLevel),
-        phone:       phone?.trim() ?? '',
+        ...pendingSignup,
+        userId: data.user.id,
       }),
     })
 
     if (!res.ok) {
       const payload = (await res.json()) as { error?: string }
-      console.warn('[signUpStudent] create-profile non-ok:', payload.error)
+      console.error('[signUpStudent] create-profile non-ok:', payload.error)
+      return {
+        success: false,
+        error: payload.error ?? 'Account created but profile setup failed. Please contact support.',
+      }
     }
+    clearPendingSignup()
   } catch (err) {
-    console.warn('[signUpStudent] create-profile network error:', err)
+    console.error('[signUpStudent] create-profile network error:', err)
+    return {
+      success: false,
+      error: 'Account created but profile setup failed. Please contact support.',
+    }
   }
 
   return { success: true }
@@ -193,6 +232,36 @@ export async function signInWithFacebook(): Promise<AuthResult> {
 // ── signOut ───────────────────────────────────────────────────────────────────
 
 export async function signOut(): Promise<void> {
+  if (typeof window !== 'undefined') {
+    window.location.href = '/api/auth/signout'
+  }
+}
+
+// ── sendOtp ───────────────────────────────────────────────────────────────────
+
+export async function sendOtp(email: string): Promise<AuthResult> {
   const supabase = createClient()
-  await supabase.auth.signOut()
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+  })
+  if (error) {
+    return { success: false, error: error.message }
+  }
+  return { success: true }
+}
+
+// ── verifyOtp ─────────────────────────────────────────────────────────────────
+
+export async function verifyOtp(email: string, token: string): Promise<AuthResult> {
+  const supabase = createClient()
+  const { error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: 'signup',
+  })
+  if (error) {
+    return { success: false, error: error.message }
+  }
+  return { success: true }
 }

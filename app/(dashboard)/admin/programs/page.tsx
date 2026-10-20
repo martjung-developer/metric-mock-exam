@@ -123,7 +123,13 @@ export default function ProgramsPage() {
         />
       ) : (
         groupedPrograms.map((section) => (
-          <motion.div key={section.key} variants={cardVariants} className={styles.sectionWrap}>
+          <motion.div
+            key={section.key}
+            variants={cardVariants}
+            initial={false}
+            animate="visible"
+            className={styles.sectionWrap}
+          >
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>{section.label}</h2>
               <span className={styles.sectionCount}>

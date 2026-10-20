@@ -18,12 +18,18 @@ const REDIRECT_DELAY_MS = 5_000
 const TICK_MS           = 1_000
 
 interface SignupSuccessModalProps {
+  email?: string
+  emailConfirmationRequired?: boolean
   onClose?: () => void
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function SignupSuccessModal({ onClose }: SignupSuccessModalProps) {
+export function SignupSuccessModal({
+  email,
+  emailConfirmationRequired = false,
+  onClose,
+}: SignupSuccessModalProps) {
   const router                  = useRouter()
   const [seconds, setSeconds]   = useState(Math.round(REDIRECT_DELAY_MS / TICK_MS))
 
@@ -112,7 +118,7 @@ export function SignupSuccessModal({ onClose }: SignupSuccessModalProps) {
             margin:         '0 0 0.4rem',
             letterSpacing:  '-0.02em',
           }}>
-            Account Created! 
+            {emailConfirmationRequired ? 'Check your email' : 'Account Created!'}
           </h2>
 
           <p style={{
@@ -121,7 +127,9 @@ export function SignupSuccessModal({ onClose }: SignupSuccessModalProps) {
             margin:      '0 0 1rem',
             lineHeight:  1.55,
           }}>
-            Welcome to VeriPraxis! Your student account has been created successfully.
+            {emailConfirmationRequired
+              ? `We sent a confirmation link${email ? ` to ${email}` : ''}. Finish confirming your email to complete profile setup.`
+              : 'Welcome to M.E.T.R.I.C.! Your student account has been created successfully.'}
           </p>
 
           <div style={{

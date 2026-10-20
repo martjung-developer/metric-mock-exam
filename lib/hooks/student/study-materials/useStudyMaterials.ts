@@ -172,7 +172,7 @@ const recordViewed = useCallback((materialId: string) => {
   useEffect(() => {
     if (!user || hasFetched.current) {return}
     hasFetched.current = true
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     refresh()
   }, [user, refresh])
 

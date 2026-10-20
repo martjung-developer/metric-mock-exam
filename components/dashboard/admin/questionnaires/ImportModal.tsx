@@ -3,13 +3,19 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Self-contained Import Questions modal.
 // All state lives in `useQuestionnaires` — this component is purely presentational.
+// CHANGES FROM PREVIOUS VERSION:
+//   + Second drop zone in FileTab for attaching image files referenced by a
+//     CSV/XLSX `image` column (filename match, not a URL)
+//   + Per-file chip list with remove buttons, and a warning banner listing
+//     any referenced filenames that weren't attached
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useRef }            from 'react'
+import { Fragment, useRef }  from 'react'
 import {
   Upload, X, FileSpreadsheet, FileText, Download,
   Link2, Globe, File, Loader2, CheckCheck,
   CheckCircle2, AlertCircle, ChevronDown, AlertTriangle,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -21,7 +27,7 @@ import type { QuestionType }   from '@/lib/types/database'
 import type { UseQuestionnairesReturn } from '@/lib/hooks/admin/questionnaires/useQuestionnaires'
 import styles                  from '@/app/(dashboard)/admin/questionnaires/questionnaires.module.css'
 
-// ── File-type icon ────────────────────────────────────────────────────────────
+// ── File-type icon ──────────────────────────────────────────────────────────
 
 function FileTypeIcon({ fileName }: { fileName: string }) {
   const ext = fileName.split('.').pop()?.toLowerCase() ?? ''
@@ -31,7 +37,7 @@ function FileTypeIcon({ fileName }: { fileName: string }) {
   return <FileText size={15} color="#4f5ff7" />
 }
 
-// ── Props ─────────────────────────────────────────────────────────────────────
+// ── Props ────────────────────────────────────────────────────────────────────
 
 type Q = UseQuestionnairesReturn
 
@@ -55,7 +61,7 @@ export function ImportModal({ q }: ImportModalProps) {
         >
           <motion.div
             className={styles.formModal}
-            style={{ maxWidth: 720 }}
+            style={{ maxWidth: 720, maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
             variants={modalVariants} initial="hidden" animate="visible" exit="exit"
           >
             {/* ── Header ── */}
@@ -67,7 +73,7 @@ export function ImportModal({ q }: ImportModalProps) {
               <button className={styles.btnIconClose} onClick={q.closeImport}><X size={14} /></button>
             </div>
 
-            <div className={styles.form}>
+            <div className={styles.form} style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
               {/* ── Success state ── */}
               {q.importDone ? (
                 <ImportSuccess q={q} />
@@ -105,6 +111,12 @@ export function ImportModal({ q }: ImportModalProps) {
                   )}
 
                   {/* ── Error ── */}
+                  {q.importWarning && (
+                    <p className={styles.formError} style={{ marginTop: '0.4rem', background: '#fffbeb', borderColor: '#fcd34d', color: '#92400e' }}>
+                      <AlertTriangle size={13} /> {q.importWarning}
+                    </p>
+                  )}
+
                   {q.importError && (
                     <p className={styles.formError} style={{ marginTop: '0.4rem' }}>
                       <AlertTriangle size={13} /> {q.importError}
@@ -143,7 +155,7 @@ export function ImportModal({ q }: ImportModalProps) {
   )
 }
 
-// ── Sub-sections ──────────────────────────────────────────────────────────────
+// ── Sub-sections ───────────────────────────────────────────────────────────────
 
 function ImportSuccess({ q }: { q: Q }) {
   return (
@@ -167,6 +179,12 @@ function ImportSuccess({ q }: { q: Q }) {
         <strong style={{ color: '#d97706' }}>{q.importCounts.skippedDuplicates}</strong>{' '}
         question{q.importCounts.skippedDuplicates !== 1 ? 's' : ''} skipped - already exist in this bank
       </p>
+      {q.importCounts.imageCorrections > 0 && (
+        <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: 4 }}>
+          <strong style={{ color: '#2563eb' }}>{q.importCounts.imageCorrections}</strong>{' '}
+          missing image{q.importCounts.imageCorrections !== 1 ? 's' : ''} attached to existing questions
+        </p>
+      )}
       {q.importCounts.failedToParse > 0 && (
         <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: 4 }}>
           <strong style={{ color: '#dc2626' }}>{q.importCounts.failedToParse}</strong>{' '}
@@ -187,6 +205,12 @@ function FileTab({
   q: Q
   fileInputRef: React.RefObject<HTMLInputElement | null>
 }) {
+  const imageInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Image bundle only makes sense for CSV/XLSX (DOCX/PDF embed images differently and aren't in scope)
+  const ext = q.importedFileName.split('.').pop()?.toLowerCase() ?? ''
+  const showImageBundle = q.importRows.length > 0 && !['docx', 'doc', 'pdf'].includes(ext)
+
   return (
     <>
       {/* Template banner */}
@@ -214,6 +238,8 @@ function FileTab({
           <span className={styles.facultyHintTitle}>Any exam formats supported</span>
           <span className={styles.facultyHintDesc}>
             DOCX files with numbered questions and bold correct answers are automatically detected.
+            For CSV/XLSX, put an image filename in the <code>image</code> column and attach the matching
+            file below.
           </span>
         </div>
       </div>
@@ -288,6 +314,83 @@ function FileTab({
           </>
         )}
       </div>
+
+      {/* ── Image bundle (CSV/XLSX only) ── */}
+      {showImageBundle && (
+        <div>
+          <label className={styles.formLabel} style={{ marginBottom: 5, display: 'block' }}>
+            Question images (optional)
+          </label>
+          <p style={{ fontSize: '0.74rem', color: '#94a3b8', marginBottom: 6 }}>
+            Attach any images referenced by the <code>image</code> column. Filenames must match exactly
+            (e.g. <code>filipino-timeline.jpg</code>).
+          </p>
+
+          <div
+            className={styles.dropZone}
+            style={{ padding: '0.9rem', minHeight: 'auto' }}
+            onClick={() => imageInputRef.current?.click()}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault()
+              q.handleImageFilesSelected(Array.from(e.dataTransfer.files))
+            }}
+          >
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                q.handleImageFilesSelected(Array.from(e.target.files ?? []))
+                e.target.value = ''
+              }}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <ImageIcon size={16} color="#94a3b8" />
+              <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                Drag &amp; drop images here, or click to browse
+              </span>
+            </div>
+          </div>
+
+          {q.importImageFiles.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+              {q.importImageFiles.map((file) => (
+                <span key={file.name} style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  fontSize: '0.72rem', fontWeight: 600, color: '#0d1523',
+                  background: '#f1f5f9', border: '1px solid #e2e8f0',
+                  borderRadius: 20, padding: '3px 6px 3px 10px',
+                }}>
+                  {file.name}
+                  <button
+                    type="button"
+                    onClick={() => q.removeImportImageFile(file.name)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 16, height: 16, borderRadius: '50%', border: 'none',
+                      background: '#e2e8f0', cursor: 'pointer', color: '#475569',
+                    }}
+                    aria-label={`Remove ${file.name}`}
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {q.importImageMatchWarnings.length > 0 && (
+            <p className={styles.formError} style={{ marginTop: 8, background: '#fffbeb', borderColor: '#fcd34d', color: '#92400e' }}>
+              <AlertTriangle size={13} />
+              {q.importImageMatchWarnings.length} referenced image{q.importImageMatchWarnings.length !== 1 ? 's' : ''} not
+              attached: {q.importImageMatchWarnings.join(', ')}
+            </p>
+          )}
+        </div>
+      )}
     </>
   )
 }
@@ -368,6 +471,44 @@ function LinkTab({ q }: { q: Q }) {
 }
 
 function ParsedRowsSection({ q }: { q: Q }) {
+  function toRoman(num: number): string {
+    const pairs: Array<[number, string]> = [
+      [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+      [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+      [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+    ]
+    let n = Math.max(1, Math.floor(num))
+    let out = ''
+    for (const [v, s] of pairs) {
+      while (n >= v) {
+        out += s
+        n -= v
+      }
+    }
+    return out
+  }
+
+  const sectionCounts = q.importRows.reduce<Record<string, number>>((acc, row) => {
+    const hasSection = Boolean(row.section_title?.trim()) && typeof row.section_number === 'number'
+    if (!hasSection) {return acc}
+    const key = `${row.section_number}|${row.section_title?.trim()}`
+    acc[key] = (acc[key] ?? 0) + 1
+    return acc
+  }, {})
+
+  const sectionDividerIndexes = q.importRows.reduce<{ lastSectionKey: string | null; indexes: number[] }>(
+    (state, row, index) => {
+      const hasSection = Boolean(row.section_title?.trim()) && typeof row.section_number === 'number'
+      if (!hasSection) {return state}
+      const sectionKey = `${row.section_number}|${row.section_title?.trim()}`
+      return {
+        lastSectionKey: sectionKey,
+        indexes: sectionKey !== state.lastSectionKey ? [...state.indexes, index] : state.indexes,
+      }
+    },
+    { lastSectionKey: null, indexes: [] },
+  ).indexes
+
   return (
     <>
       {/* Count badges */}
@@ -408,7 +549,9 @@ function ParsedRowsSection({ q }: { q: Q }) {
           fontWeight: 600,
         }}>
           <AlertTriangle size={13} />
-          {q.existingDuplicateCount === q.validCount
+          {q.missingImageCorrectionCount > 0
+            ? `${q.missingImageCorrectionCount} existing question${q.missingImageCorrectionCount !== 1 ? 's have' : ' has'} missing images that can be attached from this import.`
+            : q.existingDuplicateCount === q.validCount
             ? 'This file matches existing questions in the selected exam. Upload is blocked to prevent questionnaire reuse.'
             : `${q.existingDuplicateCount} question${q.existingDuplicateCount !== 1 ? 's are' : ' is'} already in this exam and will be skipped.`}
         </div>
@@ -425,45 +568,67 @@ function ParsedRowsSection({ q }: { q: Q }) {
             </tr>
           </thead>
           <tbody>
-            {q.importRows.map((row) => {
+            {q.importRows.map((row, rowIndex) => {
               const tc = TYPE_COLORS[row.question_type as QuestionType]
+              const hasSection = Boolean(row.section_title?.trim()) && typeof row.section_number === 'number'
+              const sectionKey = hasSection ? `${row.section_number}|${row.section_title?.trim()}` : null
+              const showSectionDivider = sectionKey !== null && sectionDividerIndexes.includes(rowIndex)
+
               return (
-                <tr key={row._rowIndex} style={{
-                  borderBottom: '1px solid #f1f5f9',
-                  background: row._valid ? 'transparent' : 'rgba(220,38,38,0.025)',
-                }}>
-                  <td style={{ padding: '0.38rem 0.6rem', color: '#94a3b8' }}>{row._rowIndex}</td>
-                  <td style={{ padding: '0.38rem 0.6rem', color: '#0d1523', maxWidth: 220 }}>
-                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {row.question_text || <span style={{ color: '#dc2626', fontStyle: 'italic' }}>missing</span>}
-                    </div>
-                  </td>
-                  <td style={{ padding: '0.38rem 0.6rem', whiteSpace: 'nowrap' }}>
-                    <span style={{
-                      fontSize: '0.67rem', fontWeight: 700, padding: '1px 6px', borderRadius: 20,
-                      background: tc?.bg ?? '#f1f5f9',
-                      color:      tc?.color ?? '#64748b',
-                    }}>
-                      {row.question_type === 'multiple_choice' ? 'MCQ'
-                        : row.question_type === 'true_false' ? 'T/F'
-                        : row.question_type || '—'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '0.38rem 0.6rem', color: '#4a5568', textTransform: 'capitalize' }}>{row.difficulty}</td>
-                  <td style={{ padding: '0.38rem 0.6rem', color: '#4a5568' }}>{row.points}</td>
-                  <td style={{ padding: '0.38rem 0.6rem' }}>
-                    {row._valid
-                      ? <span style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle2 size={12} /> OK</span>
-                      : <span
-                          title={row._errors.join(' · ')}
-                          style={{ color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, cursor: 'help' }}>
-                          <AlertCircle size={12} />
-                          <span style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {row._errors[0]}
-                          </span>
-                        </span>}
-                  </td>
-                </tr>
+                <Fragment key={`row-block-${row._rowIndex}`}>
+                  {showSectionDivider && (
+                    <tr key={`section-${sectionKey}`}>
+                      <td colSpan={6} style={{ padding: '6px 12px' }}>
+                        <div style={{
+                          background: '#f0f4ff',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          color: '#1d2951',
+                          padding: '6px 12px',
+                          borderRadius: 6,
+                        }}>
+                          {toRoman(row.section_number ?? 1)}. {row.section_title?.trim()} - {sectionCounts[sectionKey ?? ''] ?? 0} questions
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  <tr key={row._rowIndex} style={{
+                    borderBottom: '1px solid #f1f5f9',
+                    background: row._valid ? 'transparent' : 'rgba(220,38,38,0.025)',
+                  }}>
+                    <td style={{ padding: '0.38rem 0.6rem', color: '#94a3b8' }}>{row._rowIndex}</td>
+                    <td style={{ padding: '0.38rem 0.6rem', color: '#0d1523', maxWidth: 220 }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {row.question_text || <span style={{ color: '#dc2626', fontStyle: 'italic' }}>missing</span>}
+                      </div>
+                    </td>
+                    <td style={{ padding: '0.38rem 0.6rem', whiteSpace: 'nowrap' }}>
+                      <span style={{
+                        fontSize: '0.67rem', fontWeight: 700, padding: '1px 6px', borderRadius: 20,
+                        background: tc?.bg ?? '#f1f5f9',
+                        color: tc?.color ?? '#64748b',
+                      }}>
+                        {row.question_type === 'multiple_choice' ? 'MCQ'
+                          : row.question_type === 'true_false' ? 'T/F'
+                          : row.question_type || '-'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.38rem 0.6rem', color: '#4a5568', textTransform: 'capitalize' }}>{row.difficulty}</td>
+                    <td style={{ padding: '0.38rem 0.6rem', color: '#4a5568' }}>{row.points}</td>
+                    <td style={{ padding: '0.38rem 0.6rem' }}>
+                      {row._valid
+                        ? <span style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle2 size={12} /> OK</span>
+                        : <span
+                            title={row._errors.join(' · ')}
+                            style={{ color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4, cursor: 'help' }}>
+                            <AlertCircle size={12} />
+                            <span style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {row._errors[0]}
+                            </span>
+                          </span>}
+                    </td>
+                  </tr>
+                </Fragment>
               )
             })}
           </tbody>
@@ -482,9 +647,9 @@ function ParsedRowsSection({ q }: { q: Q }) {
               value={q.importProgramId}
               onChange={(e) => { q.setImportProgramId(e.target.value); q.setImportExamId('') }}
             >
-              <option value="">— Select program —</option>
+              <option value="">- Select program -</option>
               {q.programs.map((p) => (
-                <option key={p.id} value={p.id}>{p.code} — {p.name}</option>
+                <option key={p.id} value={p.id}>{p.code} - {p.name}</option>
               ))}
             </select>
             <ChevronDown size={13} className={styles.selectChevron} />
@@ -501,7 +666,7 @@ function ParsedRowsSection({ q }: { q: Q }) {
               onChange={(e) => q.setImportExamId(e.target.value)}
               disabled={!q.importProgramId}
             >
-              <option value="">{q.importProgramId ? '— Select exam —' : '— Select program first —'}</option>
+              <option value="">{q.importProgramId ? '- Select exam -' : '- Select program first -'}</option>
               {q.examsForImport.map((ex) => (
                 <option key={ex.id} value={ex.id}>{ex.title}</option>
               ))}

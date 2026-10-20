@@ -22,6 +22,41 @@ export type CategoryRow      = Database['public']['Tables']['exam_categories']['
 export type ProgramOption  = Pick<ProgramRow, 'id' | 'code' | 'name'>
 export type CategoryOption = Pick<CategoryRow, 'id' | 'name'>
 
+export interface TosAreaConfig {
+  area_title: string
+  weight_percent: number
+  expected_items: number
+  min_percent: number
+  section_number?: number | null
+}
+
+export interface TosQuestionScoreInput {
+  question_text: string
+  section_title?: string | null
+  section_number?: number | null
+  points: number
+  points_earned: number | null
+}
+
+export interface TosAreaScore {
+  area_title: string
+  weight_percent: number
+  min_percent: number
+  points_earned: number
+  points_possible: number
+  percentage: number
+  weighted_percentage: number
+  passed: boolean
+}
+
+export interface TosScoreResult {
+  score: number
+  per_area: TosAreaScore[]
+  weighted_percentage: number | null
+  passed: boolean | null
+  validation_errors: string[]
+}
+
 // ── The raw Supabase join shape returned by the exams query ───────────────────
 // Supabase returns joined rows as `T | T[] | null` depending on relationship type.
 // We model both sides to narrow safely in transformers.
@@ -69,6 +104,7 @@ export interface Exam {
   question_count:   number
   assigned_count:   number
   created_at:       string
+  tos_areas?:       TosAreaConfig[]
 }
 
 // ── Edit form state ───────────────────────────────────────────────────────────

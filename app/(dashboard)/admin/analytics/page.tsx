@@ -37,7 +37,7 @@ function resolveRole(user: { user_metadata?: Record<string, unknown>; app_metada
 
 export default function AnalyticsDashboardPage() {
   const router             = useRouter()
-  const { user, loading: authLoading } = useUser()
+  const { user, profile, loading: authLoading } = useUser()
 
   const {
     data,
@@ -55,11 +55,11 @@ export default function AnalyticsDashboardPage() {
       return
     }
     if (!user) { router.replace('/login'); return }
-    const role = resolveRole(user)
+    const role = profile?.role ?? resolveRole(user)
     if (role !== 'admin' && role !== 'faculty') {
       router.replace('/unauthorized')
     }
-  }, [user, authLoading, router])
+  }, [user, profile?.role, authLoading, router])
 
   // ── Skeleton while loading ─────────────────────────────────────────────────
   if (authLoading || loading) {

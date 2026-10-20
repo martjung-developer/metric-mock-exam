@@ -18,7 +18,7 @@ interface LegalModalProps {
 const TERMS_SECTIONS = [
   {
     num: '01', title: 'Acceptance of Terms',
-    body: 'By creating an account or using any feature of VeriPraxis ("the Platform"), you agree to these Terms and our Privacy Policy. If you do not agree, please do not use the Platform.',
+    body: 'By creating an account or using any feature of M.E.T.R.I.C. ("the Platform"), you agree to these Terms and our Privacy Policy. If you do not agree, please do not use the Platform.',
   },
   {
     num: '02', title: 'Account Responsibilities',
@@ -27,12 +27,12 @@ const TERMS_SECTIONS = [
       'You must be at least 18 years old to create an account.',
       'You are responsible for maintaining the confidentiality of your login credentials.',
       'You must provide accurate and complete information during registration.',
-      'Notify us immediately at support@veripraxis.ph if you suspect unauthorized access.',
+      'Notify us immediately at support@metric.ph if you suspect unauthorized access.',
     ],
   },
   {
     num: '03', title: 'Permitted Use',
-    body: 'VeriPraxis is licensed to you for personal, non-commercial use to prepare for PRC licensure examinations only. Any other use requires our prior written consent.',
+    body: 'M.E.T.R.I.C. is licensed to you for personal, non-commercial use to prepare for PRC licensure examinations only. Any other use requires our prior written consent.',
   },
   {
     num: '04', title: 'Prohibited Conduct',
@@ -47,7 +47,7 @@ const TERMS_SECTIONS = [
   },
   {
     num: '05', title: 'Intellectual Property',
-    body: 'All content on VeriPraxis — including exam questions, rationales, software, design, and branding — is the exclusive property of VeriPraxis Inc. You may not reproduce or distribute any content without prior written permission.',
+    body: 'All content on M.E.T.R.I.C. — including exam questions, rationales, software, design, and branding — is the exclusive property of M.E.T.R.I.C. Inc. You may not reproduce or distribute any content without prior written permission.',
   },
   {
     num: '06', title: 'Payments & Refunds',
@@ -55,11 +55,11 @@ const TERMS_SECTIONS = [
   },
   {
     num: '07', title: 'Disclaimers',
-    body: 'VeriPraxis is not affiliated with, endorsed by, or an official product of the Professional Regulation Commission (PRC). Passing a mock exam does not guarantee passing the actual board examination. The Platform is provided "as is" without warranties of any kind.',
+    body: 'M.E.T.R.I.C. is not affiliated with, endorsed by, or an official product of the Professional Regulation Commission (PRC). Passing a mock exam does not guarantee passing the actual board examination. The Platform is provided "as is" without warranties of any kind.',
   },
   {
     num: '08', title: 'Limitation of Liability',
-    body: 'To the maximum extent permitted by Philippine law, VeriPraxis Inc. shall not be liable for any indirect, incidental, or consequential damages arising from your use of the Platform.',
+    body: 'To the maximum extent permitted by Philippine law, M.E.T.R.I.C. Inc. shall not be liable for any indirect, incidental, or consequential damages arising from your use of the Platform.',
   },
   {
     num: '09', title: 'Termination',
@@ -71,14 +71,14 @@ const TERMS_SECTIONS = [
   },
   {
     num: '11', title: 'Contact',
-    body: 'Questions about these Terms? Email legal@veripraxis.ph. For support issues, email support@veripraxis.ph.',
+    body: 'Questions about these Terms? Email legal@metric.ph. For support issues, email support@metric.ph.',
   },
 ]
 
 const PRIVACY_SECTIONS = [
   {
     num: '01', title: 'Information We Collect',
-    body: 'When you register and use VeriPraxis, we collect:',
+    body: 'When you register and use M.E.T.R.I.C., we collect:',
     list: [
       'Account data: your name, email address, and bcrypt-hashed password.',
       'Profile data: exam program, educational background, and study goals.',
@@ -109,7 +109,7 @@ const PRIVACY_SECTIONS = [
   },
   {
     num: '05', title: 'Data Security',
-    body: 'We implement TLS 1.3 in transit, AES-256 at rest, bcrypt password hashing, and role-based access controls. Contact security@veripraxis.ph if you believe your account is compromised.',
+    body: 'We implement TLS 1.3 in transit, AES-256 at rest, bcrypt password hashing, and role-based access controls. Contact security@metric.ph if you believe your account is compromised.',
   },
   {
     num: '06', title: 'Your Rights (RA 10173)',
@@ -125,7 +125,7 @@ const PRIVACY_SECTIONS = [
   },
   {
     num: '07', title: "Children's Privacy",
-    body: "VeriPraxis is intended for users 18 years and older. We do not knowingly collect data from minors. If you believe a child has created an account, contact us immediately.",
+    body: "M.E.T.R.I.C. is intended for users 18 years and older. We do not knowingly collect data from minors. If you believe a child has created an account, contact us immediately.",
   },
   {
     num: '08', title: 'Changes to This Policy',
@@ -133,7 +133,7 @@ const PRIVACY_SECTIONS = [
   },
   {
     num: '09', title: 'Contact',
-    body: 'For privacy-related questions, reach our Data Privacy Officer at privacy@veripraxis.ph. For general inquiries, email support@veripraxis.ph.',
+    body: 'For privacy-related questions, reach our Data Privacy Officer at privacy@metric.ph. For general inquiries, email support@metric.ph.',
   },
 ]
 
@@ -200,7 +200,7 @@ export default function LegalModal({ open, onClose }: LegalModalProps): React.Re
                 </div>
                 <div>
                   <div className={styles.headerTitle}>{docTitle}</div>
-                  <div className={styles.headerMeta}>Effective {docDate} · VeriPraxis Inc.</div>
+                  <div className={styles.headerMeta}>Effective {docDate} · M.E.T.R.I.C. Inc.</div>
                 </div>
               </div>
               <div className={styles.headerRight}>

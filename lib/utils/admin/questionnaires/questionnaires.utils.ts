@@ -1,21 +1,68 @@
 // lib/utils/admin/questionnaires/questionnaires.utils.ts
 // ─────────────────────────────────────────────────────────────────────────────
 // CHANGES FROM PREVIOUS VERSION:
-//   + validateImportRow reads and passes through `scenario` field (already done)
-//   + downloadTemplate now includes 'scenario' column in both header and example rows
+//   + validateImportRow reads and passes through `image` field (blank = none)
+//   + downloadTemplate includes 'image' column in header + example rows
 //   + encodeDifficulty, parseDifficulty, stripDifficultyTag unchanged
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type {
   DifficultyLevel,
+  DisplayQuestion,
   RawRow,
   ImportRow,
+  EmbeddedImageData,
 } from '@/lib/types/admin/questionnaires/questionnaires'
 import {
   VALID_TYPES,
   VALID_DIFF,
   TEMPLATE_HEADERS,
 } from '@/lib/constants/admin/questionnaires/questionnaires.constants'
+
+export function normalizeQuestionText(text: string): string {
+  return text.trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+export function normalizeImageFilename(filename: string): string {
+  const leafName = filename.trim().replace(/\\/g, '/').split('/').pop() ?? ''
+  return leafName.trim().toLowerCase()
+}
+
+export function attachEmbeddedImagesToRows(
+  rows: ImportRow[],
+  images: EmbeddedImageData[],
+): ImportRow[] {
+  return rows.map((row, index) => {
+    const embeddedImage = images[index]
+    return embeddedImage ? { ...row, embeddedImage } : row
+  })
+}
+
+export function embeddedImageToFile(image: EmbeddedImageData): File {
+  const [header, encoded] = image.dataUrl.split(',', 2)
+  if (!header || !encoded) {
+    throw new Error(`Embedded image data is invalid: ${image.fileName}`)
+  }
+
+  const mimeType = /^data:(image\/[a-z0-9.+-]+);base64$/i.exec(header.slice(5))?.[1] ?? 'image/png'
+  const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0))
+  return new File([bytes], image.fileName, { type: mimeType })
+}
+
+export function filterQuestionnaireQuestions(
+  questions: DisplayQuestion[],
+  search: string,
+  examId?: string,
+): DisplayQuestion[] {
+  const query = search.trim().toLowerCase()
+  return questions.filter((question) => {
+    const matchesExam = !examId || question.exam_id === examId
+    const matchesSearch = !query ||
+      question.question_text.toLowerCase().includes(query) ||
+      (question.options?.some((option) => option.text.toLowerCase().includes(query)) ?? false)
+    return matchesExam && matchesSearch
+  })
+}
 
 // ── Difficulty encoding / decoding ────────────────────────────────────────────
 
@@ -58,6 +105,7 @@ export function validateImportRow(raw: RawRow, idx: number): ImportRow {
   const option_c       = (raw['option_c']       ?? '').trim()
   const option_d       = (raw['option_d']       ?? '').trim()
   const scenario       = (raw['scenario']       ?? '').trim()
+  const image          = (raw['image']          ?? '').trim()   // ── ADDED — blank = no image
 
   if (!question_text) {
     errors.push('question_text is required')
@@ -99,6 +147,7 @@ export function validateImportRow(raw: RawRow, idx: number): ImportRow {
     option_c,
     option_d,
     scenario,
+    image,                          // ── ADDED
     _rowIndex: idx + 2,
     _errors:   errors,
     _valid:    errors.length === 0,
@@ -106,12 +155,12 @@ export function validateImportRow(raw: RawRow, idx: number): ImportRow {
 }
 
 // ── Template download ─────────────────────────────────────────────────────────
-// UPDATED: scenario column added to both the header and the two example rows.
+// UPDATED: image column added as the 12th field, demonstrated on row 3 only.
 
 export function downloadTemplate(): void {
   const header = TEMPLATE_HEADERS.join(',')
 
-  // Row 1: MCQ with no scenario
+  // Row 1: MCQ with no scenario, no image
   const row1 = [
     '"What is 2 + 2?"',
     'multiple_choice',
@@ -124,9 +173,10 @@ export function downloadTemplate(): void {
     'B',
     '"Adding two and two gives four"',
     '',                 // scenario — empty = none
+    '',                 // image — empty = none
   ].join(',')
 
-  // Row 2: T/F with no scenario
+  // Row 2: T/F with no scenario, no image
   const row2 = [
     '"The Earth is flat."',
     'true_false',
@@ -138,23 +188,24 @@ export function downloadTemplate(): void {
     '',
     'false',
     '"The Earth is an oblate spheroid"',
-    '',                 
+    '',
+    '',
   ].join(',')
 
-  // Row 3: MCQ WITH a scenario (demonstrates the column)
+  // Row 3: MCQ WITH a scenario AND an image (demonstrates both columns)
   const row3 = [
-    '"Based on the passage, what is the main cause of the reaction?"',
+    '"Based on the figure, what geometric property is illustrated?"',
     'multiple_choice',
     '2',
     'medium',
-    'Oxidation',
-    'Reduction',
-    'Hydrolysis',
-    'Neutralisation',
-    'A',
-    '"The passage states that oxygen is the key reactant"',
-    '"When iron is exposed to moisture and oxygen, a chemical reaction called rusting occurs. ' +
-    'The iron reacts with oxygen in the presence of water to form iron oxide."',
+    'Congruence',
+    'Similarity',
+    'Symmetry',
+    'Reflection',
+    'C',
+    '"The figure shows a shape that is identical on both sides of the axis"',
+    '',
+    '"BSEd-MATH/geometry_01.png"',   
   ].join(',')
 
   const csv  = [header, row1, row2, row3].join('\n')

@@ -17,6 +17,8 @@ interface QuestionGroupProps {
   onAddInGroup: (type: QuestionType) => void
   onEdit: (q: Question) => void
   onDelete: (q: Question) => void
+  selected?: ReadonlySet<string>
+  onToggleSelect?: (id: string) => void
 }
 
 export function QuestionGroup({
@@ -28,6 +30,8 @@ export function QuestionGroup({
   onAddInGroup,
   onEdit,
   onDelete,
+  selected,
+  onToggleSelect,
 }: QuestionGroupProps): JSX.Element {
   const meta = TYPE_META[type]
   const Icon = meta.icon
@@ -81,6 +85,8 @@ export function QuestionGroup({
                 displayIndex={idx}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                selected={selected?.has(q.id) ?? false}
+                onToggleSelect={onToggleSelect ? () => onToggleSelect(q.id) : undefined}
               />
             ))
           )}

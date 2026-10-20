@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 'use client'
 
-import { useState }               from 'react'
+import { useEffect, useState }    from 'react'
 import Link                       from 'next/link'
 import { motion }                 from 'framer-motion'
 import {
@@ -13,15 +13,8 @@ import {
   CheckCircle, Eye, EyeOff, Phone, Zap, Loader2,
 } from 'lucide-react'
 import { useSignup, SIGNUP_STEPS } from '@/lib/hooks/auth/useSignup'
-type ProgramCode = 'BSCS' | 'BSIT' | 'BSIS' | 'BSEMC' | 'BSDA'
-
-const PROGRAMS: Array<{ value: ProgramCode }> = [
-  { value: 'BSCS' },
-  { value: 'BSIT' },
-  { value: 'BSIS' },
-  { value: 'BSEMC' },
-  { value: 'BSDA' },
-]
+import type { SignupProgram }      from '@/lib/hooks/auth/useSignup'
+import { createClient }            from '@/lib/supabase/client'
 
 const YEAR_LEVEL_OPTIONS = [
   { value: 1, label: '1st' },
@@ -31,20 +24,6 @@ const YEAR_LEVEL_OPTIONS = [
   { value: 5, label: '5th' },
 ]
 
-function isProgramCode(value: unknown): value is ProgramCode {
-  return PROGRAMS.some((p) => p.value === value)
-}
-
-function getProgramLabel(code: ProgramCode): string {
-  const labels: Record<ProgramCode, string> = {
-    BSCS: 'Bachelor of Science in Computer Science',
-    BSIT: 'Bachelor of Science in Information Technology',
-    BSIS: 'Bachelor of Science in Information Systems',
-    BSEMC: 'Bachelor of Science in Entertainment and Multimedia Computing',
-    BSDA: 'Bachelor of Science in Data Analytics',
-  }
-  return labels[code]
-}
 import { SignupSuccessModal }  from '@/components/auth/signup/SuccessModal'
 import styles from '../auth.module.css'
 
@@ -88,6 +67,7 @@ const BACK_BTN: React.CSSProperties = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function SignupPage() {
+  const supabase = createClient()
   const {
     state, stepIndex, loading, error, showPw, strength,
     patch, togglePw,
@@ -98,6 +78,29 @@ export default function SignupPage() {
 
   const [showSuccess,  setShowSuccess]  = useState(false)
   const [createdEmail, setCreatedEmail] = useState('')
+  const [emailConfirmationRequired, setEmailConfirmationRequired] = useState(false)
+  const [programs, setPrograms] = useState<SignupProgram[]>([])
+  const [programsLoading, setProgramsLoading] = useState(true)
+  const selectedProgram = state.selectedProgram
+  const maxYear = selectedProgram?.years ?? 4
+
+  useEffect(() => {
+    let mounted = true
+    async function loadPrograms() {
+      setProgramsLoading(true)
+      const { data } = await supabase
+        .from('programs')
+        .select('id, code, name, full_name, major, years, school_id')
+        .order('code')
+      if (!mounted) { return }
+      setPrograms(data ?? [])
+      setProgramsLoading(false)
+    }
+    void loadPrograms()
+    return () => {
+      mounted = false
+    }
+  }, [supabase])
 
   const { title, subtitle } = STEP_META[state.step]
 
@@ -105,6 +108,7 @@ export default function SignupPage() {
     const result = await handleSignupWithReturn()
     if (result.success) {
       setCreatedEmail(state.email)
+      setEmailConfirmationRequired(result.emailConfirmationRequired ?? false)
       setShowSuccess(true)
     }
   }
@@ -114,6 +118,7 @@ export default function SignupPage() {
       {showSuccess && (
         <SignupSuccessModal
           email={createdEmail}
+          emailConfirmationRequired={emailConfirmationRequired}
           onClose={() => setShowSuccess(false)}
         />
       )}
@@ -134,7 +139,7 @@ export default function SignupPage() {
 
           {state.step === 'id' && (
             <div style={{ marginBottom: '0.25rem' }}>
-              <Link href="/" className={styles.backToSite}>← Back to site</Link>
+              <Link href="/welcome" className={styles.backToSite}>← Back to site</Link>
             </div>
           )}
 
@@ -323,26 +328,42 @@ export default function SignupPage() {
               <div className={styles.fieldGroup}>
                 <label className={styles.label}>Program</label>
                 <div className={styles.programGrid}>
-                  {PROGRAMS.map((p) => (
+                  {programs.map((p) => (
                     <button
-                      key={p.value}
+                      key={p.id}
                       type="button"
                       className={[
                         styles.programBtn,
-                        state.programCode === p.value ? styles.programBtnActive : '',
+                        state.programCode === p.code ? styles.programBtnActive : '',
                       ].join(' ')}
-                      onClick={() => patch({ programCode: p.value })}
+                      onClick={() => patch({
+                        programCode: p.code,
+                        selectedProgram: p,
+                        yearLevel: state.yearLevel !== null && state.yearLevel > (p.years ?? 4)
+                          ? null
+                          : state.yearLevel,
+                      })}
                     >
-                      {p.value}
+                      {p.code}
                     </button>
                   ))}
                 </div>
-                {state.programCode && (
+                {programsLoading && (
+                  <p style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'center', margin: '0.35rem 0 0' }}>
+                    Loading programs...
+                  </p>
+                )}
+                {!programsLoading && programs.length === 0 && (
+                  <p style={{ fontSize: '0.75rem', color: '#dc2626', textAlign: 'center', margin: '0.35rem 0 0' }}>
+                    No programs found in database.
+                  </p>
+                )}
+                {selectedProgram && (
                   <p style={{
                     fontSize: '0.75rem', color: '#6366f1',
                     fontWeight: 500, textAlign: 'center', margin: '0.35rem 0 0',
                   }}>
-                    {getProgramLabel(state.programCode as ProgramCode)}
+                    {selectedProgram.full_name}
                   </p>
                 )}
               </div>
@@ -350,7 +371,11 @@ export default function SignupPage() {
               <div className={styles.fieldGroup}>
                 <label className={styles.label}>Year Level</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.4rem' }}>
-                  {YEAR_LEVEL_OPTIONS.map((yr) => {
+                  {Array.from({ length: maxYear }, (_, i) => i + 1).map((year) => {
+                    const yr = YEAR_LEVEL_OPTIONS.find((option) => option.value === year) ?? {
+                      value: year,
+                      label: String(year),
+                    }
                     const active = state.yearLevel === yr.value
                     return (
                       <button
@@ -409,8 +434,8 @@ export default function SignupPage() {
                     { label: 'Phone',      value: state.phone || '—' },
                     {
                       label: 'Program',
-                      value: isProgramCode(state.programCode)
-                        ? getProgramLabel(state.programCode as ProgramCode)
+                      value: selectedProgram
+                        ? selectedProgram.full_name
                         : '—',
                     },
                     {

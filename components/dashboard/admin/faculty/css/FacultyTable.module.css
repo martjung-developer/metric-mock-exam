@@ -200,6 +200,7 @@
   border-color: #fecaca;
 }
 
+/* ── Modal shell ─────────────────────────────────────────────────────────── */
 .modalOverlay {
   position: fixed;
   inset: 0;
@@ -214,11 +215,14 @@
 .modalCard {
   position: relative;
   width: 100%;
-  max-width: 430px;
+  max-width: 460px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
   background: var(--admin-card-bg);
   border: 1px solid var(--admin-border);
   border-radius: 12px;
-  padding: 1rem;
+  padding: 1.25rem;
 }
 
 .modalClose {
@@ -238,10 +242,11 @@
 }
 
 .modalTitle {
-  margin: 0 0 0.75rem;
-  font-size: 0.98rem;
+  margin: 0 0 0.9rem;
+  font-size: 1rem;
   color: var(--admin-text);
   font-weight: 800;
+  padding-right: 1.5rem;
 }
 
 .modalLine {
@@ -252,10 +257,16 @@
 
 .modalLabel {
   display: block;
-  margin: 0.5rem 0 0.3rem;
-  font-size: 0.76rem;
+  margin: 0.9rem 0 0.35rem;
+  font-size: 0.72rem;
   font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   color: var(--admin-text-muted);
+}
+
+.modalLabel:first-of-type {
+  margin-top: 0;
 }
 
 .modalInput {
@@ -264,16 +275,27 @@
   border: 1px solid var(--admin-border);
   background: var(--admin-card-bg);
   color: var(--admin-text);
-  padding: 0.5rem 0.6rem;
-  font-size: 0.82rem;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.85rem;
   font-family: inherit;
+  box-sizing: border-box;
+}
+
+.modalScrollBody {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-right: 0.35rem;
 }
 
 .modalActions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  margin-top: 0.9rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--admin-border);
+  flex-shrink: 0;
 }
 
 .modalBtnSecondary {
@@ -281,7 +303,7 @@
   border: 1px solid var(--admin-border);
   background: var(--admin-card-bg);
   color: var(--admin-text);
-  padding: 0.45rem 0.75rem;
+  padding: 0.5rem 0.85rem;
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
@@ -292,15 +314,117 @@
   border: 1px solid #1e3a5f;
   background: #1e3a5f;
   color: #fff;
-  padding: 0.45rem 0.75rem;
+  padding: 0.5rem 0.85rem;
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
 }
 
+.modalBtnPrimary:disabled,
+.modalBtnSecondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .modalBtnDanger {
   background: #dc2626;
   border-color: #dc2626;
+}
+
+/* ── Role type checklist ─────────────────────────────────────────────────── */
+.modalCheckGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.25rem;
+  border: 1.5px solid var(--admin-border);
+  border-radius: 8px;
+}
+
+.modalCheckItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--admin-text);
+  cursor: pointer;
+}
+
+.modalCheckItem input {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  accent-color: #1e3a5f;
+}
+
+/* ── Program picker ──────────────────────────────────────────────────────── */
+.modalProgramGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  border: 1.5px solid var(--admin-border);
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  margin-bottom: 0.75rem;
+  max-height: 210px;
+  overflow-y: auto;
+}
+
+/* Each program is its own block: the checkbox row on top, and — only when
+   selected — the "Program Head" toggle indented directly beneath it. This
+   avoids the head-toggle crowding into the program label on narrow modals. */
+.programRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px dashed var(--admin-border);
+}
+.programRow:last-child { border-bottom: none; }
+
+.programRow .modalCheckItem {
+  width: 100%;
+  line-height: 1.3;
+}
+
+.programHeadInline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  white-space: nowrap;
+  cursor: pointer;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  background: var(--admin-page-bg);
+  margin-left: 1.7rem;
+}
+.programHeadInline input {
+  width: 13px;
+  height: 13px;
+  accent-color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.hint {
+  font-size: 0.74rem;
+  color: var(--admin-text-muted);
+  display: block;
+  margin: 0.1rem 0 0.5rem;
+  line-height: 1.4;
+}
+
+.fieldError {
+  font-size: 0.72rem;
+  color: #ef4444;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.5rem;
 }
 
 /* ── Empty state ─────────────────────────────────────────────────────────── */
@@ -325,4 +449,10 @@
   color: var(--admin-text-muted);
   margin: 0;
   font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+}
+
+.badgeStack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
 }

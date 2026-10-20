@@ -1,4 +1,8 @@
 // lib/types/student/practice-exams/practice-exam.types.ts
+// ─────────────────────────────────────────────────────────────────────────────
+// CHANGES FROM PREVIOUS VERSION:
+//   + image_url added to PracticeQuestion and Question (raw DB row shape)
+// ─────────────────────────────────────────────────────────────────────────────
 
 import type { QuestionType, QuestionOption, SubmissionStatus } from '@/lib/types/database'
 
@@ -8,11 +12,14 @@ export interface PracticeQuestion {
   id:             string
   question_text:  string
   scenario?:      string | null
+  section_title?: string | null
+  section_number?: number | null
   question_type:  QuestionType
   points:         number
   options:        QuestionOption[] | null
   correct_answer: string | null
   explanation:    string | null
+  image_url:      string | null      // ── ADDED
   order_number:   number | null
 }
 
@@ -72,11 +79,14 @@ export type Question = {
   id: string;
   question_text: string;
   scenario?: string | null;
+  section_title?: string | null;
+  section_number?: number | null;
   question_type: string;
   points: number;
   options: string;
   correct_answer: string;
   explanation: string;
+  image_url?: string | null;      // ── ADDED — raw DB row shape used before mapping
   order_number: number;
 };
 

@@ -67,7 +67,7 @@ export function ExamFiltersBar({
         >
           <option value="all">All Types</option>
           <option value="mock">Mock Exam</option>
-          <option value="practice">Practice Exam</option>
+          <option value="practice">Reviewer</option>
         </select>
       </div>
 

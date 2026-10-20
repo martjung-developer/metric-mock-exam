@@ -33,7 +33,7 @@ export default function ResultsPage() {
     filters, setSearch, setPass, setStatus,
     page, setPage, totalPages, paginated, totalFiltered,
     refresh,
-    historiesByStudentId, histories,
+    historiesByStudentId, histories, areaPerformance, allResults,
   } = useExamResults(examId)
 
   useEffect(() => {
@@ -134,6 +134,22 @@ export default function ResultsPage() {
       {/* ── Summary cards ── */}
       <SummaryCards summary={summary} analytics={analytics} loading={loading} />
 
+      {areaPerformance.length > 0 && (
+        <section className={s.areaPerformance} aria-label="Average performance by area">
+          <h2>Area Performance</h2>
+          <p>Average score by area across released attempts.</p>
+          <div className={s.areaPerformanceGrid}>
+            {areaPerformance.map((area) => (
+              <div key={area.area_title} className={`${s.areaPerformanceItem} ${area.weakest ? s.areaPerformanceWeakest : ''}`}>
+                <div><strong>{area.area_title}</strong>{area.weakest && <span className={s.weakestTag}>Weakest</span>}</div>
+                <span>{area.average_percent.toFixed(1)}%</span>
+                <small>{area.released_attempts} released attempts</small>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ── Status pills ── */}
       <div className={s.statusPills}>
         <div className={`${s.statusPill} ${s.statusPillReviewed}`}>
@@ -172,6 +188,7 @@ export default function ResultsPage() {
           page={page}
           examId={examId}
           historiesByStudentId={historiesByStudentId}
+          durationMinutes={allResults[0]?.duration_minutes ?? null}
         />
         {!loading && (
           <PaginationControls

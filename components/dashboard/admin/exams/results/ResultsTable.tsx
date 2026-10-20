@@ -11,7 +11,8 @@ import React, { useState } from 'react';
 import Link                      from 'next/link'
 import { BarChart2, CheckCircle, XCircle, CheckSquare, Send, ChevronDown, ChevronRight } from 'lucide-react'
 import type { Result, StudentAttemptHistory } from '@/lib/types/admin/exams/results/results.types'
-import { fmtTime, fmtDate, getInitials }      from '@/lib/utils/admin/results/results.utils'
+import { fmtDate, getInitials }      from '@/lib/utils/admin/results/results.utils'
+import { elapsedSeconds, formatDuration } from '@/lib/utils/formatDuration'
 import { AttemptHistoryPanel }               from './AttemptHistoryPanel'
 import s from '@/app/(dashboard)/admin/exams/[examId]/results/results.module.css'
 
@@ -84,11 +85,14 @@ interface ResultRowProps {
   history:     StudentAttemptHistory | undefined
   isExpanded:  boolean
   onToggle:    () => void
+  durationMinutes?: number | null
 }
 
-function ResultRow({ result: r, rank, history, isExpanded, onToggle }: ResultRowProps) {
+function ResultRow({ result: r, rank, history, isExpanded, onToggle, durationMinutes }: ResultRowProps) {
   const hasHistory = history !== undefined && history.attempts.length > 0
   const multiAttempt = hasHistory && history.attempts.length > 1
+  const seconds = elapsedSeconds(r.started_at, r.submitted_at)
+  const tooLong = seconds !== null && durationMinutes !== null && durationMinutes !== undefined && seconds > (durationMinutes + 5) * 60
 
   return (
     <tr
@@ -131,7 +135,11 @@ function ResultRow({ result: r, rank, history, isExpanded, onToggle }: ResultRow
           ? <span className={s.statusReleased}><Send size={11} /> Released</span>
           : <span className={s.statusReviewed}><CheckSquare size={11} /> Reviewed</span>}
       </td>
-      <td><span className={s.timeCell}>{fmtTime(r.time_spent_seconds)}</span></td>
+      <td><span className={s.timeCell}>
+        <span className={tooLong ? s.durationUnavailable : undefined} title={tooLong ? "Exam was left open past its time limit, so active time can't be determined." : undefined}>
+          {formatDuration(tooLong ? null : seconds)}
+        </span>
+      </span></td>
       <td><span className={s.dateCell}>{fmtDate(r.submitted_at)}</span></td>
       <td>
         {hasHistory ? (
@@ -162,6 +170,7 @@ interface ResultsTableProps {
   page:                 number
   examId:               string
   historiesByStudentId: Map<string, StudentAttemptHistory>
+  durationMinutes?: number | null
 }
 
 export function ResultsTable({
@@ -170,6 +179,7 @@ export function ResultsTable({
   page,
   examId,
   historiesByStudentId,
+  durationMinutes,
 }: ResultsTableProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
 
@@ -222,12 +232,14 @@ export function ResultsTable({
                     history={history}
                     isExpanded={isExpanded}
                     onToggle={() => toggleExpand(r.student.id)}
+                    durationMinutes={durationMinutes}
                   />
                   {history !== undefined && (
                     <AttemptHistoryPanel
                       history={history}
                       colSpan={COL_SPAN}
                       isOpen={isExpanded}
+                      durationMinutes={durationMinutes}
                     />
                   )}
                 </React.Fragment>

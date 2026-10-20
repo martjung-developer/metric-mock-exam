@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database }       from '@/lib/types/database'
 import type { ResultRow, PendingRow, SummaryStats, RawResultRow, RawPendingRow } from '@/lib/types/student/results/results.types'
 import { RELEASED_STATUS, PENDING_STATUSES, PAGE_SIZE } from '@/lib/constants/student/results/results'
+import { getValidDurationSeconds } from '@/lib/utils/formatDuration'
 
 
 type TypedClient  = SupabaseClient<Database>
@@ -14,6 +15,9 @@ interface RawStatRow {
   percentage:         number | null
   passed:             boolean | null
   time_spent_seconds: number | null
+  started_at:         string | null
+  submitted_at:       string | null
+  exams: { duration_minutes: number | null } | Array<{ duration_minutes: number | null }> | null
 }
 
 // ── Mapper: raw DB row → domain ResultRow ─────────────────────────────────────
@@ -31,6 +35,8 @@ function mapResultRow(row: RawResultRow): ResultRow {
     status:             row.status,
     time_spent_seconds: row.time_spent_seconds ?? null,
     submitted_at:       row.submitted_at    ?? null,
+    started_at:         row.started_at ?? null,
+    duration_minutes:   row.exams?.duration_minutes ?? null,
   }
 }
 
@@ -42,18 +48,24 @@ export async function fetchStats(
 ): Promise<SummaryStats> {
   const { data } = await client
     .from('submissions')
-    .select('percentage, passed, time_spent_seconds')
+    .select('percentage, passed, time_spent_seconds, started_at, submitted_at, exams ( duration_minutes )')
     .eq('student_id', studentId)
     .eq('status', RELEASED_STATUS)
 
   if (!data || data.length === 0) {
-    return { totalExams: 0, passed: 0, averageScore: null, highestScore: null, totalTimeMinutes: 0 }
+    return { totalExams: 0, passed: 0, averageScore: null, highestScore: null, totalTimeMinutes: 0, totalTimeSeconds: null, validTimeCount: 0 }
   }
 
-  const rows   = data as RawStatRow[]
+  const rows   = data as unknown as RawStatRow[]
   const scores = rows
     .map((r) => r.percentage)
     .filter((v): v is number => v !== null)
+  const validDurations = rows.map((row) => getValidDurationSeconds(
+    row.started_at,
+    row.submitted_at,
+    Array.isArray(row.exams) ? row.exams[0]?.duration_minutes : row.exams?.duration_minutes,
+  )).filter((seconds): seconds is number => seconds !== null)
+  const totalTimeSeconds = validDurations.reduce((sum, seconds) => sum + seconds, 0)
 
   return {
     totalExams:       rows.length,
@@ -62,9 +74,9 @@ export async function fetchStats(
       ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
       : null,
     highestScore:     scores.length > 0 ? Math.round(Math.max(...scores)) : null,
-    totalTimeMinutes: Math.round(
-      rows.reduce((acc, r) => acc + (r.time_spent_seconds ?? 0), 0) / 60,
-    ),
+    totalTimeMinutes: Math.floor(totalTimeSeconds / 60),
+    totalTimeSeconds: validDurations.length > 0 ? totalTimeSeconds : null,
+    validTimeCount: validDurations.length,
   }
 }
 
@@ -112,6 +124,23 @@ export interface FetchResultsReturn {
   error:      string | null
 }
 
+export async function fetchSubmissionStatus(
+  client: TypedClient,
+  submissionId: string,
+): Promise<{ status: string | null; error: string | null }> {
+  const { data, error } = await client
+    .from('submissions')
+    .select('status')
+    .eq('id', submissionId)
+    .single()
+
+  if (error) {
+    return { status: null, error: error.message }
+  }
+
+  return { status: data?.status ?? null, error: null }
+}
+
 export async function fetchResults(
   client: TypedClient,
   params: FetchResultsParams,
@@ -121,8 +150,8 @@ export async function fetchResults(
   let query = client
     .from('submissions')
     .select(
-      `id, exam_id, score, percentage, passed, status, time_spent_seconds, submitted_at,
-       exams ( title, total_points, exam_type, exam_categories ( name ) )`,
+      `id, exam_id, score, percentage, passed, status, time_spent_seconds, started_at, submitted_at,
+       exams ( title, total_points, exam_type, duration_minutes, exam_categories ( name ) )`,
       { count: 'exact' },
     )
     .eq('student_id', studentId)

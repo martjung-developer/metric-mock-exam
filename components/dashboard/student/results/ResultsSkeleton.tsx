@@ -3,21 +3,23 @@ import styles from '@/app/(dashboard)/student/results/results.module.css'
 
 export function ResultsSkeleton() {
   return (
-    <>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <tr key={i}>
-          <td>
-            <div className={styles.skeleton} style={{ height: 13, width: '68%', marginBottom: 6, borderRadius: 5 }} />
-            <div className={styles.skeleton} style={{ height: 10, width: '38%', borderRadius: 5 }} />
-          </td>
-          <td><div className={styles.skeleton} style={{ height: 18, width: 52, borderRadius: 5 }} /></td>
-          <td><div className={styles.skeleton} style={{ height: 8, width: 90, borderRadius: 99 }} /></td>
-          <td><div className={styles.skeleton} style={{ height: 22, width: 66, borderRadius: 99 }} /></td>
-          <td><div className={styles.skeleton} style={{ height: 13, width: 50, borderRadius: 5 }} /></td>
-          <td><div className={styles.skeleton} style={{ height: 13, width: 74, borderRadius: 5 }} /></td>
-          <td><div className={styles.skeleton} style={{ height: 30, width: 78, borderRadius: 8 }} /></td>
-        </tr>
+    <div className={styles.resultGrid}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className={styles.resultSkeletonCard} aria-hidden="true">
+          <div className={styles.resultSkeletonTop} />
+          <div className={styles.resultSkeletonBody}>
+            <div className={`${styles.skeleton} ${styles.resultSkeletonTitle}`} />
+            <div className={`${styles.skeleton} ${styles.resultSkeletonCategory}`} />
+            <div className={`${styles.skeleton} ${styles.resultSkeletonDate}`} />
+            <div className={styles.resultSkeletonMetrics}>
+              <div className={`${styles.skeleton} ${styles.resultSkeletonMetric}`} />
+              <div className={`${styles.skeleton} ${styles.resultSkeletonMetric}`} />
+            </div>
+            <div className={`${styles.skeleton} ${styles.resultSkeletonTime}`} />
+            <div className={`${styles.skeleton} ${styles.resultSkeletonButton}`} />
+          </div>
+        </div>
       ))}
-    </>
+    </div>
   )
 }

@@ -37,10 +37,46 @@ export async function getCurrentUserId(supabase: DB): Promise<string | null> {
 export async function fetchCategories(supabase: DB): Promise<CategoryOption[]> {
   const { data } = await supabase
     .from('exam_categories')
-    .select('id, name')
+    .select('id, name, program_id')
     .order('name')
 
   return (data ?? []) as CategoryOption[]
+}
+
+export async function insertCategory(
+  supabase:  DB,
+  name:      string,
+  programId: string,
+): Promise<CategoryOption> {
+  const trimmed = name.trim()
+  const { data: existing, error: existingError } = await supabase
+    .from('exam_categories')
+    .select('id')
+    .eq('name', trimmed)
+    .eq('program_id', programId)
+    .maybeSingle()
+
+  if (existingError !== null) {
+    throw new Error(existingError.message)
+  }
+  if (existing !== null) {
+    throw new Error('A category with this name already exists for the selected program.')
+  }
+
+  const { data, error } = await supabase
+    .from('exam_categories')
+    .insert({
+      name:       trimmed,
+      program_id: programId,
+    })
+    .select('id, name, program_id')
+    .single()
+
+  if (error !== null || data === null) {
+    throw new Error(error?.message ?? 'Failed to create category.')
+  }
+
+  return data as CategoryOption
 }
 
 // ── buildInsertPayload ────────────────────────────────────────────────────────

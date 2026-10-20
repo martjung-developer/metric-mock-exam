@@ -55,8 +55,8 @@ export default function ForgotPasswordPage() {
         >
           <div className={styles.logoWrap}>
             <Image
-              src="/images/veripraxis-logo.png"
-              alt="VeriPraxis"
+              src="/images/metric-logo.png"
+              alt="M.E.T.R.I.C."
               height={44}
               width={160}
               className={styles.logoImg}

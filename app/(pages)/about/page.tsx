@@ -72,7 +72,7 @@ const TEAM = [
     name:   'Julian Martir',
     role:   'Founder & Lead Developer',
     photo:  '/images/julian.jpg',
-    bio:    'Full-stack developer and former board exam reviewer who built VeriPraxis after failing to find a platform that actually helped.',
+    bio:    'Full-stack developer and former board exam reviewer who built M.E.T.R.I.C. after failing to find a platform that actually helped.',
     loc:    'Bacolod City, PH',
   },
   {
@@ -123,14 +123,14 @@ export default function AboutPage() {
           <div className={styles.heroInner}>
             <motion.div {...heroContainer} className={styles.heroContent}>
               <motion.span {...heroItem} className={styles.heroBadge}>
-                About VeriPraxis
+                About M.E.T.R.I.C.
               </motion.span>
               <motion.h1 {...heroItem} className={styles.heroTitle}>
                 Built for board exam{' '}
                 <span className={styles.heroAccent}>success.</span>
               </motion.h1>
               <motion.p {...heroItem} className={styles.heroSub}>
-                VeriPraxis started as a frustration — the available review tools were
+                M.E.T.R.I.C. started as a frustration — the available review tools were
                 either outdated, inaccurate, or built for everyone except Filipino
                 board exam candidates. So we built our own.
               </motion.p>
@@ -164,7 +164,7 @@ export default function AboutPage() {
             <motion.div className={styles.missionText} {...missionText}>
               <span className={styles.sectionLabel}>Our Story</span>
               <h2 className={styles.sectionTitle}>
-                Why we built VeriPraxis
+                Why we built M.E.T.R.I.C.
               </h2>
               <p className={styles.missionBody}>
                 In 2022, our founder was preparing for his board exam and kept
@@ -173,12 +173,12 @@ export default function AboutPage() {
                 No analytics. No way to know if you were actually improving.
               </p>
               <p className={styles.missionBody}>
-                He built the first version of VeriPraxis for himself. After passing,
+                He built the first version of M.E.T.R.I.C. for himself. After passing,
                 he shared it with his batchmates. Word spread. Within six months,
                 over a hundred reviewees were using it.
               </p>
               <p className={styles.missionBody}>
-                Today, VeriPraxis serves thousands of Filipino professionals across
+                Today, M.E.T.R.I.C. serves thousands of Filipino professionals across
                 12 PRC programs — and we&#39;re just getting started.
               </p>
               <div className={styles.missionQuote}>
@@ -241,7 +241,7 @@ export default function AboutPage() {
               Every Filipino professional deserves a review tool
               that actually works.
             </blockquote>
-            <div className={styles.photoBreakAuthor}>— The VeriPraxis Team</div>
+            <div className={styles.photoBreakAuthor}>— The M.E.T.R.I.C. Team</div>
           </motion.div>
         </section>
 
@@ -250,7 +250,7 @@ export default function AboutPage() {
           <div className={styles.teamInner}>
             <div className={styles.sectionHeader}>
               <span className={styles.sectionLabel}>The People</span>
-              <h2 className={styles.sectionTitle}>Who builds VeriPraxis</h2>
+              <h2 className={styles.sectionTitle}>Who builds M.E.T.R.I.C.</h2>
               <p className={styles.sectionSub}>
                 A small, focused team of developers, educators, and licensed
                 professionals — all with a stake in helping you pass.

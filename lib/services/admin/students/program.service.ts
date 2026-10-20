@@ -17,13 +17,14 @@ type AppClient = SupabaseClient<Database>
 interface ProgramScope {
   schoolId: string | null
   programId: string | null
+  role: 'admin' | 'faculty' | 'other'
 }
 
 async function getProgramScope(client: AppClient): Promise<ProgramScope> {
   const { data: userRes } = await client.auth.getUser()
   const userId = userRes.user?.id ?? null
   if (!userId) {
-    return { schoolId: null, programId: null }
+    return { schoolId: null, programId: null, role: 'other' }
   }
 
   const { data: profile } = await client
@@ -42,6 +43,7 @@ async function getProgramScope(client: AppClient): Promise<ProgramScope> {
     return {
       schoolId: facultyRow?.school_id ?? null,
       programId: facultyRow?.program_id ?? null,
+      role: 'faculty',
     }
   }
 
@@ -51,7 +53,11 @@ async function getProgramScope(client: AppClient): Promise<ProgramScope> {
     .eq('user_id', userId)
     .maybeSingle()
 
-  return { schoolId: adminRow?.school_id ?? null, programId: null }
+  return {
+    schoolId: adminRow?.school_id ?? null,
+    programId: null,
+    role: profile?.role === 'admin' ? 'admin' : 'other',
+  }
 }
 
 /**
@@ -62,6 +68,10 @@ export async function getPrograms(
   client: AppClient,
 ): Promise<FetchProgramsResult> {
   const scope = await getProgramScope(client)
+  if ((scope.role === 'admin' || scope.role === 'faculty') && !scope.schoolId) {
+    return { programs: [], error: null }
+  }
+
   let query = client
     .from('programs')
     .select('id, code, name')

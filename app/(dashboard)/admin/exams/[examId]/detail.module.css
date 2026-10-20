@@ -402,3 +402,42 @@
   .statsGrid { grid-template-columns: repeat(2,1fr); }
   .heading { font-size: 1.15rem; }
 }
+
+:global(html.dark) .page {
+  --bg: #0d1420;
+  --surface: #111a2b;
+  --surface-soft: #172338;
+  --surface-tint: #172338;
+  --border: #243247;
+  --border-soft: #243247;
+  --text: #e6edf7;
+  --text-sub: #9db0ca;
+  --text-muted: #9db0ca;
+  --primary-pale: rgba(37, 99, 235, 0.14);
+  --primary-tint: rgba(96, 165, 250, 0.28);
+  --success-pale: rgba(5, 150, 105, 0.14);
+  --warning-pale: rgba(217, 119, 6, 0.16);
+  --danger-pale: rgba(220, 38, 38, 0.14);
+  --accent-pale: rgba(124, 58, 237, 0.14);
+  --skel-base: #172338;
+  --skel-shine: #243247;
+  --shadow-card: none;
+  --shadow-btn: none;
+}
+
+:global(html.dark) .cardHeader,
+:global(html.dark) .navItem:hover,
+:global(html.dark) .editModalHeader,
+:global(html.dark) .editModalFooter,
+:global(html.dark) .detailRow {
+  background: #172338;
+}
+
+:global(html.dark) .editInput:focus,
+:global(html.dark) .editTextarea:focus {
+  background: #111a2b;
+}
+
+:global(html.dark) .editModalClose {
+  color: #9db0ca;
+}

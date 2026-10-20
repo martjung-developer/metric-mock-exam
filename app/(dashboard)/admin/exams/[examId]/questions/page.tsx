@@ -13,10 +13,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, HelpCircle, Key, Plus } from 'lucide-react'
+import { ArrowLeft, HelpCircle, Key, Plus, Trash2 } from 'lucide-react'
 
 import { useQuestions }     from '@/lib/hooks/admin/exams/questions/useQuestions'
 import { useQuestionForm }  from '@/lib/hooks/admin/exams/questions/useQuestionForm'
+import * as QuestionsService from '@/lib/services/admin/exams/questions/questions.service'
 import {
   filterQuestions,
   groupQuestions,
@@ -55,6 +56,12 @@ export default function QuestionsPage(): JSX.Element {
     createQuestion,
     updateQuestion,
     deleteQuestion,
+    selectedQuestionIds,
+    toggleQuestionSelection,
+    setSelectedQuestions,
+    clearQuestionSelection,
+    deleteSelectedQuestions,
+    bulkDeleting,
   } = useQuestions(examId)
 
   // ── Form layer ─────────────────────────────────────────────────────────────
@@ -69,6 +76,7 @@ export default function QuestionsPage(): JSX.Element {
     setPoints,
     setExplanation,
     setCorrectAnswer,
+    setImageUrl,
     handleTypeChange,
     handleOptionText,
     addOption,
@@ -83,7 +91,10 @@ export default function QuestionsPage(): JSX.Element {
   const [deleteTarget,  setDeleteTarget]  = useState<Question | null>(null)
   const [deleting,      setDeleting]      = useState(false)
   const [saving,        setSaving]        = useState(false)
+  const [imageUploading, setImageUploading] = useState(false)
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null)
   const [page,          setPage]          = useState(1)
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
 
   const QUESTIONS_PER_PAGE = 30
 
@@ -163,6 +174,25 @@ export default function QuestionsPage(): JSX.Element {
     setSaving(false)
   }, [validateAndGetPayload, modalMode, updateQuestion, createQuestion, closeModal])
 
+  const handleImageFile = useCallback(async (file: File) => {
+    setImageUploadError(null)
+    setImageUploading(true)
+    const { data, error: uploadError } = await QuestionsService.uploadQuestionImage(examId, file)
+    setImageUploading(false)
+
+    if (uploadError || !data) {
+      setImageUploadError(uploadError ?? 'Could not upload image.')
+      return
+    }
+
+    setImageUrl(data)
+  }, [examId, setImageUrl])
+
+  const handleImageRemove = useCallback(() => {
+    setImageUploadError(null)
+    setImageUrl('')
+  }, [setImageUrl])
+
   // ── Delete confirm ─────────────────────────────────────────────────────────
 
   const handleDeleteConfirm = useCallback(async () => {
@@ -224,21 +254,44 @@ export default function QuestionsPage(): JSX.Element {
         onSearchChange={(value) => {
           setSearch(value)
           setPage(1)
+          clearQuestionSelection()
         }}
         onTypeFilterChange={(value) => {
           setTypeFilter(value)
           setPage(1)
+          clearQuestionSelection()
         }}
         onExpandAll={expandAll}
         onCollapseAll={collapseAll}
       />
 
-      {!loading && filtered.length > 0 && (
+      <div className={s.bulkSelectionBar}>
+        <label>
+          <input
+            type="checkbox"
+            aria-label="Select all current filtered results"
+            checked={filtered.length > 0 && filtered.every((question) => selectedQuestionIds.has(question.id))}
+            onChange={(event) => setSelectedQuestions(event.target.checked ? filtered.map((question) => question.id) : [])}
+          />
+          Select all current filtered results
+        </label>
+        {selectedQuestionIds.size > 0 && (
+          <div className={s.bulkSelectionActions}>
+            <span>{selectedQuestionIds.size} selected</span>
+            <button onClick={clearQuestionSelection}>Clear selection</button>
+            <button className={s.bulkDeleteButton} onClick={() => setConfirmBulkDelete(true)}>
+              <Trash2 size={13} /> Delete selected
+            </button>
+          </div>
+        )}
+      </div>
+
+      {!loading && (
         <div className={s.paginationBar}>
           <p className={s.paginationInfo}>
-            Showing {(safePage - 1) * QUESTIONS_PER_PAGE + 1}-{Math.min(safePage * QUESTIONS_PER_PAGE, filtered.length)} of {filtered.length}
+            Showing {filtered.length === 0 ? 0 : (safePage - 1) * QUESTIONS_PER_PAGE + 1}-{Math.min(safePage * QUESTIONS_PER_PAGE, filtered.length)} of {filtered.length}
           </p>
-          <div className={s.paginationControls}>
+          {filtered.length > 0 && <div className={s.paginationControls}>
             <button
               className={s.pageBtn}
               onClick={goPrevPage}
@@ -254,7 +307,7 @@ export default function QuestionsPage(): JSX.Element {
             >
               Next
             </button>
-          </div>
+          </div>}
         </div>
       )}
 
@@ -269,6 +322,8 @@ export default function QuestionsPage(): JSX.Element {
         onAddFirst={() => openCreate()}
         onEdit={(q) => openEdit(q)}
         onDelete={(q) => setDeleteTarget(q)}
+        selected={selectedQuestionIds}
+        onToggleSelect={toggleQuestionSelection}
       />
 
       {/* Create / Edit Modal */}
@@ -286,6 +341,10 @@ export default function QuestionsPage(): JSX.Element {
           onPointsChange={setPoints}
           onExplChange={setExplanation}
           onAnswerChange={setCorrectAnswer}
+          onImageFile={handleImageFile}
+          onImageRemove={handleImageRemove}
+          imageUploading={imageUploading}
+          imageUploadError={imageUploadError}
           onOptionText={handleOptionText}
           onAddOption={addOption}
           onRemoveOption={removeOption}
@@ -300,6 +359,31 @@ export default function QuestionsPage(): JSX.Element {
           onConfirm={handleDeleteConfirm}
           onCancel={() => setDeleteTarget(null)}
         />
+      )}
+
+      {confirmBulkDelete && (
+        <div className={s.modalOverlay}>
+          <div className={s.deleteModal} role="dialog" aria-modal="true" aria-labelledby="bulk-delete-title">
+            <div className={s.deleteModalIcon}><Trash2 size={22} color="var(--danger)" /></div>
+            <h2 id="bulk-delete-title" className={s.modalTitle}>Delete selected questions?</h2>
+            <p className={s.deleteModalBody}>
+              Permanently delete {selectedQuestionIds.size} selected question{selectedQuestionIds.size === 1 ? '' : 's'}?
+            </p>
+            <div className={s.modalActions}>
+              <button className={s.btnSecondary} onClick={() => setConfirmBulkDelete(false)}>Cancel</button>
+              <button
+                className={s.btnDanger}
+                disabled={bulkDeleting}
+                onClick={async () => {
+                  const deleted = await deleteSelectedQuestions()
+                  if (deleted) { setConfirmBulkDelete(false) }
+                }}
+              >
+                {bulkDeleting ? 'Deleting…' : <><Trash2 size={13} /> Delete {selectedQuestionIds.size}</>}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

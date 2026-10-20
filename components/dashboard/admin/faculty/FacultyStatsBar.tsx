@@ -14,25 +14,35 @@ export default function FacultyStatsBar({ faculty }: FacultyStatsBarProps) {
   const active   = faculty.filter((f) => f.is_active).length
   const inactive = total - active
 
+  const programHeads = faculty.filter((f) =>
+    f.programs.some((p) => p.is_program_head),
+  ).length
+
   const byRole: Record<FacultyRoleType, number> = {
     professional: 0,
     major:        0,
     minor:        0,
   }
 
+  // A faculty member can hold multiple role types at once, so each of their
+  // role_types contributes to that role's count — counts are not mutually
+  // exclusive and won't sum to `total`.
   faculty.forEach((f) => {
-    if (f.role_type && f.role_type in byRole) {
-      byRole[f.role_type as FacultyRoleType]++
-    }
+    (f.role_types ?? []).forEach((role) => {
+      if (role in byRole) {
+        byRole[role]++
+      }
+    })
   })
 
   const stats = [
-    { label: 'Total Faculty',           value: total,    color: '#3b82f6' },
-    { label: 'Active',                   value: active,   color: '#10b981' },
-    { label: 'Inactive',                 value: inactive, color: '#ef4444' },
+    { label: 'Total Faculty',              value: total,       color: '#3b82f6' },
+    { label: 'Active',                      value: active,      color: '#10b981' },
+    { label: 'Inactive',                    value: inactive,    color: '#ef4444' },
+    { label: 'Program Heads',               value: programHeads, color: '#8b5cf6' },
     { label: ROLE_TYPE_LABELS.professional, value: byRole.professional, color: '#6366f1' },
-    { label: ROLE_TYPE_LABELS.major,     value: byRole.major,  color: '#059669' },
-    { label: ROLE_TYPE_LABELS.minor,     value: byRole.minor,  color: '#d97706' },
+    { label: ROLE_TYPE_LABELS.major,        value: byRole.major,  color: '#059669' },
+    { label: ROLE_TYPE_LABELS.minor,        value: byRole.minor,  color: '#d97706' },
   ]
 
   return (

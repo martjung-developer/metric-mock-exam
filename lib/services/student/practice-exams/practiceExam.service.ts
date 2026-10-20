@@ -1,8 +1,4 @@
 // lib/services/student/practice-exams/practiceExam.service.ts
-//
-// All Supabase calls for the practice exam flow.
-// Writes to the SAME submissions + answers tables as mock exams so that
-// admin submissions/results pages see practice attempts automatically.
 
 import { createClient }          from '@/lib/supabase/client'
 import type {
@@ -59,7 +55,10 @@ export async function fetchPracticeQuestions(
 ): Promise<{ questions: PracticeQuestion[]; error: string | null }> {
   const { data, error } = await supabase
     .from('questions')
-    .select('id, question_text, scenario, question_type, points, options, correct_answer, explanation, order_number')
+    // ── CHANGED: added image_url — this column already existed and was
+    // already being populated on import/create, but was never selected
+    // here, so reviewers silently dropped every question's image.
+    .select('id, question_text, scenario, section_title, section_number, question_type, points, options, correct_answer, explanation, image_url, order_number')
     .eq('exam_id', examId)
     .order('order_number', { ascending: true, nullsFirst: false })
     .abortSignal(signal)
@@ -70,11 +69,14 @@ export async function fetchPracticeQuestions(
     id:             q.id,
     question_text:  q.question_text,
     scenario:       q.scenario ?? null,
+    section_title:  q.section_title ?? null,
+    section_number: q.section_number ?? null,
     question_type:  q.question_type as QuestionType,
     points:         q.points,
     options:        parseOptions(q.options),
     correct_answer: q.correct_answer,
     explanation:    q.explanation,
+    image_url:      q.image_url ?? null,   // ── ADDED
     order_number:   q.order_number,
   }))
 

@@ -18,7 +18,7 @@ export default function CreateExamPage() {
     form, errors, submitting, success, submitError, setField, submit,
   } = useCreateExam()
 
-  const { categories, programs, catLoading } = useExamCategories()
+  const { categories, programs, catLoading, addCategory } = useExamCategories()
 
   return (
     <div className={s.page}>
@@ -47,6 +47,7 @@ export default function CreateExamPage() {
         success={success}
         submitError={submitError}
         setField={setField}
+        addCategory={addCategory}
         onSubmit={submit}
       />
     </div>

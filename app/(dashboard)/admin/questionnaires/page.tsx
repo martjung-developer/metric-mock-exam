@@ -13,13 +13,14 @@
 
 'use client'
 
-import { useEffect }       from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter }       from 'next/navigation'
 import {
   FileText, Plus, Search, X, Upload,
   AlertTriangle, GraduationCap, Layers,
   HelpCircle, ListChecks, CheckCircle2,
   BarChart2, ArrowLeft, RefreshCw,
+  Trash2,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -50,6 +51,7 @@ export default function QuestionnairesPage() {
   const router = useRouter()
   const { user, profile, loading: authLoading } = useUser()
   const q = useQuestionnaires()
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
 
   // ── Auth guard ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -128,7 +130,7 @@ export default function QuestionnairesPage() {
         </motion.div>
 
         {/* Type summary strip */}
-        <motion.div className={styles.typeSummaryStrip} variants={childVariants}>
+        <div className={styles.typeSummaryStrip}>
           {TYPE_ORDER.map((t) => {
             const count = q.questionsByType[t].length
             const c     = TYPE_COLORS[t]
@@ -141,10 +143,10 @@ export default function QuestionnairesPage() {
               </div>
             )
           })}
-        </motion.div>
+        </div>
 
         {/* Search */}
-        <motion.div variants={childVariants} style={{ marginBottom: '1.25rem' }}>
+        <motion.div variants={childVariants} className={styles.questionFilters}>
           <div className={styles.searchWrap} style={{ maxWidth: 420 }}>
             <Search size={15} className={styles.searchIcon} />
             <input
@@ -159,10 +161,47 @@ export default function QuestionnairesPage() {
               </button>
             )}
           </div>
+          <select
+            className={styles.examFilter}
+            aria-label="Filter by exam or topic"
+            value={q.examFilter}
+            onChange={(e) => q.setExamFilter(e.target.value)}
+          >
+            <option value="">All topics</option>
+            {q.exams
+              .filter((exam) => exam.program_id === selectedProgram.id)
+              .map((exam) => (
+                <option key={exam.id} value={exam.id}>{exam.title}</option>
+              ))}
+          </select>
+          <span className={styles.resultCount}>
+            Showing {q.programDetailQuestions.length} of {q.questionsByProgram[selectedProgram.id]?.length ?? 0}
+          </span>
         </motion.div>
 
+        <div className={styles.bulkSelectionBar}>
+          {q.selectedQuestionCount > 0 && (
+            <div className={styles.bulkSelectionActions}>
+              <span>{q.selectedQuestionCount} selected</span>
+              <button onClick={q.clearQuestionSelection}>Clear selection</button>
+              <button className={styles.bulkDeleteButton} onClick={() => setConfirmBulkDelete(true)}>
+                <Trash2 size={13} /> Delete selected
+              </button>
+            </div>
+          )}
+        </div>
+
+        {q.bulkDeleteMessage && (
+          <p
+            className={`${styles.bulkDeleteMessage} ${q.bulkDeleteMessage.type === 'success' ? styles.bulkDeleteSuccess : styles.bulkDeleteError}`}
+            role={q.bulkDeleteMessage.type === 'error' ? 'alert' : 'status'}
+          >
+            {q.bulkDeleteMessage.message}
+          </p>
+        )}
+
         {/* Questions by type */}
-        <motion.div className={styles.typeSections} variants={childVariants}>
+        <div className={styles.typeSections}>
           {TYPE_ORDER.map((t) => (
             <QuestionTypeSection
               key={t}
@@ -172,9 +211,38 @@ export default function QuestionnairesPage() {
               onView={q.setViewQ}
               onEdit={q.openEdit}
               onDelete={q.setDeleteId}
+              selected={q.selectedQuestionIds}
+              onToggleSelect={q.toggleQuestionSelection}
+              allSelected={q.programDetailQuestions.length > 0 && q.selectedQuestionCount === q.programDetailQuestions.length}
+              onSelectAll={(selected) => q.setSelectedQuestions(selected ? q.programDetailQuestions.map((question) => question.id) : [])}
             />
           ))}
-        </motion.div>
+        </div>
+
+        {confirmBulkDelete && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.deleteModal} role="dialog" aria-modal="true" aria-labelledby="bank-bulk-delete-title">
+              <div className={styles.deleteIcon}><Trash2 size={22} color="#dc2626" /></div>
+              <p id="bank-bulk-delete-title" className={styles.deleteTitle}>Delete selected questions?</p>
+              <p className={styles.deleteBody}>
+                Permanently delete {q.selectedQuestionCount} selected question{q.selectedQuestionCount === 1 ? '' : 's'}?
+              </p>
+              <div className={styles.deleteActions}>
+                <button className={styles.btnSecondary} onClick={() => setConfirmBulkDelete(false)} disabled={q.bulkDeleting}>Cancel</button>
+                <button
+                  className={styles.btnDanger}
+                  disabled={q.bulkDeleting}
+                  onClick={async () => {
+                    const deleted = await q.deleteSelectedQuestions()
+                    if (deleted) { setConfirmBulkDelete(false) }
+                  }}
+                >
+                  <Trash2 size={13} /> {q.bulkDeleting ? 'Deleting…' : `Delete ${q.selectedQuestionCount}`}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {modals}
       </motion.div>
@@ -252,7 +320,7 @@ export default function QuestionnairesPage() {
       </motion.div>
 
       {/* Programs grid */}
-      <motion.div className={styles.programsGrid} variants={childVariants}>
+      <div className={styles.programsGrid}>
         {q.loading ? (
           Array.from({ length: q.programs.length || 9 }).map((_, i) => (
             <div key={i} className={styles.programCardSkeleton}>
@@ -278,7 +346,7 @@ export default function QuestionnairesPage() {
             />
           ))
         )}
-      </motion.div>
+      </div>
 
       {modals}
     </motion.div>

@@ -11,6 +11,39 @@ interface ReviewBody {
   entityType?: ApprovalEntityType
 }
 
+async function getApprovalProgramScope(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<{ ok: true; programId: string | null } | { ok: false }> {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single()
+
+  if (profile?.role === 'admin') {
+    return { ok: true, programId: null }
+  }
+
+  if (profile?.role === 'faculty') {
+    const { data: faculty } = await supabase
+      .from('faculty')
+      .select('program_id, is_program_head')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (faculty?.is_program_head && faculty.program_id) {
+      return { ok: true, programId: faculty.program_id }
+    }
+  }
+
+  return { ok: false }
+}
+
+function isOutOfScope(rowProgramId: string | null | undefined, scopeProgramId: string | null): boolean {
+  return Boolean(scopeProgramId && rowProgramId !== scopeProgramId)
+}
+
 function buildChoices(options: unknown): { label: string; text: string }[] {
   if (!Array.isArray(options)) {
     return []
@@ -54,12 +87,8 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-  if (!profile || profile.role !== 'admin') {
+  const scope = await getApprovalProgramScope(supabase, user.id)
+  if (!scope.ok) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -75,7 +104,7 @@ export async function GET(
     const { data: bank, error: bankError } = await supabase
       .from('question_banks')
       .select(`
-        id, title, approval_status, submitted_at, submitted_by, exam_id,
+        id, title, program_id, approval_status, submitted_at, submitted_by, exam_id,
         programs ( code, name ),
         profiles!question_banks_submitted_by_fkey ( full_name, avatar_url )
       `)
@@ -84,6 +113,9 @@ export async function GET(
 
     if (bankError || !bank) {
       return NextResponse.json({ error: bankError?.message ?? 'Question bank not found.' }, { status: 404 })
+    }
+    if (isOutOfScope(bank.program_id, scope.programId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { data: questions, error: qError } = await supabase
@@ -135,7 +167,7 @@ export async function GET(
     const { data: exam, error: examError } = await supabase
       .from('exams')
       .select(`
-        id, title, approval_status, submitted_at, submitted_by, duration_minutes, passing_score, exam_type,
+        id, title, program_id, approval_status, submitted_at, submitted_by, duration_minutes, passing_score, exam_type,
         programs ( code, name ),
         exam_categories ( name ),
         profiles!exams_submitted_by_fkey ( full_name, avatar_url )
@@ -145,6 +177,9 @@ export async function GET(
 
     if (examError || !exam) {
       return NextResponse.json({ error: examError?.message ?? 'Exam not found.' }, { status: 404 })
+    }
+    if (isOutOfScope(exam.program_id, scope.programId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { data: questions, error: qError } = await supabase
@@ -209,13 +244,8 @@ export async function PATCH(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || profile.role !== 'admin') {
+  const scope = await getApprovalProgramScope(supabase, user.id)
+  if (!scope.ok) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -229,6 +259,20 @@ export async function PATCH(
   }
 
   try {
+    const sourceTable = entityType === 'question_bank' ? 'question_banks' : 'exams'
+    const { data: targetRow, error: targetError } = await supabase
+      .from(sourceTable)
+      .select('program_id')
+      .eq('id', id)
+      .single()
+
+    if (targetError || !targetRow) {
+      return NextResponse.json({ error: targetError?.message ?? 'Content not found.' }, { status: 404 })
+    }
+    if (isOutOfScope(targetRow.program_id, scope.programId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     await reviewAction(
       supabase,
       {
@@ -240,7 +284,6 @@ export async function PATCH(
       user.id,
     )
 
-    const sourceTable = entityType === 'question_bank' ? 'question_banks' : 'exams'
     const { data: row } = await supabase
       .from(sourceTable)
       .select('submitted_by, approval_status')

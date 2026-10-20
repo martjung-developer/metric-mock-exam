@@ -57,7 +57,7 @@ export default function ExamsPage() {
           <div>
             <h1 className={s.heading}>Exams</h1>
             <p className={s.headingSub}>
-              Manage mock exams, practice sets, and assignments
+              Manage mock exams, reviewers, and assignments
             </p>
           </div>
         </div>

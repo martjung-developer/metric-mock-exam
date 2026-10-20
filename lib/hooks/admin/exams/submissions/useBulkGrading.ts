@@ -16,8 +16,10 @@
 import { useState, useCallback, useMemo } from 'react'
 import { createClient }          from '@/lib/supabase/client'
 import * as SubmissionService    from '@/lib/services/admin/exams/submissions/submission.service'
-import { gradeAnswer, computeScore } from '@/lib/utils/admin/submissions/grading'
+import * as ExamService          from '@/lib/services/admin/exams/submissions/exam.service'
+import { gradeAnswer, computeScore, computeTosScore } from '@/lib/utils/admin/submissions/grading'
 import { GRADEABLE_STATUSES, RELEASABLE_STATUSES } from '@/lib/utils/admin/submissions/constants'
+import { createNotification } from '@/lib/services/notifications/notification.service'
 import type {
   Submission,
   GradingMode,
@@ -35,9 +37,12 @@ interface BulkAnsRaw {
   question_id: string | null
   answer_text: string | null
   questions: {
+    question_text:  string
     question_type:  string
     points:         number
     correct_answer: string | null
+    section_title:  string | null
+    section_number: number | null
   } | null
 }
 
@@ -48,6 +53,7 @@ interface BulkAnsRaw {
 export interface UseBulkGradingReturn {
   bulkGrading:  boolean
   bulkProgress: { done: number; total: number } | null
+  tosErrors:    string[]
   bulkGradeAll: (
     submissions: Submission[],
     examInfo:    ExamInfo,
@@ -61,6 +67,7 @@ export function useBulkGrading(): UseBulkGradingReturn {
   const supabase = useMemo(() => createClient(), [])
   const [bulkGrading,  setBulkGrading]  = useState(false)
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null)
+  const [tosErrors, setTosErrors] = useState<string[]>([])
 
   const bulkGradeAll = useCallback(async (
     submissions: Submission[],
@@ -74,8 +81,30 @@ export function useBulkGrading(): UseBulkGradingReturn {
     const gradeable = submissions.filter(s => GRADEABLE_STATUSES.includes(s.status))
     if (!gradeable.length) {return}
 
+    setTosErrors([])
     setBulkGrading(true)
     setBulkProgress({ done: 0, total: gradeable.length })
+
+    const { data: examRef, error: examRefError } = await supabase
+      .from('submissions')
+      .select('exam_id')
+      .eq('id', gradeable[0].id)
+      .single()
+    if (examRefError || !examRef?.exam_id) {
+      setTosErrors([examRefError?.message ?? 'Could not determine the exam for TOS scoring.'])
+      setBulkGrading(false)
+      setBulkProgress(null)
+      return
+    }
+
+    const tosAreasResult = await ExamService.getTosAreas(supabase, examRef.exam_id)
+    if (tosAreasResult.error) {
+      setTosErrors([tosAreasResult.error])
+      setBulkGrading(false)
+      setBulkProgress(null)
+      return
+    }
+    const tosAreas = tosAreasResult.data ?? []
 
     const VALID_TYPES = new Set<string>([
       'multiple_choice', 'true_false', 'short_answer', 'essay', 'matching', 'fill_blank',
@@ -88,7 +117,7 @@ export function useBulkGrading(): UseBulkGradingReturn {
         .from('answers')
         .select(
           'id, question_id, answer_text, ' +
-          'questions:question_id ( question_type, points, correct_answer )',
+          'questions:question_id ( question_text, question_type, points, correct_answer, section_title, section_number )',
         )
         .eq('submission_id', sub.id)
 
@@ -98,10 +127,27 @@ export function useBulkGrading(): UseBulkGradingReturn {
       }
 
       let totalEarned = 0
+      let missingQuestionCount = 0
+      const answerUpdates: Array<{
+        id: string
+        is_correct: boolean | null
+        points_earned: number
+      }> = []
+      const questionsForTos: Array<{
+        question_text: string
+        section_title: string | null
+        section_number: number | null
+        points: number
+        points_earned: number
+      }> = []
 
       for (const row of ansData as unknown as BulkAnsRaw[]) {
         const q = row.questions
-        if (!q || !VALID_TYPES.has(q.question_type)) {continue}
+        if (!q) {
+          missingQuestionCount += 1
+          continue
+        }
+        if (!VALID_TYPES.has(q.question_type)) {continue}
 
         const qType = q.question_type as QuestionType
         const key   = gradingMode === 'manual'
@@ -112,13 +158,57 @@ export function useBulkGrading(): UseBulkGradingReturn {
           row.answer_text, key, qType, q.points,
         )
         totalEarned += points_earned
-
-        await SubmissionService.updateAnswer(supabase, row.id, { is_correct, points_earned })
+        if (tosAreas.length === 0) {
+          await SubmissionService.updateAnswer(supabase, row.id, { is_correct, points_earned })
+        } else {
+          answerUpdates.push({ id: row.id, is_correct, points_earned })
+        }
+        questionsForTos.push({
+          question_text: q.question_text,
+          section_title: q.section_title,
+          section_number: q.section_number,
+          points: q.points,
+          points_earned,
+        })
       }
 
-      const { percentage, passed } = computeScore(
-        totalEarned, examInfo.total_points, examInfo.passing_score,
-      )
+      let percentage: number
+      let passed: boolean
+      if (tosAreas.length > 0) {
+        const tosScore = computeTosScore(
+          questionsForTos,
+          tosAreas,
+          examInfo.total_points,
+          examInfo.passing_score,
+        )
+        const validationErrors = [...tosScore.validation_errors]
+        if (missingQuestionCount > 0) {
+          validationErrors.push(`${missingQuestionCount} answer(s) could not be matched to a question area.`)
+        }
+        if (validationErrors.length > 0 || tosScore.weighted_percentage === null || tosScore.passed === null) {
+          setTosErrors(validationErrors.length > 0
+            ? validationErrors
+            : ['TOS scoring could not produce a valid result.'])
+          setBulkGrading(false)
+          setBulkProgress(null)
+          return
+        }
+        percentage = tosScore.weighted_percentage
+        passed = tosScore.passed
+      } else {
+        const legacyScore = computeScore(totalEarned, examInfo.total_points, examInfo.passing_score)
+        percentage = legacyScore.percentage
+        passed = legacyScore.passed
+      }
+
+      if (tosAreas.length > 0) {
+        for (const answerUpdate of answerUpdates) {
+          await SubmissionService.updateAnswer(supabase, answerUpdate.id, {
+            is_correct: answerUpdate.is_correct,
+            points_earned: answerUpdate.points_earned,
+          })
+        }
+      }
 
       // FIX G: use satisfies for compile-time type safety
       const patch = {
@@ -143,7 +233,7 @@ export function useBulkGrading(): UseBulkGradingReturn {
     setBulkProgress(null)
   }, [supabase])
 
-  return { bulkGrading, bulkProgress, bulkGradeAll }
+  return { bulkGrading, bulkProgress, tosErrors, bulkGradeAll }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -192,6 +282,24 @@ export function useReleaseResults(): UseReleaseResultsReturn {
         console.error('[releaseResults] failed:', sub.id, error?.message ?? 'no row returned')
         failed.push(sub.id)
         continue
+      }
+
+      const { data: meta } = await supabase
+        .from('submissions')
+        .select('student_id, exams(title)')
+        .eq('id', sub.id)
+        .single()
+
+      const studentProfileId = meta?.student_id ?? null
+      const examTitle = (meta?.exams as { title?: string } | null)?.title ?? 'your exam'
+
+      if (studentProfileId) {
+        await createNotification(supabase, {
+          userId: studentProfileId,
+          type: 'result_released',
+          title: 'Your results are ready!',
+          message: `Your results for ${examTitle} have been released. Tap to review your answers and score. [submission_id:${sub.id}]`,
+        })
       }
 
       onUpdate(sub.id, { status: 'released' })

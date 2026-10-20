@@ -34,8 +34,8 @@ const FAQ_CATEGORIES = [
     title: 'Getting Started',
     faqs: [
       {
-        q: 'What is VeriPraxis and who is it for?',
-        a: 'VeriPraxis is a mock exam platform designed specifically for Filipino professionals preparing for PRC licensure board exams. We currently support nursing, engineering, accountancy, and other major programs.',
+        q: 'What is M.E.T.R.I.C. and who is it for?',
+        a: 'M.E.T.R.I.C. is a mock exam platform designed specifically for Filipino professionals preparing for PRC licensure board exams. We currently support nursing, engineering, accountancy, and other major programs.',
       },
       {
         q: 'How do I create an account?',
@@ -79,7 +79,7 @@ const FAQ_CATEGORIES = [
       },
       {
         q: 'Do you offer student or group discounts?',
-        a: 'We offer discounts for registered review centers and bulk enrollments. Contact us at support@veripraxis.ph for pricing details.',
+        a: 'We offer discounts for registered review centers and bulk enrollments. Contact us at support@metric.ph for pricing details.',
       },
     ],
   },
@@ -89,7 +89,7 @@ const FAQ_CATEGORIES = [
     faqs: [
       {
         q: "The exam isn't loading — what should I do?",
-        a: 'Try refreshing the page or clearing your browser cache. VeriPraxis works best on Chrome, Edge, or Firefox. If the issue persists, contact us via the chat widget or email support@veripraxis.ph.',
+        a: 'Try refreshing the page or clearing your browser cache. M.E.T.R.I.C. works best on Chrome, Edge, or Firefox. If the issue persists, contact us via the chat widget or email support@metric.ph.',
       },
       {
         q: 'I found a question with an error. How do I report it?',

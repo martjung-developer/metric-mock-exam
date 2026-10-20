@@ -92,6 +92,8 @@ export function useStudentDashboard(): UseDashboardReturn {
   // Initial fetch (and re-fetch when auth resolves)
   useEffect(() => {
     if (authLoading) {return}
+    // Load dashboard data after authentication finishes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh()
   }, [authLoading, refresh])
 

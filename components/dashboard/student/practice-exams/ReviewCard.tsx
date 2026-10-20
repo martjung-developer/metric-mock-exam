@@ -1,5 +1,7 @@
 // components/dashboard/student/practice-exams/ReviewCard.tsx
+import Image from 'next/image'
 import { Clock, BookOpen, GraduationCap, Lock, PlayCircle } from 'lucide-react'
+import { getProgramImagePath } from '@/lib/constants/program-images'
 import { EXAM_TYPE_META } from '@/lib/types/database'
 import type { ReviewItem, ExamStatus } from '@/lib/services/student/practice-exams/practiceExamList.service'
 import styles from '@/app/(dashboard)/student/practice-exams/reviews.module.css'
@@ -19,6 +21,7 @@ interface ReviewCardProps {
 
 export default function ReviewCard({ item, onStart }: ReviewCardProps) {
   const isAvailable = item.status === 'available'
+  const programImage = getProgramImagePath(item.programCode)
 
   return (
     <div className={`${styles.examCard} ${isAvailable ? styles.examCardAvailable : ''}`}>
@@ -26,15 +29,20 @@ export default function ReviewCard({ item, onStart }: ReviewCardProps) {
 
       <div className={styles.cardTop}>
         <div className={`${styles.cardIconWrap} ${isAvailable ? styles.cardIconAvailable : styles.cardIconSoon}`}>
-          <GraduationCap size={20} strokeWidth={1.75} />
+          {programImage ? (
+            <Image
+              className={styles.programImage}
+              src={programImage}
+              alt=""
+              width={640}
+              height={180}
+            />
+          ) : (
+            <GraduationCap size={28} strokeWidth={1.75} />
+          )}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem' }}>
-          <span style={{
-            display: 'inline-block', padding: '0.18rem 0.55rem',
-            borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700,
-            letterSpacing: '0.03em', background: 'rgba(16,185,129,0.10)',
-            color: '#047857', whiteSpace: 'nowrap',
-          }}>
+        <div className={styles.cardBadges}>
+          <span className={styles.examTypePill}>
             {EXAM_TYPE_META['practice'].label}
           </span>
           <StatusBadge status={item.status} />
@@ -44,7 +52,7 @@ export default function ReviewCard({ item, onStart }: ReviewCardProps) {
       <div className={styles.cardBody}>
         <p className={styles.shortCode}>{item.shortCode}</p>
         <h3 className={styles.programName}>{item.title}</h3>
-        <span className={styles.categoryTag}>{item.category}</span>
+        <span className={styles.categoryTag}>{item.program}</span>
       </div>
 
       {isAvailable && (

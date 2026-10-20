@@ -99,7 +99,7 @@ export default function RoadmapPage() {
                 <span className={styles.heroAccent}>student to licensed professional</span>
               </motion.h1>
               <motion.p {...heroItem} className={styles.heroSub}>
-                VeriPraxis gives you access to mock board examinations, automated
+                M.E.T.R.I.C. gives you access to mock board examinations, automated
                 scoring, and performance tracking — all in one platform built to
                 help you pass your PRC licensure exam.
               </motion.p>
@@ -264,7 +264,7 @@ export default function RoadmapPage() {
           >
             <h2 className={styles.ctaTitle}>Ready to get started?</h2>
             <p className={styles.ctaSub}>
-              Join students already using VeriPraxis to prepare for their
+              Join students already using M.E.T.R.I.C. to prepare for their
               Philippine licensure examinations — anytime, anywhere.
             </p>
             <div className={styles.ctaActions}>

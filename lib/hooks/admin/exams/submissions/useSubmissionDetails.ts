@@ -2,13 +2,39 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
-import { createClient }             from '@/lib/supabase/client'
 import type { Submission }          from '@/lib/types/admin/exams/submissions/submission.types'
+import type { Json }                from '@/lib/types/database'
 import type {
   AnswerDetail,
   AnswerStats,
 }                                   from '@/lib/types/admin/exams/submissions/answer.types'
 import type { QuestionType } from '@/lib/types/database'
+
+type AnswerPayloadQuestion = {
+  id: string
+  question_text: string
+  question_type: string
+  points: number | null
+  options: Json | null
+  correct_answer: string | null
+  explanation: string | null
+  order_number: number | null
+}
+
+type AnswerPayloadAnswer = {
+  id: string
+  question_id: string | null
+  answer_text: string | null
+  is_correct: boolean | null
+  points_earned: number | null
+  feedback: string | null
+}
+
+type AnswersPayload = {
+  questions?: AnswerPayloadQuestion[]
+  answers?: AnswerPayloadAnswer[]
+  error?: string
+}
 
 export interface UseSubmissionDetailsReturn {
   viewTarget:     Submission | null
@@ -22,8 +48,6 @@ export interface UseSubmissionDetailsReturn {
 }
 
 export function useSubmissionDetails(): UseSubmissionDetailsReturn {
-  const supabase = useMemo(() => createClient(), [])
-
   const [viewTarget,     setViewTarget]     = useState<Submission | null>(null)
   const [modalMode,      setModalMode]      = useState<'grade' | 'view'>('view')
   const [answers,        setAnswers]        = useState<AnswerDetail[]>([])
@@ -39,20 +63,14 @@ export function useSubmissionDetails(): UseSubmissionDetailsReturn {
     setAnswers([])
     setAnswersLoading(true)
 
-    const [questionsRes, answersRes] = await Promise.all([
-      supabase
-        .from('questions')
-        .select('id, question_text, question_type, points, options, correct_answer, explanation, order_number')
-        .eq('exam_id', examId),
-      supabase
-        .from('answers')
-        .select('id, question_id, answer_text, is_correct, points_earned, feedback')
-        .eq('submission_id', sub.id),
-    ])
+    const res = await fetch(`/api/admin/exams/${examId}/submissions/${sub.id}/answers`, {
+      credentials: 'include',
+    })
+    const payload = (await res.json().catch(() => ({}))) as AnswersPayload
 
-    if (!questionsRes.error && !answersRes.error) {
+    if (res.ok) {
       const questionMap = new Map(
-        (questionsRes.data ?? []).map((q) => [
+        (payload.questions ?? []).map((q) => [
           q.id,
           {
             question_text: q.question_text,
@@ -75,8 +93,9 @@ export function useSubmissionDetails(): UseSubmissionDetailsReturn {
         ]),
       )
 
-      const mapped: AnswerDetail[] = (answersRes.data ?? [])
+      const mapped: AnswerDetail[] = (payload.answers ?? [])
         .map((ans) => {
+          if (!ans.question_id) {return null}
           const question = questionMap.get(ans.question_id)
           if (!question) {return null}
           return {
@@ -96,7 +115,7 @@ export function useSubmissionDetails(): UseSubmissionDetailsReturn {
     }
 
     setAnswersLoading(false)
-  }, [supabase])
+  }, [])
 
   const closeModal = useCallback(() => {
     setViewTarget(null)

@@ -83,13 +83,9 @@ export function useNotifications(): UseNotificationsReturn {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications" },
-        (payload: RealtimePostgresChangesPayload<Notification>) => {
+        () => {
           if (!mountedRef.current) {return}
-          const newRow = payload.new as Notification
-          setNotifications((prev) => {
-            if (prev.some((n) => n.id === newRow.id)) {return prev}
-            return [newRow, ...prev]
-          })
+          void refetch()
         },
       )
       .on(
@@ -122,7 +118,7 @@ export function useNotifications(): UseNotificationsReturn {
       .subscribe()
 
     return () => { void supabase.removeChannel(channel) }
-  }, [supabase])
+  }, [supabase, refetch])
 
   // ── Initial load (unchanged) ────────────────────────────────────────────────
   useEffect(() => {

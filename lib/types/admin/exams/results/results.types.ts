@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { Database } from '@/lib/types/database'
+import type { TosAreaBreakdown } from '@/lib/utils/admin/results/tosBreakdown'
 
 // ── DB row aliases ────────────────────────────────────────────────────────────
 type AnalyticsRow  = Database['public']['Tables']['analytics']['Row']
@@ -27,6 +28,8 @@ export interface Result {
   percentage:         number
   passed:             boolean
   submitted_at:       string
+  started_at?:        string | null
+  duration_minutes?:  number | null
   time_spent_seconds: number
   status:             ResultStatus
 }
@@ -42,7 +45,17 @@ export interface Attempt {
   passed:             boolean
   status:             ResultStatus
   submitted_at:       string
+  started_at?:        string | null
+  duration_minutes?:  number | null
   time_spent_seconds: number
+  tosBreakdown?: TosAreaBreakdown[]
+}
+
+export interface TosAreaPerformance {
+  area_title: string
+  average_percent: number
+  released_attempts: number
+  weakest: boolean
 }
 
 // ── ImprovementTrend ──────────────────────────────────────────────────────────

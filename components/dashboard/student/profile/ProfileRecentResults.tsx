@@ -42,7 +42,7 @@ export function ProfileRecentResults({ submissions }: Props) {
             </div>
             <p className={styles.emptyTitle}>No released results yet</p>
             <p className={styles.emptyText}>
-              Complete a mock or practice exam and your results will appear here once your faculty releases them.
+              Complete a mock exam or reviewer and your results will appear here once your faculty releases them.
             </p>
           </motion.div>
         ) : (

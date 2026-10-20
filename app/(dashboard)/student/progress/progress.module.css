@@ -334,12 +334,13 @@
 .lineWrap {
   width: 100%;
   height: 155px;
+  overflow: hidden;
 }
 
 .lineSvg {
   width: 100%;
   height: 100%;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* ══════════════════════════════════════
@@ -570,5 +571,25 @@
   .statsGrid   { grid-template-columns: repeat(2, 1fr); }
   .header      { flex-direction: column; align-items: flex-start; }
   .achieveGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+:global(html.dark) .cardTitle,
+:global(html.dark) .legendPct,
+:global(html.dark) .progressPct,
+:global(html.dark) .examTitle,
+:global(html.dark) .achieveName {
+  color: #e6edf7;
+}
+
+:global(html.dark) .trendNeutral,
+:global(html.dark) .barTrack,
+:global(html.dark) .progressTrack,
+:global(html.dark) .achieveBadgeLocked {
+  background: #172338;
+}
+
+:global(html.dark) .tableHead,
+:global(html.dark) .table td {
+  border-color: #1d293b;
 }
 

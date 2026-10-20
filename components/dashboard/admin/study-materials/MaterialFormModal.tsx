@@ -19,7 +19,11 @@ import type {
   LinkType,
   MaterialType,
 } from '@/lib/types/admin/study-materials/study-materials'
-import type { RawFormState } from '@/lib/utils/admin/study-materials/validators'
+import {
+  COMMON_MATERIAL_ACCEPT,
+  MAX_MATERIAL_UPLOAD_LABEL,
+  type RawFormState,
+} from '@/lib/utils/admin/study-materials/validators'
 import styles from '@/app/(dashboard)/admin/study-materials/study-materials.module.css'
 import {
   overlayVariants,
@@ -48,6 +52,7 @@ interface MaterialFormModalProps {
   errors:          StudyMaterialFormErrors
   file:            File | null
   submitting:      boolean
+  uploadProgress:  number | null
   dragOver:        boolean
   programs:        ProgramOption[]
   existingFileUrl: string | null
@@ -63,7 +68,7 @@ interface MaterialFormModalProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function MaterialFormModal({
-  open, isEditing, form, errors, file, submitting, dragOver,
+  open, isEditing, form, errors, file, submitting, uploadProgress, dragOver,
   programs, existingFileUrl, fileInputRef,
   onClose, onPatch, onSetFile, onDragOver, onDrop, onSubmit,
 }: MaterialFormModalProps) {
@@ -241,12 +246,15 @@ export function MaterialFormModal({
                         <p className={styles.uploadZoneTitle}>
                           Drag &amp; drop or click to select
                         </p>
-                        <p className={styles.uploadZoneSub}>PDF, DOCX, PPTX, etc.</p>
+                        <p className={styles.uploadZoneSub}>
+                          PDF, Office files, images, audio, video, ZIP, and more. Up to {MAX_MATERIAL_UPLOAD_LABEL}.
+                        </p>
                       </>
                     )}
                     <input
                       ref={fileInputRef}
                       type="file"
+                      accept={COMMON_MATERIAL_ACCEPT}
                       style={{ display: 'none' }}
                       onChange={(e) => {
                         const f = e.target.files?.[0]
@@ -256,6 +264,20 @@ export function MaterialFormModal({
                   </div>
                   {errors.file && (
                     <p className={styles.formError}>{errors.file}</p>
+                  )}
+                  {uploadProgress !== null && (
+                    <div className={styles.uploadProgress} aria-live="polite">
+                      <div className={styles.uploadProgressHeader}>
+                        <span>Uploading file</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className={styles.uploadProgressTrack}>
+                        <div
+                          className={styles.uploadProgressBar}
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
               )}

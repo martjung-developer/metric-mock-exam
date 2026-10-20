@@ -78,6 +78,8 @@ export function useMockExams() {
   useEffect(() => {
     if (user === null || user === undefined || !programReady) {return}
     if (!programId) {
+      // No assigned program means there are no exams to fetch.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAllExams([])
       setDataLoading(false)
       setDataError('No degree program is assigned to your student account.')
@@ -129,7 +131,9 @@ export function useMockExams() {
             id:           exam.id,
             title:        exam.title,
             shortCode:    prog?.code ?? (cat?.name?.match(/\b([A-Z])/g)?.join('') ?? 'EXAM'),
+            programCode:  prog?.code,
             category:     cat?.name ?? 'Uncategorized',
+            categoryProgramId: cat?.program_id ?? null,
             status,
             questions:    qCountMap[exam.id],
             duration:     formatDuration(exam.duration_minutes),
@@ -159,9 +163,13 @@ export function useMockExams() {
 
   // ── Derived ──────────────────────────────────────────────────────────────
   const categories = useMemo(() => {
-    const unique = Array.from(new Set(allExams.map((e) => e.category))).sort()
+    const hasProgramCategories = allExams.some((e) => e.categoryProgramId === programId)
+    const categorySource = hasProgramCategories
+      ? allExams.filter((e) => e.categoryProgramId === null || e.categoryProgramId === programId)
+      : allExams
+    const unique = Array.from(new Set(categorySource.map((e) => e.category))).sort()
     return [ALL_CATEGORIES, ...unique]
-  }, [allExams])
+  }, [allExams, programId])
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.toLowerCase().trim()

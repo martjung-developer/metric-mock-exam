@@ -22,6 +22,8 @@ interface QuestionListProps {
   onAddFirst:      ()                   => void
   onEdit:          (q: Question)        => void
   onDelete:        (q: Question)        => void
+  selected?: ReadonlySet<string>
+  onToggleSelect?: (id: string) => void
 }
 
 export function QuestionList({
@@ -34,6 +36,8 @@ export function QuestionList({
   onAddFirst,
   onEdit,
   onDelete,
+  selected,
+  onToggleSelect,
 }: QuestionListProps): JSX.Element {
   if (loading) {
     return (
@@ -82,6 +86,8 @@ export function QuestionList({
             onAddInGroup={onAddInGroup}
             onEdit={onEdit}
             onDelete={onDelete}
+            selected={selected}
+            onToggleSelect={onToggleSelect}
           />
         )
       })}

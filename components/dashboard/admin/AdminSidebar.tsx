@@ -13,7 +13,6 @@ import {
   ClipboardCheck,
 } from 'lucide-react'
 import { createClient }   from '@/lib/supabase/client'
-import { signOut }        from '@/lib/auth/actions'
 import { useUnreadCount } from '@/lib/hooks/notifications/useUnreadCount'
 import {
   STAFF_NAV_HREF,
@@ -138,12 +137,15 @@ export default function AdminSidebar({ role, collapsed, onCollapse }: AdminSideb
 
   async function handleLogout() {
     setLoggingOut(true)
-    await signOut()
+    window.location.href = '/api/auth/signout'
   }
 
   const initials = getInitials(adminName)
 
   const allowedNavItems = new Set(getStaffAllowedNav(role))
+  if (role === 'program_head') {
+    allowedNavItems.add('study-materials')
+  }
   const hrefByKey = STAFF_NAV_HREF[role]
 
   return (
@@ -165,8 +167,8 @@ export default function AdminSidebar({ role, collapsed, onCollapse }: AdminSideb
         {!collapsed && (
           <div className={styles.logoImgWrap}>
             <Image
-              src="/images/veripraxis-logo.png"
-              alt="VeriPraxis"
+              src="/images/metric-logo.png"
+              alt="M.E.T.R.I.C."
               width={28}
               height={28}
               className={styles.logoImg}
@@ -189,7 +191,9 @@ export default function AdminSidebar({ role, collapsed, onCollapse }: AdminSideb
                 return null
               }
 
-              const href = hrefByKey[item.key]
+              const href = item.key === 'study-materials' && role === 'program_head'
+                ? '/faculty/study-materials'
+                : hrefByKey[item.key]
               const isActive =
                 pathname === href ||
                 (href !== '/admin/dashboard' &&

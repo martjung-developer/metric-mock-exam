@@ -74,7 +74,8 @@ function mapToDisplayPrograms(raw: FetchAllProgramDataResult): ProgramDisplay[] 
         exam_type:    e.exam_type,
       }))
 
-    const school = Array.isArray(prog.schools) ? prog.schools[0] : prog.schools
+    const schoolJoin = prog.school ?? prog.schools ?? null
+    const school = Array.isArray(schoolJoin) ? schoolJoin[0] : schoolJoin
     const normalizedCode = prog.code.toUpperCase().replace(/\s+/g, '')
     const fallbackDepartment = DEPARTMENT_MAP[normalizedCode] ?? 'UNASSIGNED'
     const departmentCode = school?.code ?? fallbackDepartment
@@ -144,6 +145,7 @@ export function usePrograms(): UseProgramsReturn {
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState<string | null>(null)
   const [viewerSchoolId, setViewerSchoolId] = useState<string | null>(null)
+  const [viewerSchoolLoaded, setViewerSchoolLoaded] = useState(false)
 
   // ── Filter state ──────────────────────────────────────────────────────────
   const [filters, setFilters] = useState<ProgramFilters>({
@@ -194,7 +196,10 @@ export function usePrograms(): UseProgramsReturn {
       profile?.role
 
     if (role !== 'faculty' && role !== 'admin') {
-      setViewerSchoolId(null)
+      queueMicrotask(() => {
+        setViewerSchoolId(null)
+        setViewerSchoolLoaded(true)
+      })
       return
     }
 
@@ -208,7 +213,10 @@ export function usePrograms(): UseProgramsReturn {
         null
 
       if (metaSchoolId) {
-        if (!cancelled) { setViewerSchoolId(metaSchoolId) }
+        if (!cancelled) {
+          setViewerSchoolId(metaSchoolId)
+          setViewerSchoolLoaded(true)
+        }
         return
       }
 
@@ -226,6 +234,7 @@ export function usePrograms(): UseProgramsReturn {
 
       if (!cancelled) {
         setViewerSchoolId(data?.school_id ?? null)
+        setViewerSchoolLoaded(true)
       }
     })()
 
@@ -237,7 +246,18 @@ export function usePrograms(): UseProgramsReturn {
     setLoading(true)
     setError(null)
 
-    const raw = await fetchAllProgramData(supabase)
+    const role =
+      (user?.user_metadata?.role as string | undefined) ??
+      (user?.app_metadata?.role  as string | undefined) ??
+      profile?.role
+
+    if ((role === 'faculty' || role === 'admin') && !viewerSchoolId) {
+      setPrograms([])
+      setLoading(false)
+      return
+    }
+
+    const raw = await fetchAllProgramData(supabase, viewerSchoolId)
 
     if (raw.error) {
       setError('Could not load programs. Please try again.')
@@ -247,13 +267,16 @@ export function usePrograms(): UseProgramsReturn {
 
     setPrograms(mapToDisplayPrograms(raw))
     setLoading(false)
-  }, [supabase])
+  }, [supabase, user, profile?.role, viewerSchoolId])
 
   // Fire on mount (deferred by one tick to avoid blocking the initial paint)
   useEffect(() => {
+    if (!viewerSchoolLoaded) {
+      return
+    }
     const t = window.setTimeout(() => { void loadPrograms() }, 0)
     return () => window.clearTimeout(t)
-  }, [loadPrograms])
+  }, [loadPrograms, viewerSchoolLoaded])
 
   // ── Derived: degree type list ─────────────────────────────────────────────
   const scopedPrograms = useMemo<ProgramDisplay[]>(() => {
@@ -267,7 +290,7 @@ export function usePrograms(): UseProgramsReturn {
     }
 
     if (!viewerSchoolId) {
-      return role === 'faculty' ? [] : programs
+      return role === 'faculty' || role === 'admin' ? [] : programs
     }
 
     return programs.filter((p) => p.school_id === viewerSchoolId)
@@ -302,9 +325,11 @@ export function usePrograms(): UseProgramsReturn {
   }, [scopedPrograms, filters])
 
   const departmentOptions = useMemo<string[]>(() => {
-    const base = ['all', 'SBIT', 'SSLATE', 'SARFAID']
-    const hasUnassigned = scopedPrograms.some((p) => p.departmentCode === 'UNASSIGNED')
-    return hasUnassigned ? [...base, 'UNASSIGNED'] : base
+    const departments = Array.from(
+      new Set(scopedPrograms.map((p) => p.departmentCode).filter(Boolean)),
+    ).sort()
+
+    return ['all', ...departments]
   }, [scopedPrograms])
 
   const groupedPrograms = useMemo<Array<{ key: string; label: string; programs: ProgramDisplay[] }>>(() => {

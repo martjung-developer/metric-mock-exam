@@ -319,15 +319,26 @@
   animation: fadeUp 0.4s ease 0.1s both;
 }
 
-.tableWrap { overflow-x: auto; }
+.tableWrap { overflow: auto; max-height: 70vh; }
 
 .table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.82rem;
 }
 
 .table thead { background: var(--student-input-bg); }
+
+.table thead th { position: sticky; top: 0; z-index: 2; background: var(--student-input-bg); }
+
+.table th:nth-child(1) { width: 29%; }
+.table th:nth-child(2) { width: 10%; }
+.table th:nth-child(3) { width: 14%; }
+.table th:nth-child(4) { width: 13%; }
+.table th:nth-child(5) { width: 12%; }
+.table th:nth-child(6) { width: 12%; }
+.table th:nth-child(7) { width: 10%; }
 
 .table th {
   text-align: left;
@@ -348,7 +359,7 @@
 }
 
 .table tr:last-child td { border-bottom: none; }
-.table tbody tr:hover td { background: var(--student-input-bg); }
+.table tbody tr.resultDataRow:hover td { background: var(--student-input-bg); }
 
 /* Column: Exam info */
 .examInfo {}
@@ -476,11 +487,11 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.4rem 0.85rem;
-  background: #f0f5fa;
-  color: #1e3a5f;
-  border: 1px solid #d1dfe9;
-  border-radius: 8px;
+  padding: 0.38rem 0.75rem;
+  background: #0d2540;
+  color: #fff;
+  border: 1px solid #0d2540;
+  border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
@@ -490,9 +501,9 @@
 }
 
 .reviewBtn:hover {
-  background: var(--student-chip-active-bg);
-  color: var(--student-chip-active-text);
-  border-color: var(--student-text);
+  background: linear-gradient(135deg, #0d2540, #1e3a5f);
+  color: #fff;
+  border-color: #1e3a5f;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(13, 37, 64, 0.2);
 }
@@ -693,5 +704,181 @@
   .pagination   { flex-direction: column; align-items: flex-start; }
   .tabGroup     { width: 100%; justify-content: stretch; }
   .tabBtn       { flex: 1; text-align: center; }
+}
+
+:global(html.dark) .examTitle {
+  color: #e6edf7;
+}
+
+:global(html.dark) .table th,
+:global(html.dark) .table td,
+:global(html.dark) .skeletonRow {
+  border-color: #1d293b;
+}
+
+:global(html.dark) .table tbody tr:hover td,
+:global(html.dark) .pctTrack,
+:global(html.dark) .badgePending,
+:global(html.dark) .reviewBtn,
+:global(html.dark) .emptyIconWrap {
+  background: #172338;
+}
+
+.resultDataRow td { height: 66px; }
+.scoreCell,.percentageCell { font-variant-numeric: tabular-nums; }
+.timeCell,.dateCell { font-variant-numeric: tabular-nums; }
+.resultDataRow td:nth-child(2),.resultDataRow td:nth-child(3) { text-align: right; }
+.resultDataRow td:nth-child(4),.resultDataRow td:nth-child(5),.resultDataRow td:nth-child(6),.resultDataRow td:nth-child(7) { text-align: center; }
+.resultDataRow .examTitle { color: var(--student-heading); }
+.resultDataRow .reviewBtn { justify-content: center; }
+.statValue { font-size: 1.95rem; }
+.statCard:nth-child(4) .statValue { font-size: 1.35rem; white-space: nowrap; }
+
+:global(html.dark) .resultDataRow,
+:global(html.dark) .examCell,
+:global(html.dark) .scoreCell,
+:global(html.dark) .percentageCell,
+:global(html.dark) .statusCell,
+:global(html.dark) .timeCell,
+:global(html.dark) .dateCell,
+:global(html.dark) .actionCell {
+  color: var(--student-text);
+  border-color: #1d293b;
+}
+:global(html.dark) .resultDataRow:hover td { background: #172338; }
+
+@media (max-width: 640px) {
+  .tableWrap { max-height: none; overflow: visible; }
+  .table,.table tbody { display: block; width: 100%; }
+  .table thead { display: none; }
+  .resultDataRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; margin: .6rem; border: 1px solid var(--student-border); border-radius: 10px; overflow: hidden; background: var(--student-card-bg); }
+  .resultDataRow td { display: block; min-width: 0; height: auto; padding: .6rem .75rem; border-bottom: 0; text-align: left!important; }
+  .examCell,.statusCell,.actionCell { grid-column: 1 / -1; }
+  .examCell { padding-bottom: .35rem!important; }
+  .scoreCell,.percentageCell { align-self: center; }
+  .statusCell { padding-top: .2rem!important; }
+  .timeCell::before,.dateCell::before { content: attr(data-label); display: block; margin-bottom: .2rem; color: var(--student-text-muted); font-size: .62rem; font-weight: 700; text-transform: uppercase; }
+  .actionCell { padding-top: .25rem!important; }
+  .reviewBtn { width: 100%; min-height: 38px; }
+  .table th:nth-child(n) { width: auto; }
+}
+
+:global(html.dark) .resultDataRow { background: var(--student-card-bg); border-color: #243247; }
+@media (prefers-reduced-motion: reduce) {
+  .statCard,.reviewBtn,.pctFill,.refreshBtn { transition: none; animation: none; }
+  .spin,.skeleton { animation-duration: 0.01ms; animation-iteration-count: 1; }
+}
+
+/* Results cards follow the student exam-card pattern. */
+.resultGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr)); gap: 1rem; margin-bottom: 1.75rem; }
+.resultCard { min-width: 0; min-height: 388px; display: flex; flex-direction: column; background: var(--student-card-bg); border: 1px solid var(--student-border); border-radius: 13px; box-shadow: 0 2px 8px rgba(30,58,95,.05); transition: border-color .2s, box-shadow .2s, transform .2s; }
+.resultCard:hover { border-color: #b8ccdb; box-shadow: 0 10px 28px rgba(30,58,95,.14); transform: translateY(-3px) scale(1.01); }
+.resultCardTop { height: 112px; min-height: 112px; position: relative; display: flex; align-items: center; padding: 1rem; border-radius: 12px 12px 0 0; background: linear-gradient(135deg,#0d2540,#1e3a5f); overflow: hidden; }
+.resultCardMark { color: rgba(255,255,255,.28); }
+.resultCardBadges { position: absolute; z-index: 1; top: .75rem; right: .75rem; display: flex; flex-direction: column; align-items: flex-end; gap: .4rem; }
+.resultTypeBadge,.resultStatusBadge { display: inline-flex; align-items: center; gap: .3rem; width: fit-content; border-radius: 999px; padding: .22rem .6rem; font-size: .66rem; font-weight: 800; letter-spacing: .03em; white-space: nowrap; }
+.resultTypeBadge.typeMock { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.resultTypeBadge.typePractice { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+.resultStatusBadge { border-width: 1px; border-style: solid; }
+.resultStatusPassed { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+.resultStatusFailed { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+.resultStatusPending { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+.resultCardBody { flex: 1; display: flex; flex-direction: column; gap: .9rem; padding: 1rem 1.2rem 1.2rem; }
+.resultIdentity { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; min-height: 96px; }
+.resultIdentity .examTitle { margin: 0; color: var(--student-heading); line-height: 1.4; overflow-wrap: anywhere; }
+.resultCategory { display: inline-block; max-width: 100%; padding: .2rem .55rem; border-radius: 5px; background: var(--student-chip-bg); color: var(--student-text-muted); font-size: .68rem; font-weight: 600; overflow-wrap: anywhere; }
+.resultDateTime { display: inline-flex; align-items: center; gap: .35rem; color: var(--student-text-muted); font-size: .72rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.resultMetrics { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: .75rem; padding-top: .8rem; border-top: 1px solid var(--student-border); }
+.resultMetric { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: .35rem; }
+.resultMetricLabel { color: var(--student-text-muted); font-size: .65rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.resultScore { color: var(--student-heading); font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.resultMetric .pctWrap { width: 100%; min-width: 0; }
+.resultMetric .pctLabel { font-size: .82rem; }
+.resultMetric .pctTrack { height: 7px; background: #e8eef5; }
+.resultTimeMetric { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; padding-top: .1rem; }
+.resultTimeValue { display: inline-flex; align-items: center; gap: .35rem; color: var(--student-text); font-size: .78rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.resultCardFooter { margin-top: auto; padding-top: .15rem; }
+.resultReviewBtn { width: 100%; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: .45rem; border: 1px solid #1e3a5f; border-radius: 8px; background: var(--student-chip-active-bg); color: var(--student-chip-active-text); font-family: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; transition: background .15s, transform .15s, box-shadow .15s; }
+.resultReviewBtn:hover { background: linear-gradient(135deg,#0d2540,#1e3a5f); color: #fff; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(30,58,95,.25); }
+.durationTooltipWrap { position: relative; display: inline-flex; }
+.durationTooltipTrigger { padding: 0; border: 0; border-bottom: 1px dotted currentColor; background: transparent; color: inherit; font: inherit; cursor: help; }
+.durationTooltipTrigger:focus-visible { outline: 2px solid #1e3a5f; outline-offset: 3px; border-radius: 2px; }
+.durationTooltip { position: absolute; z-index: 5; right: 0; bottom: calc(100% + 8px); width: min(260px, 72vw); padding: .55rem .7rem; border: 1px solid var(--student-border); border-radius: 8px; background: var(--student-heading); color: #fff; box-shadow: 0 6px 18px rgba(13,37,64,.2); font-size: .69rem; font-weight: 500; line-height: 1.45; opacity: 0; visibility: hidden; pointer-events: none; }
+.durationTooltip::after { content: ''; position: absolute; right: 1rem; top: 100%; border: 6px solid transparent; border-top-color: var(--student-heading); }
+.durationTooltipOpen,.durationTooltipWrap:focus-within .durationTooltip { opacity: 1; visibility: visible; }
+.resultSkeletonCard { min-width: 0; min-height: 388px; overflow: hidden; border: 1px solid var(--student-border); border-radius: 13px; background: var(--student-card-bg); }
+.resultSkeletonTop { height: 112px; background: linear-gradient(135deg,#0d2540,#1e3a5f); }
+.resultSkeletonBody { box-sizing: border-box; min-height: 274px; display: flex; flex-direction: column; gap: .65rem; padding: 1.1rem 1.2rem 1.2rem; }
+.resultSkeletonTitle { width: 82%; height: 16px; }
+.resultSkeletonCategory { width: 42%; height: 18px; border-radius: 5px; }
+.resultSkeletonDate { width: 64%; height: 12px; }
+.resultSkeletonMetrics { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-top: .5rem; padding-top: .8rem; border-top: 1px solid var(--student-border); }
+.resultSkeletonMetric { width: 84%; height: 30px; }
+.resultSkeletonTime { width: 48%; height: 12px; margin-top: .2rem; }
+.resultSkeletonButton { width: 100%; height: 40px; margin-top: auto; border-radius: 8px; }
+
+:global(html.dark) .resultGrid,
+:global(html.dark) .resultCard,
+:global(html.dark) .resultCardTop,
+:global(html.dark) .resultCardBadges,
+:global(html.dark) .resultTypeBadge,
+:global(html.dark) .resultStatusBadge,
+:global(html.dark) .resultCardBody,
+:global(html.dark) .resultIdentity,
+:global(html.dark) .resultCategory,
+:global(html.dark) .resultDateTime,
+:global(html.dark) .resultMetrics,
+:global(html.dark) .resultMetric,
+:global(html.dark) .resultMetricLabel,
+:global(html.dark) .resultScore,
+:global(html.dark) .resultTimeMetric,
+:global(html.dark) .resultTimeValue,
+:global(html.dark) .resultCardFooter,
+:global(html.dark) .resultReviewBtn,
+:global(html.dark) .durationTooltipWrap,
+:global(html.dark) .durationTooltipTrigger,
+:global(html.dark) .durationTooltip,
+:global(html.dark) .durationTooltipOpen,
+:global(html.dark) .resultSkeletonCard,
+:global(html.dark) .resultSkeletonTop,
+:global(html.dark) .resultSkeletonBody,
+:global(html.dark) .resultSkeletonTitle,
+:global(html.dark) .resultSkeletonCategory,
+:global(html.dark) .resultSkeletonDate,
+:global(html.dark) .resultSkeletonMetrics,
+:global(html.dark) .resultSkeletonMetric,
+:global(html.dark) .resultSkeletonTime,
+:global(html.dark) .resultSkeletonButton {
+  border-color: #243247;
+}
+:global(html.dark) .resultCard,
+:global(html.dark) .resultCardBody,
+:global(html.dark) .resultSkeletonCard,
+:global(html.dark) .resultSkeletonBody { background-color: #111a2b; }
+:global(html.dark) .resultCard:hover { border-color: #466080; box-shadow: 0 10px 28px rgba(0,0,0,.28); }
+:global(html.dark) .resultCardTop,
+:global(html.dark) .resultSkeletonTop { background: linear-gradient(135deg,#0d2540,#1e3a5f); }
+:global(html.dark) .resultCardMark { color: rgba(255,255,255,.32); }
+:global(html.dark) .resultTypeBadge.typeMock { background: #172b4d; color: #bfdbfe; border-color: #29466f; }
+:global(html.dark) .resultTypeBadge.typePractice { background: #28213f; color: #ddd6fe; border-color: #51406f; }
+:global(html.dark) .resultStatusPassed { background: #12372f; color: #86efac; border-color: #1b5b49; }
+:global(html.dark) .resultStatusFailed { background: #3b2028; color: #fca5a5; border-color: #69303a; }
+:global(html.dark) .resultStatusPending { background: #392e1c; color: #fcd68a; border-color: #69502a; }
+:global(html.dark) .resultIdentity .examTitle,
+:global(html.dark) .resultScore,
+:global(html.dark) .resultTimeValue { color: var(--student-text); }
+:global(html.dark) .resultCategory,
+:global(html.dark) .resultMetrics,
+:global(html.dark) .resultSkeletonMetrics { background-color: #172338; }
+:global(html.dark) .resultReviewBtn { background: linear-gradient(135deg,#0d2540,#1e3a5f); border-color: #35557c; color: #fff; }
+:global(html.dark) .durationTooltipTrigger:focus-visible { outline-color: #9bb7da; }
+:global(html.dark) .durationTooltip { background: #e6edf7; color: #111a2b; }
+:global(html.dark) .durationTooltip::after { border-top-color: #e6edf7; }
+:global(html.dark) .resultSkeletonBody .skeleton { background-image: linear-gradient(90deg,#172338 25%,#243247 50%,#172338 75%); }
+
+@media (max-width: 1100px) { .resultGrid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); } }
+@media (max-width: 640px) { .resultGrid { grid-template-columns: 1fr; } .resultCard,.resultSkeletonCard { min-height: 388px; } .resultSkeletonBody { min-height: 274px; } }
+@media (prefers-reduced-motion: reduce) {
+  .resultCard,.resultReviewBtn,.resultSkeletonBody .skeleton { transition: none; animation: none; }
 }
 

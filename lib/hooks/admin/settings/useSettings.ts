@@ -119,7 +119,7 @@ export interface UseSettingsReturn {
 export function useSettings(): UseSettingsReturn {
   const router   = useRouter()
   const supabase = useMemo(() => createClient(), [])
-  const { user, loading: authLoading } = useUser()
+  const { user, profile: authProfile, loading: authLoading } = useUser()
   const { resolved, setMode } = useTheme()
 
   const [profile,   setProfile]   = useState<Profile | null>(null)
@@ -217,6 +217,8 @@ export function useSettings(): UseSettingsReturn {
   })
 
   useEffect(() => {
+    // Keep the persisted preference in sync with the resolved color scheme.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPreferences((p) => ({ ...p, darkMode: resolved === 'dark' }))
   }, [resolved])
 
@@ -257,10 +259,11 @@ export function useSettings(): UseSettingsReturn {
     if (authLoading) {return}
     if (!user) { router.replace('/login'); return }
     const role =
+      authProfile?.role ??
       (user.user_metadata?.role as string | undefined) ??
       (user.app_metadata?.role  as string | undefined)
     if (role !== 'admin' && role !== 'faculty') {router.replace('/unauthorized')}
-  }, [user, authLoading, router])
+  }, [user, authProfile?.role, authLoading, router])
 
   // ── Fetch profile ─────────────────────────────────────────────────────────
   const fetchProfile = useCallback(async (userId: string) => {
@@ -277,6 +280,8 @@ export function useSettings(): UseSettingsReturn {
   useEffect(() => {
     if (!user) {return}
     let cancelled = false
+    // Load profile data when the signed-in user becomes available.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     void (async () => {
       const ok = await fetchProfile(user.id)
@@ -299,7 +304,7 @@ export function useSettings(): UseSettingsReturn {
       return
     }
     showToast({ type: 'success', message: 'Settings data refreshed.' })
-  }, [fetchProfile, showToast, user?.id])
+  }, [fetchProfile, showToast, user])
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
@@ -382,8 +387,7 @@ export function useSettings(): UseSettingsReturn {
   }, [currentPw, newPw, confirmPw, profile, showToast, resetPasswordForm])
 
   const handleLogout = useCallback(async () => {
-    await SettingsService.logout()
-    window.location.href = '/login'
+    window.location.href = '/api/auth/signout'
   }, [])
 
   return {

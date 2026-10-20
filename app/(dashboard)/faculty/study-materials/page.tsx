@@ -1,6 +1,5 @@
-import { redirect } from 'next/navigation'
+import { StudyMaterialsPage } from '@/components/dashboard/admin/study-materials/StudyMaterialsPage'
 
-export default function FacultyProxyPage() {
-  redirect('/admin/study-materials')
+export default function FacultyStudyMaterialsRoute() {
+  return <StudyMaterialsPage />
 }
-

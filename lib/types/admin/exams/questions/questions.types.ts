@@ -28,6 +28,7 @@ export interface Question {
   order_number:   number | null
   options:        QuestionOption[] | null
   correct_answer: string | null
+  image_url:      string | null
   explanation:    string | null
   created_at:     string
 }
@@ -40,6 +41,7 @@ export interface QuestionForm {
   points:         number
   options:        QuestionOption[]
   correct_answer: string
+  image_url:      string
   explanation:    string
 }
 
@@ -54,6 +56,7 @@ export const BLANK_FORM: QuestionForm = {
     { label: 'D', text: '' },
   ],
   correct_answer: '',
+  image_url:      '',
   explanation:    '',
 }
 

@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Image                   from 'next/image'
 import Link                    from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { Search, Bell, Settings, ChevronDown, GraduationCap, UserCircle2, LogOut } from 'lucide-react'
 import { createClient }        from '@/lib/supabase/client'
 import { useUnreadCount }      from '@/lib/hooks/notifications/useUnreadCount'
@@ -43,7 +43,6 @@ export default function AdminTopbar() {
   const [search,      setSearch]      = useState('')
   const [menuOpen,    setMenuOpen]    = useState(false)
   const pathname = usePathname()
-  const router = useRouter()
 
   // ── Resolve current user + profile ───────────────────────────────────────
   useEffect(() => {
@@ -99,8 +98,7 @@ export default function AdminTopbar() {
   }, [menuOpen])
 
   async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push('/login')
+    window.location.href = '/api/auth/signout'
   }
 
   return (

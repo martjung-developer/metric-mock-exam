@@ -11,7 +11,9 @@ export interface MockExam {
   id:            string
   title:         string
   shortCode:     string
+  programCode?:   string
   category:      string
+  categoryProgramId: string | null
   status:        ExamStatus
   questions?:    number
   duration?:     string
@@ -25,10 +27,13 @@ export interface Question {
   id:             string
   question_text:  string
   scenario?:      string | null
+  section_title?: string | null
+  section_number?: number | null
   question_type:  string
   points:         number
   options:        QuestionOption[] | null
   correct_answer: string | null
+  image_url:      string | null
   explanation:    string | null
   order_number:   number | null
 }
@@ -65,7 +70,7 @@ export interface ExamAttempt {
   passed:              boolean | null
 }
 
-export type CategoryShape = { id: string; name: string; icon: string | null }
+export type CategoryShape = { id: string; name: string; icon: string | null; program_id: string | null }
 export type ProgramShape  = { id: string; code: string; name: string } | null
 
 export type ExamRaw = {

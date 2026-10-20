@@ -115,14 +115,14 @@ export function useProfile(): UseProfileReturn {
       }
     })()
     return () => { cancelled = true }
-  }, [authLoading, fetchAll, router, user]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authLoading, fetchAll, router, user])  
 
   const refetch = useCallback(async () => {
     if (!user?.id) {
       return
     }
     await fetchAll(user.id)
-  }, [fetchAll, user?.id])
+  }, [fetchAll, user])
 
   return {
     profile, student, program, school,

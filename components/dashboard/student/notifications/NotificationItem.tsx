@@ -15,6 +15,9 @@ import {
   Trash2,
   TrendingUp,
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { fetchSubmissionStatus } from '@/lib/services/student/results/results.service'
 
 import { getStaggerClass, notifAnimations } from '@/animations/notifications/notifications'
 import { timeAgo } from '@/lib/utils/student/notifications/helpers'
@@ -24,11 +27,11 @@ import type {
 } from '@/lib/types/student/notifications/notifications.types'
 
 import styles from '@/app/(dashboard)/student/notifications/notifications.module.css'
-import type { JSX } from 'react'
+import type { JSX, ReactNode } from 'react'
 
 // ── Icon map ───────────────────────────────────────────────────────────────
 
-const ICON_MAP: Record<NotifType, { icon: React.ReactNode; cls: string }> = {
+const ICON_MAP: Record<NotifType, { icon: ReactNode; cls: string }> = {
   exam: { icon: <ClipboardList size={18} />, cls: styles.iconExam },
   progress: { icon: <TrendingUp size={18} />, cls: styles.iconProgress },
   reminder: { icon: <AlarmClock size={18} />, cls: styles.iconReminder },
@@ -67,6 +70,8 @@ export function NotificationItem({
   onToggleRead,
   onDelete,
 }: NotificationItemProps): JSX.Element {
+  const router = useRouter()
+  const supabase = createClient()
   // SAFE ICON RESOLUTION
   const entry = isNotifType(n.type)
     ? ICON_MAP[n.type]
@@ -74,9 +79,31 @@ export function NotificationItem({
 
   const { icon, cls } = entry
 
-  function handleItemClick() {
+  function extractSubmissionId(message: string): string | null {
+    const match = message.match(/\[(?:submission_id|exam_id):([a-f0-9-]{36})\]/i)
+    return match?.[1] ?? null
+  }
+
+  const displayMessage = n.message
+    .replace(/\[(?:submission_id|exam_id):[^\]]*\]/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+
+  async function handleItemClick() {
     if (!n.is_read) {onToggleRead(n.id, false)}
-    if (n.link) {window.location.href = n.link}
+
+    const submissionId = extractSubmissionId(n.message)
+    if (submissionId) {
+      const { status } = await fetchSubmissionStatus(supabase, submissionId)
+      if (status === 'released') {
+        router.push(`/student/results/${submissionId}`)
+        return
+      }
+      router.push(`/student/results/${submissionId}/pending`)
+      return
+    }
+
+    if (n.link) {router.push(n.link)}
   }
 
   return (
@@ -101,7 +128,7 @@ export function NotificationItem({
           )}
         </div>
 
-        <p className={styles.notifMessage}>{n.message}</p>
+        <p className={styles.notifMessage}>{displayMessage}</p>
 
         <div className={styles.notifMeta}>
           <span className={styles.notifTime}>

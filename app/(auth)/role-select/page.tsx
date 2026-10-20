@@ -6,10 +6,11 @@
 'use client'
 
 import Link          from 'next/link'
+import Image         from 'next/image'
 import { useRouter } from 'next/navigation'
 import { motion }    from 'framer-motion'
 import {
-  GraduationCap, BookOpen, ShieldCheck, ArrowLeft, ChevronRight,
+  GraduationCap, BookOpen, ShieldCheck, ChevronRight,
 } from 'lucide-react'
 import { RoleSelectBackground } from '@/animations/auth/RoleSelectBackground'
 import styles from './role-select.module.css'
@@ -65,19 +66,22 @@ export default function RoleSelectPage() {
     <>
       <RoleSelectBackground />
 
-      <div className={styles.page}>
-
-        {/* ── Back to site ── */}
+      <main className={styles.page}>
         <motion.div
-          className={styles.backRow}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.08 }}
+          className={styles.brandLockup}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
         >
-          <Link href="/" className={styles.backLink}>
-            <ArrowLeft size={13} strokeWidth={2.5} />
-            Back to site
-          </Link>
+          <Image
+            src="/images/metric-logo.png"
+            alt="M.E.T.R.I.C."
+            width={150}
+            height={44}
+            className={styles.logo}
+            priority
+          />
+          <span className={styles.brandEyebrow}>Personalized exam practice portal</span>
         </motion.div>
 
         {/* ── Heading ── */}
@@ -87,9 +91,9 @@ export default function RoleSelectPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
         >
-          <h1 className={styles.heading}>What Role Are You In?</h1>
+          <h1 className={styles.heading}>Choose your access path</h1>
           <p className={styles.subheading}>
-            Select your role to continue. Your ID will be verified at log in page.
+            Enter the workspace built for your responsibilities. Your ID will be verified on the next step.
           </p>
         </motion.div>
 
@@ -103,7 +107,7 @@ export default function RoleSelectPage() {
           {ROLES.map(({ key, icon: Icon, title, description, hint }) => (
             <motion.button
               key={key}
-              className={styles.card}
+              className={styles.card} 
               data-role={key}
               variants={itemVariants}
               onClick={() => handleRoleSelect(key)}
@@ -133,13 +137,13 @@ export default function RoleSelectPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          Already signed in?{' '}
-          <Link href="/student/dashboard" className={styles.footerLink}>
-            Go to login
+          Already have an account?{' '}
+          <Link href="/login" className={styles.footerLink}>
+            Log in directly
           </Link>
         </motion.p>
 
-      </div>
+      </main>
     </>
   )
 }

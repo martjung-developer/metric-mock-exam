@@ -189,17 +189,32 @@ export async function reviewAction(
  */
 export async function fetchPendingReviewItems(
   client: TypedClient,
+  programId?: string | null,
 ): Promise<PendingReviewItem[]> {
-  const [examsRes, banksRes] = await Promise.all([
-    client
+  let examsQuery = client
       .from('exams')
       .select(`
-        id, title, submitted_by, submitted_at, review_notes, approval_status,
+        id, title, program_id, submitted_by, submitted_at, review_notes, approval_status,
         programs ( code ),
         profiles!exams_submitted_by_fkey ( full_name )
       `)
       .eq('approval_status', 'pending_review')
-      .order('submitted_at', { ascending: true }) as {
+  let banksQuery = client
+      .from('question_banks')
+      .select(`
+        id, title, program_id, submitted_by, submitted_at, review_notes, approval_status,
+        programs ( code, name ),
+        profiles!question_banks_submitted_by_fkey ( full_name )
+      `)
+      .eq('approval_status', 'pending_review')
+
+  if (programId) {
+    examsQuery = examsQuery.eq('program_id', programId)
+    banksQuery = banksQuery.eq('program_id', programId)
+  }
+
+  const [examsRes, banksRes] = await Promise.all([
+    examsQuery.order('submitted_at', { ascending: true }) as {
         data: Array<{
           id: string; title: string; submitted_by: string | null
           submitted_at: string | null; review_notes: string | null
@@ -209,15 +224,7 @@ export async function fetchPendingReviewItems(
         }> | null
         error: unknown
       },
-    client
-      .from('question_banks')
-      .select(`
-        id, title, submitted_by, submitted_at, review_notes, approval_status,
-        programs ( code, name ),
-        profiles!question_banks_submitted_by_fkey ( full_name )
-      `)
-      .eq('approval_status', 'pending_review')
-      .order('submitted_at', { ascending: false }) as {
+    banksQuery.order('submitted_at', { ascending: false }) as {
         data: Array<{
           id: string; title: string; submitted_by: string | null
           submitted_at: string | null; review_notes: string | null
@@ -354,6 +361,16 @@ export async function fetchFacultyQuestionBanks(
   client:    TypedClient,
   facultyId: string,
 ): Promise<QuestionBank[]> {
+  const { data: faculty } = await client
+    .from('faculty')
+    .select('program_id')
+    .eq('user_id', facultyId)
+    .maybeSingle()
+
+  if (!faculty?.program_id) {
+    return []
+  }
+
   const { data, error } = await client
     .from('question_banks')
     .select(`
@@ -361,7 +378,7 @@ export async function fetchFacultyQuestionBanks(
       programs ( code ),
       exams ( title )
     `)
-    .eq('submitted_by', facultyId)
+    .eq('program_id', faculty.program_id)
     .order('created_at', { ascending: false }) as {
       data: Array<Record<string, unknown>> | null
       error: unknown
@@ -385,6 +402,8 @@ export async function fetchFacultyQuestionBanks(
     review_notes:    row['review_notes']  !== null ? String(row['review_notes'])  : null,
     rejected_at:     row['rejected_at']   !== null ? String(row['rejected_at'])   : null,
     published_at:    row['published_at']  !== null ? String(row['published_at'])  : null,
+    last_modified_by: row['last_modified_by'] !== null ? String(row['last_modified_by']) : null,
+    last_modified_at: row['last_modified_at'] !== null ? String(row['last_modified_at']) : null,
     created_at:      String(row['created_at']),
     updated_at:      String(row['updated_at']),
     programCode:     (() => {

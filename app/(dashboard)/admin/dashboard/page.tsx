@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ClipboardList, BookOpen, BarChart2,
   Plus, PenLine, Clock, ArrowRight,
@@ -119,7 +120,7 @@ export default function AdminDashboardPage() {
     },
     {
       Icon: BookOpen, bg: "#fffbeb", color: "#d97706",
-      label: "Practice Exams", value: String(stats.practiceExams),
+      label: "Reviewers", value: String(stats.practiceExams),
       sub: "published", href: "/admin/exams",
       empty: stats.practiceExams === 0,
     },
@@ -216,13 +217,23 @@ export default function AdminDashboardPage() {
 
       {/* Hero */}
       <div className={styles.hero}>
+        <Image
+          src="/images/lccb_admin_img.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className={styles.heroImage}
+          aria-hidden="true"
+          priority
+        />
+        <div className={styles.heroOverlay} aria-hidden="true" />
         <div className={styles.heroContent}>
           <p className={styles.heroEyebrow}><Activity size={10} /> Control Panel</p>
           <h2 className={styles.heroTitle}>
             Assign, grade, and guide<br />your students to success.
           </h2>
           <p className={styles.heroSub}>
-            Upload question banks by degree program, set answer keys, assign mock and practice exams,
+            Upload question banks by degree program, set answer keys, assign mock exams and reviewers,
             and track every student&apos;s performance — all in one place.
           </p>
           <div className={styles.heroActions}>

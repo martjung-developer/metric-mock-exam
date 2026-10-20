@@ -7,7 +7,7 @@
 
 import { useState, useEffect }  from 'react'
 import { createClient }         from '@/lib/supabase/client'
-import { fetchCategories }      from '@/lib/services/admin/exams/create/exam.service'
+import { fetchCategories, insertCategory } from '@/lib/services/admin/exams/create/exam.service'
 import type {
   CategoryOption,
 }                               from '@/lib/types/admin/exams/create/exam.types'
@@ -20,9 +20,10 @@ interface ProgramOption {
 }
 
 export interface UseExamCategoriesReturn {
-  categories: CategoryOption[]
-  programs:   ProgramOption[]
-  catLoading: boolean
+  categories:  CategoryOption[]
+  programs:    ProgramOption[]
+  catLoading:  boolean
+  addCategory: (name: string, programId: string) => Promise<CategoryOption>
 }
 
 export function useExamCategories(): UseExamCategoriesReturn {
@@ -64,5 +65,14 @@ export function useExamCategories(): UseExamCategoriesReturn {
     return () => { cancelled = true }
   }, [])
 
-  return { categories, programs, catLoading }
+  async function addCategory(name: string, programId: string): Promise<CategoryOption> {
+    const supabase = createClient()
+    const created  = await insertCategory(supabase, name, programId)
+    setCategories((prev) =>
+      [...prev, created].sort((a, b) => a.name.localeCompare(b.name)),
+    )
+    return created
+  }
+
+  return { categories, programs, catLoading, addCategory }
 }

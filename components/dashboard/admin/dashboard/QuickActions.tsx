@@ -21,7 +21,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   { Icon: Send,     bg: "#fffbeb", color: "#d97706", label: "Assign Exam",       sub: "Send to students",    href: "/admin/exams"          },
   { Icon: Key,      bg: "#fef2f2", color: "#dc2626", label: "Set Answer Key",    sub: "Score an exam",       href: "/admin/questionnaires" },
   { Icon: PenLine,  bg: "#f5f3ff", color: "#7c3aed", label: "Grade Submissions", sub: "Review answers",      href: "/admin/exams"          },
-  { Icon: FileText, bg: "#ecfeff", color: "#0891b2", label: "Add Practice Exam", sub: "Upload practice set", href: "/admin/exams/create"   },
+  { Icon: FileText, bg: "#ecfeff", color: "#0891b2", label: "Add Reviewer", sub: "Upload reviewer set", href: "/admin/exams/create"   },
 ];
 
 export function QuickActions() {

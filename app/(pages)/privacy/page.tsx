@@ -182,8 +182,8 @@ export default function PrivacyPage() {
               <div className={styles.tocInfoCardText}>
                 Our Data Privacy Officer is available to address any concerns about how your information is handled.
               </div>
-              <a href="mailto:privacy@veripraxis.ph" className={styles.tocInfoCardLink}>
-                privacy@veripraxis.ph
+              <a href="mailto:privacy@metric.ph" className={styles.tocInfoCardLink}>
+                privacy@metric.ph
                 <ChevronRight size={13} strokeWidth={2.4} />
               </a>
             </motion.div>
@@ -194,7 +194,7 @@ export default function PrivacyPage() {
 
             {/* Lead highlight */}
             <motion.div {...contentSection} className={styles.highlight}>
-              Veripraxis collects only what&apos;s necessary to provide and improve your review experience.
+              Metric collects only what&apos;s necessary to provide and improve your review experience.
               We do <strong>not</strong> sell your personal data to third parties — ever.
             </motion.div>
 
@@ -202,7 +202,7 @@ export default function PrivacyPage() {
             <motion.section {...sectionCard} className={styles.section} id="information">
               <span className={styles.sectionNum}>Section 01</span>
               <h2 className={styles.sectionTitle}>Information We Collect</h2>
-              <p className={styles.paragraph}>When you register and use Veripraxis, we may collect the following types of information:</p>
+              <p className={styles.paragraph}>When you register and use Metric, we may collect the following types of information:</p>
               <ul className={styles.list}>
                 <li><strong>Account data</strong>: Your name, email address, and password (bcrypt-hashed — we never see the plaintext).</li>
                 <li><strong>Profile data</strong>: Exam program, educational background, and study goals you voluntarily provide.</li>
@@ -260,7 +260,7 @@ export default function PrivacyPage() {
                 We implement layered, industry-standard security: TLS 1.3 in transit, AES-256 at rest,
                 bcrypt password hashing, role-based access controls, and regular third-party audits.
                 If you believe your account has been compromised, contact us immediately at{' '}
-                <a href="mailto:security@veripraxis.ph" className={styles.email}>security@veripraxis.ph</a>.
+                <a href="mailto:security@metric.ph" className={styles.email}>security@metric.ph</a>.
               </p>
             </motion.section>
 
@@ -280,7 +280,7 @@ export default function PrivacyPage() {
               </div>
               <p className={styles.paragraph} style={{ marginTop: '1rem' }}>
                 To exercise any of these rights, email{' '}
-                <a href="mailto:privacy@veripraxis.ph" className={styles.email}>privacy@veripraxis.ph</a>.
+                <a href="mailto:privacy@metric.ph" className={styles.email}>privacy@metric.ph</a>.
                 We will respond within 15 business days.
               </p>
             </motion.section>
@@ -290,7 +290,7 @@ export default function PrivacyPage() {
               <span className={styles.sectionNum}>Section 07</span>
               <h2 className={styles.sectionTitle}>Children&apos;s Privacy</h2>
               <p className={styles.paragraph}>
-                Veripraxis is intended for users 18 years of age and older, consistent with the eligibility
+                Metric is intended for users 18 years of age and older, consistent with the eligibility
                 requirements for Philippine licensure examinations. We do not knowingly collect data from
                 minors. If you believe a child under 18 has created an account, please contact us immediately
                 and we will delete the account promptly.
@@ -316,13 +316,13 @@ export default function PrivacyPage() {
               <p className={styles.paragraph}>
                 For privacy-related questions or to exercise your data subject rights, reach our
                 Data Privacy Officer at{' '}
-                <a href="mailto:privacy@veripraxis.ph" className={styles.email}>privacy@veripraxis.ph</a>.
+                <a href="mailto:privacy@metric.ph" className={styles.email}>privacy@metric.ph</a>.
               </p>
               <p className={styles.paragraph}>
                 For general inquiries, visit our{' '}
                 <Link href="/contact" className={styles.email}>Contact page</Link>{' '}
                 or email{' '}
-                <a href="mailto:support@veripraxis.ph" className={styles.email}>support@veripraxis.ph</a>.
+                <a href="mailto:support@metric.ph" className={styles.email}>support@metric.ph</a>.
               </p>
             </motion.section>
 

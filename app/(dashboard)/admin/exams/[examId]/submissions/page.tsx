@@ -83,6 +83,8 @@ function handleGradeSubmission() {
   )
 }
 
+  const tosErrors = [...new Set([...grading.tosErrors, ...bulk.tosErrors])]
+
   return (
     <div className={s.page}>
       <SubmissionsHeader
@@ -143,6 +145,7 @@ function handleGradeSubmission() {
       {/* onForceSubmit enables the ▶ button on in_progress rows */}
       <SubmissionsTable
         paginated={subs.paginated}
+        durationMinutes={subs.examInfo?.duration_minutes}
         loading={subs.loading}
         takeSort={subs.takeSort}
         onTakeSort={subs.setTakeSort}
@@ -168,6 +171,7 @@ function handleGradeSubmission() {
           gradingSubmission={grading.gradingSubmission}
           onClose={details.closeModal}
           onGrade={handleGradeSubmission}
+          tosErrors={tosErrors}
         />
       )}
     </div>

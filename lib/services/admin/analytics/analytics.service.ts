@@ -47,11 +47,19 @@ function extractMessage(err: unknown): string {
 
 // ── fetchPrograms ───────────────────────────────────────────────────────────
 
-export async function fetchPrograms(db: DB): Promise<ProgramFilterOption[]> {
-  const { data, error } = await db
+export async function fetchPrograms(
+  db: DB,
+  schoolId?: string | null,
+): Promise<ProgramFilterOption[]> {
+  let query = db
     .from('programs')
     .select('id, code, name')
-    .order('code')
+
+  if (schoolId) {
+    query = query.eq('school_id', schoolId)
+  }
+
+  const { data, error } = await query.order('code')
 
   if (error) {
     throw new Error(extractMessage(error))
@@ -68,10 +76,27 @@ interface CountStats {
   totalExams:    number
 }
 
-export async function fetchCountStats(db: DB): Promise<CountStats> {
+export async function fetchCountStats(
+  db: DB,
+  schoolId?: string | null,
+  programIds?: string[],
+): Promise<CountStats> {
+  let studentsQuery = db.from('students').select('id', { count: 'exact', head: true })
+  let examsQuery = db.from('exams').select('id', { count: 'exact', head: true })
+
+  if (schoolId) {
+    studentsQuery = studentsQuery.eq('school_id', schoolId)
+  }
+  if (programIds) {
+    if (programIds.length === 0) {
+      return { totalStudents: 0, totalExams: 0 }
+    }
+    examsQuery = examsQuery.in('program_id', programIds)
+  }
+
   const [studentsRes, examsRes] = await Promise.all([
-    db.from('students').select('id', { count: 'exact', head: true }),
-    db.from('exams').select('id',    { count: 'exact', head: true }),
+    studentsQuery,
+    examsQuery,
   ])
 
   if (studentsRes.error) {
@@ -113,6 +138,10 @@ export async function fetchAllSubmissions(
   db:         DB,
   examIds?:   string[],
 ): Promise<SubmissionProjection[]> {
+  if (examIds && examIds.length === 0) {
+    return []
+  }
+
   let query = db
     .from('submissions')
     .select('id, student_id, exam_id, status, time_spent_seconds')
@@ -138,6 +167,10 @@ export async function fetchReleasedSubmissions(
   db:       DB,
   examIds?: string[],
 ): Promise<ReleasedSubmissionProjection[]> {
+  if (examIds && examIds.length === 0) {
+    return []
+  }
+
   let query = db
     .from('submissions')
     .select('id, student_id, exam_id, percentage, passed, time_spent_seconds')

@@ -5,8 +5,8 @@ import { normaliseId } from '@/lib/utils/auth'
 import type { ResolveUserResult } from '@/lib/types/auth/'
 
 function getServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY
   if (!url || !key) {
     throw new Error('Missing Supabase service role env vars.')
   }
@@ -61,6 +61,27 @@ export async function POST(req: NextRequest): Promise<NextResponse<ResolveUserRe
       userId = faculty.user_id
     } else if (admin?.user_id) {
       userId = admin.user_id
+    }
+
+    // Fallback path for student IDs:
+    // If the students row is missing (e.g., profile-sync race/non-fatal signup insert),
+    // resolve directly from auth user metadata so login can still proceed.
+    if (!userId) {
+      const isStudentId = /^\d{2}-\d{4}-\d{3}$/.test(id)
+      if (isStudentId) {
+        const { data: usersPage, error: listErr } = await supabase.auth.admin.listUsers()
+        if (!listErr) {
+          const authUser = usersPage.users.find((u) => {
+            const meta = (u.user_metadata ?? {}) as Record<string, unknown>
+            return typeof meta.student_id === 'string' && normaliseId(meta.student_id) === id
+          })
+          if (authUser?.id) {
+            userId = authUser.id
+          }
+        } else {
+          console.error('[resolve-user-by-id] listUsers fallback error:', listErr.message)
+        }
+      }
     }
 
     if (!userId) {

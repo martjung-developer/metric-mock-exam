@@ -13,8 +13,9 @@ export type CategoryRow   = Database['public']['Tables']['exam_categories']['Row
 // Pick ensures we stay in sync with the generated schema.
 
 export interface CategoryOption {
-  id:   string
-  name: string
+  id:         string
+  name:       string
+  program_id: string | null
 }
  
 // ── Form State ──────────────────────────────────────────────────────────────
@@ -70,5 +71,11 @@ export interface UseCreateExamReturn {
 }
 export interface UseExamCategoriesReturn {
   categories:  CategoryOption[]
+  programs:    {
+    id:   string
+    code: string
+    name: string
+  }[]
   catLoading:  boolean
+  addCategory: (name: string, programId: string) => Promise<CategoryOption>
 }

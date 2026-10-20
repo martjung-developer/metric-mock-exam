@@ -2,8 +2,9 @@
 // Custom hook encapsulating all state and data-fetching for the analytics dashboard.
 // Calls service functions — no direct Supabase queries here.
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useUser } from '@/lib/context/AuthContext'
 import {
   fetchPrograms,
   fetchCountStats,
@@ -39,13 +40,16 @@ const EMPTY_DATA: AnalyticsData = {
 // ── Hook ────────────────────────────────────────────────────────────────────
 
 export function useAnalytics(): UseAnalyticsReturn {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
+  const { user, profile, loading: authLoading } = useUser()
 
   const [data,            setData]            = useState<AnalyticsData>(EMPTY_DATA)
   const [loading,         setLoading]         = useState(true)
   const [error,           setError]           = useState<string | null>(null)
   const [refreshed,       setRefreshed]       = useState<Date | null>(null)
   const [selectedProgram, setSelectedProgram] = useState('all')
+  const [viewerSchoolId, setViewerSchoolId] = useState<string | null>(null)
+  const [viewerSchoolLoaded, setViewerSchoolLoaded] = useState(false)
 
   // Stable ref so fetchAll always sees latest selectedProgram
   const selectedProgramRef = useRef(selectedProgram)
@@ -53,21 +57,84 @@ export function useAnalytics(): UseAnalyticsReturn {
     selectedProgramRef.current = selectedProgram
   }, [selectedProgram])
 
+  useEffect(() => {
+    if (authLoading || !user) {
+      return
+    }
+
+    let cancelled = false
+
+    void (async () => {
+      const role =
+        (user.user_metadata?.role as string | undefined) ??
+        (user.app_metadata?.role  as string | undefined) ??
+        profile?.role
+
+      const metaSchoolId =
+        (user.user_metadata?.school_id as string | undefined) ??
+        (user.app_metadata?.school_id  as string | undefined) ??
+        profile?.school_id ??
+        null
+
+      if (metaSchoolId) {
+        if (!cancelled) {
+          setViewerSchoolId(metaSchoolId)
+          setViewerSchoolLoaded(true)
+        }
+        return
+      }
+
+      if (role !== 'faculty' && role !== 'admin') {
+        if (!cancelled) {
+          setViewerSchoolId(null)
+          setViewerSchoolLoaded(true)
+        }
+        return
+      }
+
+      const { data } = role === 'faculty'
+        ? await supabase
+            .from('faculty')
+            .select('school_id')
+            .eq('user_id', user.id)
+            .maybeSingle()
+        : await supabase
+            .from('admins')
+            .select('school_id')
+            .eq('user_id', user.id)
+            .maybeSingle()
+
+      if (!cancelled) {
+        setViewerSchoolId(data?.school_id ?? null)
+        setViewerSchoolLoaded(true)
+      }
+    })()
+
+    return () => { cancelled = true }
+  }, [authLoading, profile?.role, profile?.school_id, supabase, user])
+
   const fetchAll = useCallback(async () => {
+    if (!viewerSchoolLoaded) {
+      return
+    }
+
     setLoading(true)
     setError(null)
 
     try {
       // ── Step 1: Programs filter list + count stats (parallel) ──────────────
-      const [programs, { totalStudents, totalExams }] = await Promise.all([
-        fetchPrograms(supabase),
-        fetchCountStats(supabase),
-      ])
+      const programs = await fetchPrograms(supabase, viewerSchoolId)
+      const scopedProgramIds = viewerSchoolId ? programs.map((program) => program.id) : undefined
+      const { totalStudents, totalExams } = await fetchCountStats(
+        supabase,
+        viewerSchoolId,
+        scopedProgramIds,
+      )
 
       const program = selectedProgramRef.current
 
       // ── Step 2: Resolve exam IDs for program filter ────────────────────────
-      let examIds: string[] | undefined
+      let examIds: string[] | undefined = scopedProgramIds
 
       if (program !== 'all') {
         const ids = await fetchExamIdsForProgram(supabase, program)
@@ -152,10 +219,12 @@ export function useAnalytics(): UseAnalyticsReturn {
     } finally {
       setLoading(false)
     }
-  }, [supabase]) // selectedProgram is accessed via ref inside fetchAll
+  }, [supabase, viewerSchoolId, viewerSchoolLoaded]) // selectedProgram is accessed via ref inside fetchAll
 
   // Re-run when selectedProgram changes
   useEffect(() => {
+    // Load analytics for the currently selected program.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchAll()
   }, [fetchAll, selectedProgram])
 

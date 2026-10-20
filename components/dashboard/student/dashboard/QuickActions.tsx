@@ -20,10 +20,10 @@ const QUICK_ACTIONS = [
     bg:    '#eff6ff',
   },
   {
-    href:  '/student/practice-exams',
+    href:  '/student/reviewer',
     icon:  BookOpen,
     label: 'Start a Reviewer',
-    desc:  'Practice questions',
+    desc:  'Review questions',
     color: '#047857',
     bg:    '#ecfdf5',
   },

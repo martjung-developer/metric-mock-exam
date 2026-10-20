@@ -85,7 +85,31 @@
   pointer-events: none;
 }
 
-.heroText { position: relative; z-index: 1; }
+.heroText { position: relative; z-index: 2; }
+
+.heroImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  object-fit: cover;
+  object-position: center 35%;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to right,
+    rgba(20, 30, 60, 0.92) 0%,
+    rgba(20, 30, 60, 0.75) 50%,
+    rgba(20, 30, 60, 0.35) 100%
+  );
+  pointer-events: none;
+}
 
 .heroEyebrow {
   font-size: 0.65rem;
@@ -109,7 +133,7 @@
   font-size: 0.785rem;
   color: rgba(176, 188, 201, 0.75);
   margin: 0 0 1.125rem;
-  max-width: 310px;
+  max-width: 500px;
   line-height: 1.6;
 }
 
@@ -296,6 +320,112 @@
   margin-top: 1px;
 }
 
+.dashboardList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dashboardRow,
+.assignedRow {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  background: #f8fafc;
+  border: 1.5px solid #edf0f5;
+  border-radius: 9px;
+}
+
+.assignedRow {
+  text-decoration: none;
+  transition: border-color 0.15s;
+}
+
+.dashboardRowTitle {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #0d2540;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboardRowMeta {
+  font-size: 0.72rem;
+  color: #7a8fa8;
+  margin: 0;
+}
+
+.assignedIconBox {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #dbeafe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.activitySkeletonDot {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #e4ecf3;
+}
+
+.activitySkeletonBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.activitySkeletonTitle,
+.activitySkeletonMeta,
+.activitySkeletonScore,
+.assignedSkeletonIcon,
+.assignedSkeletonTitle,
+.assignedSkeletonMeta {
+  border-radius: 4px;
+  background: #e4ecf3;
+}
+
+.activitySkeletonTitle {
+  width: 55%;
+  height: 12px;
+}
+
+.activitySkeletonMeta {
+  width: 35%;
+  height: 10px;
+  background: #edf0f5;
+}
+
+.activitySkeletonScore {
+  width: 36px;
+  height: 14px;
+}
+
+.assignedSkeletonIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.assignedSkeletonTitle {
+  width: 60%;
+  height: 12px;
+}
+
+.assignedSkeletonMeta {
+  width: 40%;
+  height: 10px;
+  background: #edf0f5;
+}
+
 /* ── Empty state ── */
 .emptyState {
   text-align: center;
@@ -475,4 +605,50 @@
   to { transform: rotate(360deg); }
 }
 
+:global(html.dark) .quickLabel {
+  color: #e6edf7;
+}
 
+:global(html.dark) .quickItem,
+:global(html.dark) .dashboardRow,
+:global(html.dark) .assignedRow {
+  background: #172338;
+  border-color: #243247;
+}
+
+:global(html.dark) .quickItem:hover,
+:global(html.dark) .assignedRow:hover {
+  background: #1b2a43;
+  border-color: #3a4a66;
+}
+
+:global(html.dark) .quickIconWrap,
+:global(html.dark) .statIconWrap,
+:global(html.dark) .assignedIconBox {
+  background: #111a2b !important;
+}
+
+:global(html.dark) .quickIconWrap svg,
+:global(html.dark) .statIconWrap svg,
+:global(html.dark) .assignedIconBox svg {
+  stroke: #9db0ca;
+}
+
+:global(html.dark) .dashboardRowTitle {
+  color: #e6edf7;
+}
+
+:global(html.dark) .dashboardRowMeta,
+:global(html.dark) .quickDesc {
+  color: #9db0ca;
+}
+
+:global(html.dark) .activitySkeletonDot,
+:global(html.dark) .activitySkeletonTitle,
+:global(html.dark) .activitySkeletonMeta,
+:global(html.dark) .activitySkeletonScore,
+:global(html.dark) .assignedSkeletonIcon,
+:global(html.dark) .assignedSkeletonTitle,
+:global(html.dark) .assignedSkeletonMeta {
+  background: #243247;
+}

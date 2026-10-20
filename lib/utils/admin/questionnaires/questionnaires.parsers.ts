@@ -296,6 +296,9 @@ function csvRowsToImportRows(raw: Record<string, string>[]): ImportRow[] {
     const optionD       = col(row, 'option_d', 'd')
     const explanation   = col(row, 'explanation', 'rationale')
     const scenario      = col(row, 'scenario')
+    const image         = col(row, 'image', 'image_filename', 'image_url').trim()
+    const sectionTitle  = col(row, 'section_title', 'section')              
+    const sectionNumberRaw = col(row, 'section_number')                     
     const difficulty    = coerceDifficulty(col(row, 'difficulty') || 'medium')
     const points        = coercePoints(row['points'])
 
@@ -306,6 +309,11 @@ function csvRowsToImportRows(raw: Record<string, string>[]): ImportRow[] {
     if (questionType === 'multiple_choice' && !correctAnswer) {
       errors.push('correct_answer is missing')
     }
+
+    const parsedSectionNumber = Number(sectionNumberRaw)
+    const sectionNumber = sectionNumberRaw && Number.isFinite(parsedSectionNumber)
+      ? Math.round(parsedSectionNumber)
+      : undefined
 
     return {
       _rowIndex:      rowIdx,
@@ -320,6 +328,9 @@ function csvRowsToImportRows(raw: Record<string, string>[]): ImportRow[] {
       option_d:       optionD,
       explanation,
       scenario,
+      image,                                    
+      section_title:  sectionTitle || undefined,   
+      section_number: sectionNumber,                
       difficulty,
       points,
       exam_id:        '',

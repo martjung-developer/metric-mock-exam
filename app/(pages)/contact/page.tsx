@@ -28,16 +28,16 @@ import {
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 const QUICK_CHIPS = [
-  { icon: MailIcon, label: 'support@veripraxis.ph', href: 'mailto:support@veripraxis.ph' },
+  { icon: MailIcon, label: 'support@metric.ph', href: 'mailto:support@metric.ph' },
   { icon: MessageSquare, label: 'Live Chat',              href: '#chat' },
-  { icon: Facebook, label: 'Facebook',               href: 'https://facebook.com/veripraxis' },
+  { icon: Facebook, label: 'Facebook',               href: 'https://facebook.com/metric' },
 ]
 
 const CHANNELS = [
   {
     icon:  MailIcon,
     title: 'Email Support',
-    value: 'support@veripraxis.ph',
+    value: 'support@metric.ph',
     note:  'We reply within 24 hours',
   },
   {
@@ -49,7 +49,7 @@ const CHANNELS = [
   {
     icon:  Facebook,
     title: 'Facebook Page',
-    value: 'facebook.com/veripraxis',
+    value: 'facebook.com/metric',
     note:  'DMs answered daily',
   },
   {
@@ -120,7 +120,7 @@ export default function ContactPage() {
             <motion.div {...heroRightContainer}>
               <motion.span {...heroRightItem} className={styles.heroBadge}>
                 <MessageCircle size={11} strokeWidth={2.5} />
-                Contact VeriPraxis
+                Contact M.E.T.R.I.C.
               </motion.span>
 
               <motion.h1 {...heroRightItem} className={styles.heroTitle}>

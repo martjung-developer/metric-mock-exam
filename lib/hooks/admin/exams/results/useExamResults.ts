@@ -18,6 +18,7 @@ import {
   fetchResults,
   fetchAnalytics,
   getExamResultsWithAttempts,
+  fetchExamTosBreakdowns,
 } from '@/lib/services/admin/exams/results/results.service'
 import {
   computeSummaryFromHistories,
@@ -32,7 +33,10 @@ import type {
   ResultSummary,
   PassFilter,
   StatusFilter,
+  TosAreaPerformance,
 } from '@/lib/types/admin/exams/results/results.types'
+import { normalizeAreaTitle } from '@/lib/utils/admin/submissions/grading'
+import type { TosAreaBreakdown } from '@/lib/utils/admin/results/tosBreakdown'
 
 const PAGE_SIZE = 10
 
@@ -62,6 +66,7 @@ export interface UseExamResultsReturn {
   historiesByStudentId: Map<string, StudentAttemptHistory>
   /** Full ordered list (same order as the results table) */
   histories: StudentAttemptHistory[]
+  areaPerformance: TosAreaPerformance[]
 }
 
 export function useExamResults(examId: string): UseExamResultsReturn {
@@ -73,6 +78,7 @@ export function useExamResults(examId: string): UseExamResultsReturn {
 
   const [allResults,   setAllResults]   = useState<Result[]>([])
   const [histories,    setHistories]    = useState<StudentAttemptHistory[]>([])
+  const [areaPerformance, setAreaPerformance] = useState<TosAreaPerformance[]>([])
   const [analytics,    setAnalytics]    = useState<AggregateAnalytics | null>(null)
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState<string | null>(null)
@@ -91,9 +97,10 @@ export function useExamResults(examId: string): UseExamResultsReturn {
     setError(null)
 
     // Run results fetch and attempt history fetch in parallel
-    const [resultsOutcome, attemptsOutcome] = await Promise.all([
+    const [resultsOutcome, attemptsOutcome, tosOutcome] = await Promise.all([
       fetchResults(supabase, examIdRef.current),
       getExamResultsWithAttempts(supabase, examIdRef.current),
+      fetchExamTosBreakdowns(supabase, examIdRef.current),
     ])
 
     if (!isMounted.current) {return}
@@ -105,7 +112,49 @@ export function useExamResults(examId: string): UseExamResultsReturn {
     }
 
     const results      = resultsOutcome.results
-    const newHistories = attemptsOutcome.ok ? attemptsOutcome.histories : []
+    const tosBySubmission: Map<string, TosAreaBreakdown[]> = tosOutcome.ok
+      ? tosOutcome.bySubmissionId
+      : new Map<string, TosAreaBreakdown[]>()
+    const newHistories = attemptsOutcome.ok
+      ? attemptsOutcome.histories.map((history) => ({
+        ...history,
+        attempts: history.attempts.map((attempt) => ({
+          ...attempt,
+          ...(tosBySubmission.has(attempt.submission_id)
+            ? { tosBreakdown: tosBySubmission.get(attempt.submission_id) }
+            : {}),
+        })),
+      }))
+      : []
+
+    const releasedAreas = new Map<string, { title: string; total: number; attempts: number }>()
+    if (tosOutcome.ok) {
+      for (const submissionId of tosOutcome.releasedSubmissionIds) {
+        for (const area of tosOutcome.bySubmissionId.get(submissionId) ?? []) {
+          const key = normalizeAreaTitle(area.area_title)
+          const current = releasedAreas.get(key) ?? { title: area.area_title, total: 0, attempts: 0 }
+          current.total += area.percent
+          current.attempts += 1
+          releasedAreas.set(key, current)
+        }
+      }
+    }
+    const averages = [...releasedAreas.entries()].map(([key, area]) => ({
+      key,
+      area_title: area.title,
+      average_percent: area.total / area.attempts,
+      released_attempts: area.attempts,
+      weakest: false,
+    }))
+    const weakestAverage = averages.length > 0
+      ? Math.min(...averages.map((area) => area.average_percent))
+      : null
+    setAreaPerformance(averages.map((area) => ({
+      area_title: area.area_title,
+      average_percent: area.average_percent,
+      released_attempts: area.released_attempts,
+      weakest: weakestAverage !== null && area.average_percent === weakestAverage,
+    })))
 
     // Analytics: prefer DB table, fall back to histories-derived computation
     const analyticsOutcome = await fetchAnalytics(supabase, examIdRef.current, results)
@@ -123,7 +172,7 @@ export function useExamResults(examId: string): UseExamResultsReturn {
   }, [supabase])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     void refresh()
   }, [refresh])
 
@@ -192,5 +241,6 @@ export function useExamResults(examId: string): UseExamResultsReturn {
     allResults,
     historiesByStudentId,
     histories,
+    areaPerformance,
   }
 }

@@ -9,7 +9,7 @@ import { usePathname } from 'next/navigation'
 import styles from '@/app/page.module.css'
 
 const NAV_LINKS = [
-  { label: 'Home',     href: '/'         },
+  { label: 'Welcome',  href: '/welcome'  },
   { label: 'About',  href: '/about'  },
   { label: 'Features', href: '/features' },
   { label: 'Programs', href: '/programs' },
@@ -36,10 +36,10 @@ export default function Navbar() {
     <header className={navClass}>
       <div className={styles.navInner}>
         {/* Logo */}
-        <Link href="/" className={styles.navLogo} aria-label="Veripraxis home">
+        <Link href="/welcome" className={styles.navLogo} aria-label="Metric welcome">
           <Image
-            src="/images/veripraxis-logo.png"
-            alt="Veripraxis"
+            src="/images/metric-logo.png"
+            alt="Metric"
             width={140}
             height={40}
             className={styles.navLogoImg}
@@ -50,8 +50,8 @@ export default function Navbar() {
         {/* Desktop center links */}
         <nav className={styles.navCenter} aria-label="Main navigation">
           {NAV_LINKS.map(({ label, href }) => {
-            const isActive = href === '/'
-              ? pathname === '/'
+            const isActive = href === '/welcome'
+              ? pathname === '/welcome'
               : pathname.startsWith(href)
 
             return (
@@ -69,8 +69,8 @@ export default function Navbar() {
 
         {/* Desktop CTA buttons */}
         <div className={styles.navActions}>
-          <Link href="/role-select"    className={styles.navLoginBtn}>Log in</Link>
-          <Link href="/role-select" className={styles.navSignupBtn}>Sign Up</Link>
+          <Link href="/" prefetch={true} className={styles.navLoginBtn}>Log in</Link>
+          <Link href="/signup" prefetch={true} className={styles.navSignupBtn}>Sign Up</Link>
 
           {/* Hamburger (mobile) */}
           <button
@@ -99,8 +99,8 @@ export default function Navbar() {
           </Link>
         ))}
         <div className={styles.mobileDivider} />
-        <Link href="/role-select"    className={styles.mobileNavLink}   onClick={() => setMobileOpen(false)}>Log in</Link>
-        <Link href="/role-select" className={styles.mobileSignupBtn} onClick={() => setMobileOpen(false)}>Sign Up</Link>
+        <Link href="/" prefetch={true} className={styles.mobileNavLink} onClick={() => setMobileOpen(false)}>Log in</Link>
+        <Link href="/signup" prefetch={true} className={styles.mobileSignupBtn} onClick={() => setMobileOpen(false)}>Sign Up</Link>
       </div>
     </header>
   )

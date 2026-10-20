@@ -11,11 +11,14 @@ import type { Database }       from '@/lib/types/database'
 import type { GradingMode }    from '@/lib/types/database'
 import type { ServiceResult }  from '@/lib/types/admin/exams/submissions/submission.types'
 import type { ExamInfo }       from '@/lib/types/admin/exams/submissions/exam.types'
+import type { TosAreaConfig }  from '@/lib/types/admin/exams/exam.types'
 export { validateExamAccess } from '@/lib/services/admin/exams/submissions/submission.service'
 
 type PublicSchema = Database['public']
 type ExamsRow     = PublicSchema['Tables']['exams']['Row']
 type ExamsUpdate  = PublicSchema['Tables']['exams']['Update']
+type TosAreaRow   = Pick<PublicSchema['Tables']['exam_tos_areas']['Row'],
+  'area_title' | 'weight_percent' | 'expected_items' | 'min_percent'>
 type DB           = SupabaseClient<Database>
 
 function ok<T>(data: T): ServiceResult<T>             { return { data, error: null } }
@@ -53,9 +56,9 @@ export async function getExamInfo(
 ): Promise<ServiceResult<ExamInfo>> {
   const { data, error } = await supabase
     .from('exams')
-    .select('passing_score,total_points,grading_mode')
+    .select('passing_score,total_points,grading_mode,duration_minutes')
     .eq('id', examId)
-    .single<Pick<ExamsRow, 'passing_score' | 'total_points' | 'grading_mode'>>()
+    .single<Pick<ExamsRow, 'passing_score' | 'total_points' | 'grading_mode' | 'duration_minutes'>>()
 
   if (error || !data) {return err(error?.message ?? 'Exam not found')}
 
@@ -66,6 +69,7 @@ export async function getExamInfo(
     passing_score: exam.passing_score,
     total_points:  exam.total_points,
     grading_mode:  mode,
+    duration_minutes: exam.duration_minutes ?? undefined,
   })
 }
 
@@ -83,4 +87,25 @@ export async function updateGradingMode(
     .eq('id', examId)
 
   return error ? err(error.message) : ok(undefined)
+}
+
+export async function getTosAreas(
+  supabase: DB,
+  examId: string,
+): Promise<ServiceResult<TosAreaConfig[]>> {
+  const { data, error } = await supabase
+    .from('exam_tos_areas')
+    .select('area_title,weight_percent,expected_items,min_percent')
+    .eq('exam_id', examId)
+    .order('area_title', { ascending: true })
+    .overrideTypes<TosAreaRow[], { merge: false }>()
+
+  if (error) {return err(error.message)}
+
+  return ok((data ?? []).map((area) => ({
+    area_title: area.area_title,
+    weight_percent: area.weight_percent,
+    expected_items: area.expected_items,
+    min_percent: area.min_percent,
+  })))
 }

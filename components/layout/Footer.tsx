@@ -29,10 +29,10 @@ export default function Footer() {
         <div className={styles.footerGrid}>
           {/* Brand */}
           <div className={styles.footerBrand}>
-            <Link href="/" className={styles.footerLogoLink} aria-label="Veripraxis home">
+            <Link href="/" className={styles.footerLogoLink} aria-label="Metric home">
               <Image
-                src="/images/veripraxis-logo.png"
-                alt="Veripraxis"
+                src="/images/metric-logo.png"
+                alt="Metric"
                 width={140}
                 height={40}
                 className={styles.footerLogoImg}
@@ -61,7 +61,7 @@ export default function Footer() {
         </div>
 
         <div className={styles.footerBottom}>
-          <span>© {new Date().getFullYear()} Veripraxis. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} Metric. All rights reserved.</span>
           <span>Built for Filipino reviewees 🇵🇭</span>
         </div>
       </div>

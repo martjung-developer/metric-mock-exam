@@ -1,15 +1,9 @@
 // lib/types/admin/questionnaires/questionnaires.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// CHANGES FROM PREVIOUS VERSION:
-//   + scenario field added to ImportRow, DisplayQuestion, QuestionInsertPayload
-//   + ParsedQuestion interface (used by docx.extractor.ts)
-//   + No `any`, no `as`, no `unknown as`
-// ─────────────────────────────────────────────────────────────────────────────
 
 import type { Database, QuestionType, QuestionOption } from '@/lib/types/database'
 import type { ApprovalStatus } from '../../approval'
 
-// ── Raw DB row types (source of truth) ────────────────────────────────────────
+// ── Raw DB row types ────────────────────────────────────────
 export type ProgramRow  = Database['public']['Tables']['programs']['Row']
 export type ExamRow     = Database['public']['Tables']['exams']['Row']
 export type QuestionRow = Database['public']['Tables']['questions']['Row']
@@ -22,8 +16,7 @@ export interface ExamOption {
   program_id: string
 }
 
-// ── Parsed question shape (output of all parsers / extractors) ─────────────────
-// This is the canonical intermediate type between raw file content and ImportRow.
+// ── Parsed question shape ─────────────────
 export interface QuestionInsertPayload {
   question_text:  string
   question_type:  QuestionType
@@ -33,16 +26,20 @@ export interface QuestionInsertPayload {
   explanation:    string | null
   exam_id:        string | null
   scenario:       string | null
+  image_url:      string | null      
+  section_title?: string | null
+  section_number?: number | null
   approval_status?: ApprovalStatus
   submitted_by?:    string | null
   question_bank_id?: string | null
+  created_by?: string | null
 }
 
 export interface ParsedQuestion {
   question:       string
-  scenario:       string | undefined   // undefined = no scenario detected
-  options:        string[]             // raw option texts (no labels yet)
-  correct_answer: string | null        // label (A/B/C/D) or 'true'/'false' or null
+  scenario:       string | undefined
+  options:        string[]
+  correct_answer: string | null
 }
 
 // ── Joined shape returned by fetchQuestions ────────────────────────────────────
@@ -54,11 +51,17 @@ export interface DisplayQuestion {
   options:        QuestionOption[] | null
   correct_answer: string | null
   explanation:    string | null
-  scenario:       string | null   
+  scenario:       string | null
+  image_url:      string | null      // ── ADDED
+  section_title:  string | null
+  section_number: number | null
   order_number:   number | null
   exam_id:        string | null
   created_by:     string | null
   created_at:     string
+  last_modified_by: string | null
+  last_modified_at: string | null
+  lastModifiedByName: string | null
   categoryName:   string
   examTitle:      string | null
   examProgramId:  string | null
@@ -88,30 +91,41 @@ export interface FormState {
   difficulty:     DifficultyLevel
   choices: Array<{ label: string; text: string }>
   program_id:     string
-  scenario:       string            
+  scenario:       string
+  image_url:      string             // ── ADDED — '' = no image
 }
 
 export interface ImportRow {
   _rowIndex:      number
   _valid:         boolean
   _errors:        string[]
- 
+
   question_text:  string
   question_type:  QuestionType
   correct_answer: string
- 
+
   option_a:       string
   option_b:       string
   option_c:       string
   option_d:       string
- 
-  explanation:    string   
-  scenario:       string   
- 
+
+  explanation:    string
+  scenario:       string
+  image:          string             // ── ADDED — CSV column name is 'image'
+  embeddedImage?: EmbeddedImageData
+  section_title?: string
+  section_number?: number | null
+  status?:        'ready' | 'needs_review'
+
   difficulty:     DifficultyLevel
   points:         number
   exam_id:        string
   program_id:     string
+}
+
+export interface EmbeddedImageData {
+  fileName: string
+  dataUrl:  string
 }
 
 // Raw row shape coming out of every file parser

@@ -27,6 +27,12 @@ export interface UseQuestionsReturn {
   createQuestion: (payload: CreatePayload) => Promise<boolean>
   updateQuestion: (payload: UpdatePayload) => Promise<boolean>
   deleteQuestion: (id: string)            => Promise<boolean>
+  selectedQuestionIds: Set<string>
+  toggleQuestionSelection: (id: string) => void
+  setSelectedQuestions: (ids: string[]) => void
+  clearQuestionSelection: () => void
+  deleteSelectedQuestions: () => Promise<boolean>
+  bulkDeleting: boolean
 }
 
 export interface CreatePayload {
@@ -35,6 +41,7 @@ export interface CreatePayload {
   points:         number
   options:        Question['options']
   correct_answer: string
+  image_url:      string
   explanation:    string
 }
 
@@ -49,6 +56,8 @@ export function useQuestions(examId: string): UseQuestionsReturn {
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState<string | null>(null)
   const [toast,     setToast]     = useState<ToastState | null>(null)
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -120,6 +129,7 @@ export function useQuestions(examId: string): UseQuestionsReturn {
         correct_answer: isAutoGraded(payload.question_type)
           ? (payload.correct_answer || null)
           : null,
+        image_url:      payload.image_url || null,
         explanation:    payload.explanation || null,
         order_number:   maxOrder + 1,
       })
@@ -151,6 +161,7 @@ export function useQuestions(examId: string): UseQuestionsReturn {
         correct_answer: isAutoGraded(payload.question_type)
           ? (payload.correct_answer || null)
           : null,
+        image_url:      payload.image_url || null,
         explanation:    payload.explanation || null,
       }
 
@@ -165,6 +176,7 @@ export function useQuestions(examId: string): UseQuestionsReturn {
         points:         payload.points,
         options:        patched.options ?? null,
         correct_answer: patched.correct_answer ?? null,
+        image_url:      patched.image_url ?? null,
         explanation:    patched.explanation ?? null,
       })
 
@@ -203,11 +215,55 @@ export function useQuestions(examId: string): UseQuestionsReturn {
         return false
       }
 
+      setSelectedQuestionIds((previous) => {
+        const next = new Set(previous)
+        next.delete(id)
+        return next
+      })
       showToast({ message: 'Question deleted.', type: 'success' })
       return true
     },
     [questions, showToast],
   )
+
+  const toggleQuestionSelection = useCallback((id: string) => {
+    setSelectedQuestionIds((previous) => {
+      const next = new Set(previous)
+      if (next.has(id)) { next.delete(id) } else { next.add(id) }
+      return next
+    })
+  }, [])
+
+  const setSelectedQuestions = useCallback((ids: string[]) => {
+    setSelectedQuestionIds(new Set(ids))
+  }, [])
+
+  const clearQuestionSelection = useCallback(() => setSelectedQuestionIds(new Set()), [])
+
+  const deleteSelectedQuestions = useCallback(async (): Promise<boolean> => {
+    const ids = [...selectedQuestionIds]
+    if (ids.length === 0) { return false }
+
+    setBulkDeleting(true)
+    try {
+      const { error: deleteErr } = await QuestionsService.deleteQuestions(ids, examId)
+      if (deleteErr !== null) {
+        showToast({ message: `Could not delete selected questions: ${deleteErr}`, type: 'error' })
+        return false
+      }
+
+      clearQuestionSelection()
+      await fetchQuestions()
+      showToast({ message: `${ids.length} question${ids.length === 1 ? '' : 's'} deleted.`, type: 'success' })
+      return true
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown deletion error.'
+      showToast({ message: `Could not delete selected questions: ${message}`, type: 'error' })
+      return false
+    } finally {
+      setBulkDeleting(false)
+    }
+  }, [selectedQuestionIds, examId, showToast, clearQuestionSelection, fetchQuestions])
 
   return {
     questions,
@@ -219,5 +275,11 @@ export function useQuestions(examId: string): UseQuestionsReturn {
     createQuestion,
     updateQuestion,
     deleteQuestion,
+    selectedQuestionIds,
+    toggleQuestionSelection,
+    setSelectedQuestions,
+    clearQuestionSelection,
+    deleteSelectedQuestions,
+    bulkDeleting,
   }
 }

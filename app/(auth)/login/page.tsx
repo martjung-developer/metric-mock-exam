@@ -1,17 +1,8 @@
 // app/(auth)/login/page.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Unified login page for student / faculty / admin.
-//
-// ID detection (client-side, before server):
-//   • Student  (YY-NNNN-NNN)  → badge "Student"
-//   • Staff    (PREFIX-NNNNN) → badge "Staff (PREFIX)"
-//   Server role is always authoritative for the final redirect.
-//
-// Mismatch: warns the user but does NOT block sign-in.
-// ─────────────────────────────────────────────────────────────────────────────
+
 'use client'
 
-import { useState, useEffect }     from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Image                       from 'next/image'
 import Link                        from 'next/link'
 import { useSearchParams }         from 'next/navigation'
@@ -68,6 +59,14 @@ function getPreResolveBadgeLabel(userId: string): string | null {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
+  )
+}
+
+function LoginContent() {
   const searchParams = useSearchParams()
   const queryRole    = searchParams.get('role')
   const nextPath     = searchParams.get('next') ?? undefined
@@ -171,13 +170,13 @@ export default function LoginPage() {
 
           {/* ── Back + Logo ── */}
           <div className={styles.logoWrap} style={{ position: 'relative' }}>
-            <Link href="/role-select" className={styles.cardBackLink} aria-label="Back to role selection">
+            <Link href="/" className={styles.cardBackLink} aria-label="Back to role selection">
               <ArrowLeft size={13} strokeWidth={2} />
               Back
             </Link>
             <Image
-              src="/images/veripraxis-logo.png"
-              alt="VeriPraxis"
+              src="/images/metric-logo.png"
+              alt="M.E.T.R.I.C."
               height={44}
               width={160}
               className={styles.logoImg}
@@ -185,7 +184,7 @@ export default function LoginPage() {
               onError={(e) => {
                 const parent = e.currentTarget.parentElement
                 if (parent) {
-                  parent.innerHTML = '<span class="logoTextFallback">Veri<em>Praxis</em></span>'
+                  parent.innerHTML = '<span class="logoTextFallback">M.E.T.R.I.C.</span>'
                 }
               }}
             />
@@ -198,7 +197,7 @@ export default function LoginPage() {
               <span className={styles.roleHintPill} data-role={selectedRole}>
                 {ROLE_LABELS[selectedRole]}
               </span>
-              <Link href="/role-select" className={styles.roleHintChange}>Change</Link>
+              <Link href="/" className={styles.roleHintChange}>Change</Link>
             </div>
           )}
 

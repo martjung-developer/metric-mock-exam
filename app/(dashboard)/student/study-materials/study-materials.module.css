@@ -727,3 +727,11 @@
   }
 }
 
+:global(html.dark) .cardTitle {
+  color: #e6edf7;
+}
+
+:global(html.dark) .categoryTag {
+  background: #172338;
+}
+

@@ -3,14 +3,14 @@ import Link from 'next/link'
 import styles from '@/app/page.module.css'
 
 const FREE_FEATURES = [
-  '50 practice questions per month',
+  '50 reviewer questions per month',
   'Basic performance summary',
   'Access to community forums',
   '1 mock exam per month',
 ]
 
 const PRO_FEATURES = [
-  'Unlimited practice questions',
+  'Unlimited reviewer questions',
   'Full analytics dashboard',
   'Unlimited mock exams',
   'All study materials & reviewers',

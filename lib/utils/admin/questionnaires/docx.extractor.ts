@@ -18,6 +18,25 @@ export interface DocxExtractResult {
     text: string
     boldText: string
   }>
+  embeddedImages?: Array<{ fileName: string; dataUrl: string }>
+}
+
+export function extractEmbeddedImagesFromHtml(html: string): Array<{ fileName: string; dataUrl: string }> {
+  const images: Array<{ fileName: string; dataUrl: string }> = []
+  const pattern = /<img\b[^>]*\bsrc=["'](data:image\/[^"']+)["'][^>]*>/gi
+  let match = pattern.exec(html)
+
+  while (match !== null) {
+    const dataUrl = match[1]
+    if (dataUrl) {
+      const mimeType = /^data:(image\/[a-z0-9.+-]+);base64,/i.exec(dataUrl)?.[1] ?? 'image/png'
+      const extension = mimeType.split('/')[1]?.replace('jpeg', 'jpg').split('+')[0] ?? 'png'
+      images.push({ fileName: `embedded-image-${images.length + 1}.${extension}`, dataUrl })
+    }
+    match = pattern.exec(html)
+  }
+
+  return images
 }
 
 /**
@@ -43,12 +62,14 @@ export async function extractDocx(file: File): Promise<DocxExtractResult> {
   ])
 
   const boldSet = extractBoldTexts(htmlResult.value)
+  const embeddedImages = extractEmbeddedImagesFromHtml(htmlResult.value)
 
  return {
     html:      htmlResult.value,
     plainText: textResult.value,
     boldSet,
     paragraphs,
+    embeddedImages,
   }
 }
 
@@ -86,7 +107,7 @@ function collectParagraphs(doc: MammothElement): NonNullable<DocxExtractResult['
   function walk(el: MammothElement): void {
     if (el.type === 'paragraph') {
       result.push({
-        level:    el.numbering !== null ? parseLevel(el.numbering.level) : null,
+        level:    el.numbering?.level ? parseLevel(el.numbering.level) : null,
         boldText: mammothGetBoldText(el).trim(),
         text:     mammothGetText(el).trim(),
       })

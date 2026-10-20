@@ -65,7 +65,11 @@ export function useFacultySubmissions(): UseFacultySubmissionsReturn {
     }
   }, [supabase, user])
 
-  useEffect(() => { void fetchAll() }, [fetchAll])
+  useEffect(() => {
+    // Load the current faculty submission list when the user is available.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchAll()
+  }, [fetchAll])
 
   const handleRefresh = useCallback(() => { void fetchAll() }, [fetchAll])
 

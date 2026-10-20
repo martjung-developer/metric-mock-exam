@@ -11,7 +11,7 @@ import { getDashboardByRole, canManageContent }   from '@/lib/types/auth'
 function isInvalidRefreshTokenError(error: unknown): boolean {
   if (!(error instanceof Error)) { return false }
   const msg = error.message.toLowerCase()
-  return msg.includes('invalid refresh token') && msg.includes('refresh token not found')
+  return msg.includes('invalid refresh token') || msg.includes('refresh token not found')
 }
 
 // ── Get current user ──────────────────────────────────────────────────────────
@@ -153,9 +153,33 @@ export async function requireContentAccess() {
 // ── Redirect already-authenticated users ─────────────────────────────────────
 
 export async function redirectIfAuthenticated() {
-  const user = await getUser()
-  if (!user) { return }
+  const supabase = await createClient()
+  let signOutRedirect = false
+  let userId: string | null = null
 
-  const profile = await getProfile(user.id)
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser()
+
+    if (error) {
+      if (isInvalidRefreshTokenError(error)) {
+        signOutRedirect = true
+      }
+      return
+    }
+
+    userId = user?.id ?? null
+  } catch (error) {
+    if (isInvalidRefreshTokenError(error)) {
+      signOutRedirect = true
+    }
+  }
+
+  if (signOutRedirect) {
+    redirect('/api/auth/signout')
+  }
+
+  if (!userId) { return }
+
+  const profile = await getProfile(userId)
   redirect(getDashboardByRole(profile?.role ?? 'student'))
 }

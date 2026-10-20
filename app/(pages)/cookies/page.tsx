@@ -110,7 +110,7 @@ export default function CookiesPage() {
               {/* Eyebrow badge */}
               <motion.div {...legalHeroRightItem} className={styles.heroBadge}>
                 <Cookie size={11} strokeWidth={2.2} className={styles.heroBadgeIcon} />
-                VeriPraxis Legal
+                M.E.T.R.I.C. Legal
               </motion.div>
 
               <motion.h1 {...legalHeroRightItem} className={styles.heroTitle}>
@@ -229,10 +229,10 @@ export default function CookiesPage() {
               </div>
               <div className={styles.tocCardTitle}>Cookie questions?</div>
               <div className={styles.tocCardText}>
-                Contact our Data Privacy Officer for any questions about how cookies are used on Veripraxis.
+                Contact our Data Privacy Officer for any questions about how cookies are used on Metric.
               </div>
-              <a href="mailto:privacy@veripraxis.ph" className={styles.tocCardLink}>
-                privacy@veripraxis.ph
+              <a href="mailto:privacy@metric.ph" className={styles.tocCardLink}>
+                privacy@metric.ph
                 <ArrowRight size={11} strokeWidth={2.4} />
               </a>
             </motion.div>
@@ -280,7 +280,7 @@ export default function CookiesPage() {
                 ))}
               </div>
 
-              <p className={styles.paragraph}>Below is the full list of cookies Veripraxis may set on your device:</p>
+              <p className={styles.paragraph}>Below is the full list of cookies Metric may set on your device:</p>
 
               {/* Cookie table */}
               <div className={styles.tableWrap}>
@@ -382,7 +382,7 @@ export default function CookiesPage() {
               </div>
               <p className={styles.paragraph}>
                 Questions about this Cookie Policy? Email our Data Privacy Officer at{' '}
-                <a href="mailto:privacy@veripraxis.ph" className={styles.email}>privacy@veripraxis.ph</a>.
+                <a href="mailto:privacy@metric.ph" className={styles.email}>privacy@metric.ph</a>.
               </p>
               <p className={styles.paragraph}>
                 For general inquiries visit our{' '}

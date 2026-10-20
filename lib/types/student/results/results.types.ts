@@ -9,9 +9,9 @@ type ExamCategoryRow = Database['public']['Tables']['exam_categories']['Row']
 // ── Raw Supabase join shape (submissions + exams + exam_categories) ───────────
 export type RawResultRow = Pick<
   SubmissionRow,
-  'id' | 'exam_id' | 'score' | 'percentage' | 'passed' | 'status' | 'time_spent_seconds' | 'submitted_at'
+  'id' | 'exam_id' | 'score' | 'percentage' | 'passed' | 'status' | 'time_spent_seconds' | 'submitted_at' | 'started_at'
 > & {
-  exams: (Pick<ExamRow, 'title' | 'total_points' | 'exam_type'> & {
+  exams: (Pick<ExamRow, 'title' | 'total_points' | 'exam_type' | 'duration_minutes'> & {
     exam_categories: Pick<ExamCategoryRow, 'name'> | null
   }) | null
 }
@@ -37,6 +37,8 @@ export interface ResultRow {
   status:             string
   time_spent_seconds: number | null
   submitted_at:       string | null
+  started_at:         string | null
+  duration_minutes:   number | null
 }
 
 export interface PendingRow {
@@ -52,6 +54,8 @@ export interface SummaryStats {
   averageScore:     number | null
   highestScore:     number | null
   totalTimeMinutes: number
+  totalTimeSeconds?: number | null
+  validTimeCount?:   number
 }
 
 // ── Filter types ──────────────────────────────────────────────────────────────

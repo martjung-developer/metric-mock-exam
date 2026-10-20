@@ -7,6 +7,7 @@
 
 import { type FC, useState }      from 'react'
 import Link             from 'next/link'
+import Image            from 'next/image'
 import { motion }       from 'framer-motion'
 import { Clock, ChevronRight } from 'lucide-react'
 import { dashboardPage, section } from '@/animations/dashboard/dashboardAnimations'
@@ -58,10 +59,20 @@ const DashboardClient: FC<Props> = ({ firstName, greeting }) => {
 
       {/* ── Hero Banner ── */}
       <motion.div className={styles.heroBanner} {...section}>
+        <Image
+          src="/images/lccb_student_img.jpeg"
+          alt=""
+          fill
+          sizes="100vw"
+          className={styles.heroImage}
+          aria-hidden="true"
+          priority
+        />
+        <div className={styles.heroOverlay} aria-hidden="true" />
         <div className={styles.heroText}>
           <div className={styles.heroEyebrow}>Board Exam Prep</div>
           <h2 className={styles.heroTitle}>
-            Ready to ace your<br />Licensure Exam?
+            Ready to ace your Licensure Exam?
           </h2>
           <p className={styles.heroSub}>
             Take mock exams, practice with reviewers, and track your progress — all in one place.
@@ -137,7 +148,7 @@ const DashboardClient: FC<Props> = ({ firstName, greeting }) => {
             <p className={styles.tipText}>
               Consistent daily practice beats last-minute cramming. Aim for at least one reviewer per day!
             </p>
-            <Link href="/student/practice-exams" className={styles.tipBtn}>
+            <Link href="/student/reviewer" className={styles.tipBtn}>
               Start Reviewing →
             </Link>
           </motion.div>

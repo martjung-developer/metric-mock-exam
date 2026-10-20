@@ -184,6 +184,14 @@
   padding: 0.75rem;
   align-content: start;
 }
+.sectionMarker {
+  grid-column: 1 / -1;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  padding: 0.25rem 0 0.1rem;
+}
 
 .palBtn {
   aspect-ratio: 1;
@@ -226,6 +234,58 @@
   padding: 1.75rem 2rem;
   box-shadow: 0 1px 3px rgba(30,58,95,0.06);
   animation: slideQ 0.18s ease both;
+}
+
+.questionImage {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  width: auto;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid #e4ecf3;
+  margin-bottom: 1.25rem;
+  object-fit: contain;
+  background: #f9fbfd;
+}
+ 
+:global(html.dark) .questionImage {
+  border-color: #243247;
+  background: #172338;
+}
+
+.sectionTransitionCard {
+  background: #fff;
+  border: 1px solid #e4ecf3;
+  border-radius: 13px;
+  padding: 1.75rem 2rem;
+  box-shadow: 0 1px 3px rgba(30,58,95,0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-height: 340px;
+}
+.sectionTransitionOverline {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #1d2951;
+  text-transform: uppercase;
+}
+.sectionTransitionTitle {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+.sectionTransitionMeta {
+  margin: 0 0 0.6rem;
+  color: #64748b;
+  font-size: 0.95rem;
 }
 
 .questionMeta {
@@ -777,4 +837,42 @@
   .examTitle { max-width: 140px; }
   .navBar  { padding: 0.6rem 1rem; }
   .completionCard { padding: 1.5rem; }
+}
+
+:global(html.dark) .legendItem,
+:global(html.dark) .textArea,
+:global(html.dark) .fillInput {
+  color: #9db0ca;
+}
+
+:global(html.dark) .sidebar,
+:global(html.dark) .questionCard,
+:global(html.dark) .sectionTransitionCard,
+:global(html.dark) .optLabel,
+:global(html.dark) .textArea,
+:global(html.dark) .fillInput,
+:global(html.dark) .matchInput,
+:global(html.dark) .btnRetry,
+:global(html.dark) .navBar,
+:global(html.dark) .btnNav,
+:global(html.dark) .completionCard,
+:global(html.dark) .btnRetryAll {
+  background: #111a2b;
+  border-color: #243247;
+}
+
+:global(html.dark) .palBtn,
+:global(html.dark) .typeBadge,
+:global(html.dark) .optionBtn,
+:global(html.dark) .tfBtn,
+:global(html.dark) .matchLeft,
+:global(html.dark) .completionGridItem {
+  background: #172338;
+}
+
+:global(html.dark) .palBtn,
+:global(html.dark) .typeBadge,
+:global(html.dark) .optionBtn,
+:global(html.dark) .tfBtn {
+  border-color: #243247;
 }

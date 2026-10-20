@@ -156,6 +156,8 @@ export function useMockExamSession(examId: string): ExamSessionState {
   useEffect(() => {
     if (authLoading) {return}
     if (user === null || user === undefined) {
+      // Reflect the completed auth check in the session's loading/error state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError('Not authenticated.')
       setLoading(false)
       return

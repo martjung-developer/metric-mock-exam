@@ -1,3 +1,4 @@
+// app/api/admin/create-faculty/route.ts
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/lib/supabase/server'
@@ -17,13 +18,18 @@ function getServiceRoleClient() {
   return createServiceClient<Database>(url, key, { auth: { persistSession: false } })
 }
 
+interface CreateFacultyProgramInput {
+  programId: string
+  isProgramHead?: boolean
+}
+
 interface CreateFacultyBody {
   fullName: string
   email: string
   facultyId: string
   password: string
-  programId: string
-  roleType: FacultyRoleType
+  programs: CreateFacultyProgramInput[]
+  roleTypes: FacultyRoleType[]
 }
 
 export async function POST(req: NextRequest) {
@@ -66,16 +72,36 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (!body.programId) {
+    // ── Multi-program validation ────────────────────────────────────────
+    if (!Array.isArray(body.programs) || body.programs.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'programId is required.' },
+        { success: false, error: 'At least one program is required.' },
         { status: 400 },
       )
     }
 
-    if (!body.roleType || !VALID_ROLE_TYPES.has(body.roleType)) {
+    const programIds = body.programs.map((p) => p.programId).filter(Boolean)
+    if (programIds.length !== body.programs.length) {
       return NextResponse.json(
-        { success: false, error: 'Invalid roleType. Must be professional | major | minor.' },
+        { success: false, error: 'Invalid program selection.' },
+        { status: 400 },
+      )
+    }
+    const uniqueProgramIds = new Set(programIds)
+    if (uniqueProgramIds.size !== programIds.length) {
+      return NextResponse.json(
+        { success: false, error: 'Duplicate programs selected.' },
+        { status: 400 },
+      )
+    }
+
+    if (
+      !Array.isArray(body.roleTypes) ||
+      body.roleTypes.length === 0 ||
+      !body.roleTypes.every((r) => VALID_ROLE_TYPES.has(r))
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid roleTypes. Provide at least one of: professional, major, minor.' },
         { status: 400 },
       )
     }
@@ -84,8 +110,8 @@ export async function POST(req: NextRequest) {
     const fullName = body.fullName.trim()
     const facultyId = body.facultyId.trim().toUpperCase()
     const password = body.password.trim()
-    const roleType = body.roleType
-    const programId = body.programId
+    const roleTypes = body.roleTypes
+    const programSelections = body.programs
 
     const idValidationError = validateFacultyId(facultyId)
     if (idValidationError) {
@@ -97,18 +123,28 @@ export async function POST(req: NextRequest) {
 
     const serviceClient = getServiceRoleClient()
 
-    const { data: programRow, error: programError } = await serviceClient
+    // ── Fetch and validate all selected programs ────────────────────────
+    const { data: programRows, error: programError } = await serviceClient
       .from('programs')
       .select('id, code, name, school_id')
-      .eq('id', programId)
-      .single()
+      .in('id', [...uniqueProgramIds])
 
-    if (programError || !programRow) {
+    if (programError || !programRows || programRows.length !== uniqueProgramIds.size) {
       return NextResponse.json(
-        { success: false, error: 'Program not found.' },
+        { success: false, error: 'One or more selected programs were not found.' },
         { status: 400 },
       )
     }
+
+    // Enforce: all selected programs must belong to the same school.
+    const schoolIds = new Set(programRows.map((p) => p.school_id).filter(Boolean))
+    if (schoolIds.size > 1) {
+      return NextResponse.json(
+        { success: false, error: 'All selected programs must belong to the same school.' },
+        { status: 400 },
+      )
+    }
+    const schoolId = programRows[0]?.school_id ?? null
 
     const { data: existingFaculty } = await serviceClient
       .from('faculty')
@@ -164,34 +200,64 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { error: insertError } = await serviceClient
+    // "Primary" program = the first one in the submitted list — mirrored
+    // onto the legacy faculty.program_id / is_program_head columns.
+    const primarySelection = programSelections[0]
+    const primaryProgram = programRows.find((p) => p.id === primarySelection.programId)
+
+    const { data: insertedFaculty, error: insertError } = await serviceClient
       .from('faculty')
       .insert({
         faculty_id: facultyId,
         user_id: newUserId,
         email,
         full_name: fullName,
-        role_type: roleType,
-        program_id: programId,
-        school_id: programRow.school_id ?? null,
+        role_types: roleTypes,
+        program_id: primaryProgram?.id ?? null,
+        school_id: schoolId,
+        is_program_head: Boolean(primarySelection.isProgramHead),
         is_active: true,
         created_by: user.id,
       })
+      .select('id')
+      .single()
 
-    if (insertError) {
+    if (insertError || !insertedFaculty) {
       await serviceClient.auth.admin.deleteUser(newUserId)
       return NextResponse.json(
-        { success: false, error: insertError.message },
+        { success: false, error: insertError?.message ?? 'Failed to create faculty record.' },
+        { status: 500 },
+      )
+    }
+
+    // ── Insert one faculty_programs row per selected program ────────────
+    const { error: linksError } = await serviceClient
+      .from('faculty_programs')
+      .insert(
+        programSelections.map((sel) => ({
+          faculty_id: insertedFaculty.id,
+          program_id: sel.programId,
+          is_program_head: Boolean(sel.isProgramHead),
+        })),
+      )
+
+    if (linksError) {
+      // Roll back: faculty row cascade-deletes faculty_programs via FK,
+      // but the row itself and the auth user still need cleanup.
+      await serviceClient.from('faculty').delete().eq('id', insertedFaculty.id)
+      await serviceClient.auth.admin.deleteUser(newUserId)
+      return NextResponse.json(
+        { success: false, error: linksError.message },
         { status: 500 },
       )
     }
 
     let schoolCode: string | null = null
-    if (programRow.school_id) {
+    if (schoolId) {
       const { data: schoolRow } = await serviceClient
         .from('schools')
         .select('code')
-        .eq('id', programRow.school_id)
+        .eq('id', schoolId)
         .maybeSingle()
       schoolCode = schoolRow?.code ?? null
     }
@@ -199,10 +265,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       faculty_id: facultyId,
-      program_code: programRow.code,
-      program_name: programRow.name,
+      programs: programRows.map((p) => ({
+        code: p.code,
+        name: p.name,
+        is_program_head: Boolean(
+          programSelections.find((sel) => sel.programId === p.id)?.isProgramHead,
+        ),
+      })),
       school_code: schoolCode,
-      role_type: roleType,
+      role_types: roleTypes,
       email,
       full_name: fullName,
       role: 'faculty',

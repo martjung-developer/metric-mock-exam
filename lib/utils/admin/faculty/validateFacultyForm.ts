@@ -1,12 +1,7 @@
 // lib/utils/admin/faculty/validateFacultyForm.ts
-//
-// Client-side form validation for the Create Faculty modal.
-// Mirrors the server-side checks so the user gets instant feedback.
-
 import type {
   CreateFacultyPayload,
   FacultyDepartment,
-  FacultyProgram,
   DepartmentPrograms,
 } from '@/lib/types/admin/faculty'
 import { DEPARTMENT_PROGRAMS } from '@/lib/types/admin/faculty'
@@ -18,8 +13,8 @@ export interface FacultyFormErrors {
   facultyId?:  string
   password?:   string
   department?: string
-  program?:    string
-  roleType?:   string
+  programs?:    string
+  roleTypes?:  string
   programId?:  string
 }
 
@@ -44,9 +39,7 @@ export function validateFacultyForm(
     errors.facultyId = 'Faculty ID Number is required.'
   } else {
     const idError = validateFacultyId(payload.facultyId)
-    if (idError) {
-      errors.facultyId = idError
-    }
+    if (idError) { errors.facultyId = idError }
   }
 
   if (!payload.password?.trim()) {
@@ -59,22 +52,33 @@ export function validateFacultyForm(
     errors.department = 'Department is required.'
   }
 
-  if (!payload.program) {
-    errors.program = 'Program is required.'
-  } else if (payload.department) {
-    const deptEntry: DepartmentPrograms | undefined = DEPARTMENT_PROGRAMS.find(
-      (d) => d.department === payload.department,
-    )
-    if (deptEntry && !deptEntry.programs.includes(payload.program as FacultyProgram)) {
-      errors.program = 'Selected program does not belong to the chosen department.'
+  // ── Multi-program validation ──────────────────────────────────────────
+  if (!payload.programs || payload.programs.length === 0) {
+    errors.programs = 'Select at least one program.'
+  } else {
+    const dups = new Set<string>()
+    for (const p of payload.programs) {
+      if (dups.has(p.programId)) {
+        errors.programs = 'Duplicate program selected.'
+        break
+      }
+      dups.add(p.programId)
+    }
+    if (!errors.programs && payload.department) {
+      const deptEntry: DepartmentPrograms | undefined = DEPARTMENT_PROGRAMS.find(
+        (d) => d.department === payload.department,
+      )
+      const invalid = payload.programs.some(
+        (p) => deptEntry && !deptEntry.programs.includes(p.code),
+      )
+      if (invalid) {
+        errors.programs = 'All selected programs must belong to the chosen department.'
+      }
     }
   }
-  if (!payload.programId?.trim()) {
-    errors.programId = 'Program mapping failed. Please reselect the program.'
-  }
 
-  if (!payload.roleType) {
-    errors.roleType = 'Role type is required.'
+  if (!payload.roleTypes || payload.roleTypes.length === 0) {
+    errors.roleTypes = 'Select at least one role type.'
   }
 
   return errors
@@ -84,14 +88,8 @@ export function hasErrors(errors: FacultyFormErrors): boolean {
   return Object.values(errors).some(Boolean)
 }
 
-// ── Derive programs for a selected department ─────────────────────────────────
-
-export function getProgramsForDepartment(
-  department: FacultyDepartment | '',
-): FacultyProgram[] {
-  if (!department) {
-    return []
-  }
+export function getProgramsForDepartment(department: FacultyDepartment | '') {
+  if (!department) { return [] }
   const entry = DEPARTMENT_PROGRAMS.find((d) => d.department === department)
   return entry ? [...entry.programs] : []
 }

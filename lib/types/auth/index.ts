@@ -1,29 +1,19 @@
 // lib/types/auth/index.ts
 
-// ── Roles ─────────────────────────────────────────────────────────────────────
+// ── Roles ─────────────────────────────────────────────────────────────────────────
 export type UserRole   = 'student' | 'faculty' | 'admin'
 export type SignupRole = 'student' // signup is student-only
 
-// ── ID format aliases (documentation only — runtime is regex-validated) ────────
+// ── ID format aliases (documentation only — runtime is regex-validated) ─────────
 export type StudentId = `${string}-${string}-${string}`
 export type FacultyId = `${Uppercase<string>}-${string}`
 export type AdminId   = `${Uppercase<string>}-${string}`
 export type AnyUserId = StudentId | FacultyId | AdminId
 
-// ── 9 Programs ────────────────────────────────────────────────────
-export const PROGRAMS = [
-  { value: 'BS-PSYCH',  label: 'BS Psychology'                     },
-  { value: 'BS-ID',     label: 'BS Interior Design'                 },
-  { value: 'BLIS',      label: 'BS Library and Information Science' },
-  { value: 'BS-ARCH',   label: 'BS Architecture'                    },
-  { value: 'BSEd-MATH', label: 'BSEd – Mathematics'                 },
-  { value: 'BSEd-SCI',  label: 'BSEd – Science'                     },
-  { value: 'BSEd-ENG',  label: 'BSEd – English'                     },
-  { value: 'BEEd',      label: 'Bachelor of Elementary Education'    },
-  { value: 'BSEd-FIL',  label: 'BSEd – Filipino'                    },
-] as const
+// ── Program codes come from database at runtime (no hardcoded list) ────────────
+export const PROGRAMS: ReadonlyArray<{ value: string; label: string }> = []
 
-export type ProgramCode = typeof PROGRAMS[number]['value']
+export type ProgramCode = string
 
 // ── Year levels ───────────────────────────────────────────────────────────────
 export const YEAR_LEVEL_OPTIONS = [
@@ -149,11 +139,11 @@ export type AuthProfile = Profile
 
 // ── Program utilities ─────────────────────────────────────────────────────────
 export function isProgramCode(value: unknown): value is ProgramCode {
-  return PROGRAMS.some((p) => p.value === value)
+  return typeof value === 'string' && value.trim().length > 0
 }
 
 export function getProgramLabel(code: ProgramCode | '' | null | undefined): string {
   if (!code) { return '—' }
   const match = PROGRAMS.find((p) => p.value === code)
-  return match?.label ?? '—'
+  return match?.label ?? code
 }

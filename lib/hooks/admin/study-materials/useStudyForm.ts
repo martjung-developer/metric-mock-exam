@@ -18,6 +18,7 @@ import {
   type RawFormState,
   type ValidationErrors,
 } from '@/lib/utils/admin/study-materials/validators'
+import type { UploadProgressHandler } from '@/lib/services/admin/study-materials/storage.service'
 
 // ── State shape ───────────────────────────────────────────────────────────────
 
@@ -27,6 +28,7 @@ interface FormReducerState {
   file:       File | null
   submitting: boolean
   dragOver:   boolean
+  uploadProgress: number | null
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────
@@ -37,6 +39,7 @@ type FormAction =
   | { type: 'SET_ERRORS';     payload: ValidationErrors }
   | { type: 'SET_DRAG';       payload: boolean }
   | { type: 'SET_SUBMITTING'; payload: boolean }
+  | { type: 'SET_UPLOAD_PROGRESS'; payload: number | null }
   | { type: 'RESET';          payload: RawFormState }
 
 function formReducer(
@@ -54,6 +57,8 @@ function formReducer(
       return { ...state, dragOver: action.payload }
     case 'SET_SUBMITTING':
       return { ...state, submitting: action.payload }
+    case 'SET_UPLOAD_PROGRESS':
+      return { ...state, uploadProgress: action.payload }
     case 'RESET':
       return {
         form:       action.payload,
@@ -61,6 +66,7 @@ function formReducer(
         file:       null,
         submitting: false,
         dragOver:   false,
+        uploadProgress: null,
       }
     default:
       return state
@@ -73,6 +79,7 @@ const INITIAL_STATE: FormReducerState = {
   file:       null,
   submitting: false,
   dragOver:   false,
+  uploadProgress: null,
 }
 
 // ── Hook return shape ─────────────────────────────────────────────────────────
@@ -84,6 +91,7 @@ export interface UseStudyFormReturn {
   file:         File | null
   submitting:   boolean
   dragOver:     boolean
+  uploadProgress: number | null
   fileInputRef: React.RefObject<HTMLInputElement | null>
   editTarget:   StudyMaterial | null
   showForm:     boolean
@@ -98,12 +106,13 @@ export interface UseStudyFormReturn {
   handleDrop:   (e: React.DragEvent) => void
   /** Validates + calls onCreate or onUpdate. Returns true on success. */
   handleSubmit: (
-    onCreate: (form: RawFormState, file: File | null) => Promise<void>,
+    onCreate: (form: RawFormState, file: File | null, onUploadProgress?: UploadProgressHandler) => Promise<void>,
     onUpdate: (
       id: string,
       form: RawFormState,
       file: File | null,
       existingUrl: string | null,
+      onUploadProgress?: UploadProgressHandler,
     ) => Promise<void>,
   ) => Promise<boolean>
 }
@@ -203,6 +212,11 @@ export function useStudyForm(): UseStudyFormReturn {
       }
 
       dispatch({ type: 'SET_SUBMITTING', payload: true })
+      dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: state.file ? 0 : null })
+
+      const onUploadProgress: UploadProgressHandler = (progress) => {
+        dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress })
+      }
 
       try {
         if (editTarget) {
@@ -211,9 +225,10 @@ export function useStudyForm(): UseStudyFormReturn {
             state.form,
             state.file,
             editTarget.file_url,
+            state.file ? onUploadProgress : undefined,
           )
         } else {
-          await onCreate(state.form, state.file)
+          await onCreate(state.form, state.file, state.file ? onUploadProgress : undefined)
         }
         closeForm()
         return true
@@ -222,6 +237,7 @@ export function useStudyForm(): UseStudyFormReturn {
         return false
       } finally {
         dispatch({ type: 'SET_SUBMITTING', payload: false })
+        dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: null })
       }
     },
     [state.form, state.file, editTarget, closeForm],
@@ -233,6 +249,7 @@ export function useStudyForm(): UseStudyFormReturn {
     file:         state.file,
     submitting:   state.submitting,
     dragOver:     state.dragOver,
+    uploadProgress: state.uploadProgress,
     fileInputRef,
     editTarget,
     showForm,

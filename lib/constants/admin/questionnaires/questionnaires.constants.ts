@@ -1,9 +1,4 @@
 // lib/constants/admin/questionnaires/questionnaires.constants.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// CHANGES FROM PREVIOUS VERSION:
-//   + TEMPLATE_HEADERS now includes 'scenario' as the last column
-//   + Everything else unchanged
-// ─────────────────────────────────────────────────────────────────────────────
 
 import type { QuestionType } from '@/lib/types/database'
 import type { DifficultyLevel } from '@/lib/types/admin/questionnaires/questionnaires'
@@ -25,6 +20,8 @@ export const VALID_DIFF = [
   'hard',
 ] as const satisfies readonly DifficultyLevel[]
 
+export const IMAGE_BUCKET = 'questionnaire-assets'   
+
 // Column order for the downloadable CSV template
 export const TEMPLATE_HEADERS = [
   'question_text',
@@ -37,7 +34,8 @@ export const TEMPLATE_HEADERS = [
   'option_d',
   'correct_answer',
   'explanation',
-  'scenario',    
+  'scenario',
+  'image',
 ] as const
 
 // Display order for question type sections
@@ -94,3 +92,4 @@ export const DIFFICULTY_LABELS: Record<DifficultyLevel, string> = {
 }
 
 export const ACCEPTED_FILE_TYPES = '.csv,.xlsx,.xls,.docx,.doc,.pdf'
+export const ACCEPTED_IMAGE_TYPES = '.png,.jpg,.jpeg,.webp'

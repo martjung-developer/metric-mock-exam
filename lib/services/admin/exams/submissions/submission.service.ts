@@ -60,6 +60,19 @@ export async function getSubmissionsByExam(
   supabase: DB,
   examId:   string,
 ): Promise<ServiceResult<SubmissionRaw[]>> {
+  if (typeof window !== 'undefined') {
+    const res = await fetch(`/api/admin/exams/${examId}/submissions`, {
+      credentials: 'include',
+    })
+    const json = (await res.json().catch(() => ({}))) as {
+      data?: SubmissionRaw[]
+      error?: string
+    }
+    if (!res.ok) {
+      return err(json.error ?? 'Could not load submissions.')
+    }
+    return ok(json.data ?? [])
+  }
 
   // Step 1: flat submissions — no joins.
   // FIX E: Select ALL columns needed by the Submission display model.
@@ -208,7 +221,9 @@ export async function getSubmissionAnswers(
         options,
         correct_answer,
         explanation,
-        order_number
+        order_number,
+        section_title,
+        section_number
       )
     `)
     .eq('submission_id', submissionId)

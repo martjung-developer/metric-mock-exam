@@ -110,8 +110,8 @@ export async function updatePassword(newPassword: string): Promise<ServiceResult
 }
 
 export async function logout(): Promise<ServiceResult<void>> {
-  const supabase = createClient()
-  const { error } = await supabase.auth.signOut()
-  if (error) {return { data: null, error: error.message }}
+  if (typeof window !== 'undefined') {
+    window.location.href = '/api/auth/signout'
+  }
   return { data: null, error: null }
 }

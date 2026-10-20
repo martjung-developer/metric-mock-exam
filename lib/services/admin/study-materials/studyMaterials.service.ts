@@ -16,7 +16,7 @@ import type {
   LinkType,
 } from '@/lib/types/admin/study-materials/study-materials'
 import type { RawFormState } from '@/lib/utils/admin/study-materials/validators'
-import { uploadMaterialFile } from './storage.service'
+import { uploadMaterialFile, type UploadProgressHandler } from './storage.service'
 
 type SupabaseDB = SupabaseClient<Database>
 
@@ -218,17 +218,21 @@ interface BuildPayloadArgs {
   form:            RawFormState
   file:            File | null
   existingFileUrl: string | null
+  onUploadProgress?: UploadProgressHandler
 }
 
 async function buildPayload(args: BuildPayloadArgs) {
-  const { supabase, form, file, existingFileUrl } = args
+  const { form, file, existingFileUrl, onUploadProgress } = args
 
   let fileUrl: string | null = existingFileUrl
 
   // Upload physical file for document type
   if (form.type === 'document' && file) {
-    const { publicUrl } = await uploadMaterialFile(supabase, file)
-    fileUrl = publicUrl
+    const upload = await uploadMaterialFile(file, 'uploads', onUploadProgress)
+    if (!upload.ok) {
+      throw new Error(upload.error.message)
+    }
+    fileUrl = upload.data.url
   }
 
   // For video type, store YouTube URL in file_url
@@ -258,6 +262,7 @@ export interface CreateMaterialArgs {
   supabase: SupabaseDB
   form:     RawFormState
   file:     File | null
+  onUploadProgress?: UploadProgressHandler
 }
 
 export async function createStudyMaterial(
@@ -275,6 +280,7 @@ export async function createStudyMaterial(
     form:            { ...args.form, program_id: scopedProgramId ?? '' },
     file:            args.file,
     existingFileUrl: null,
+    onUploadProgress: args.onUploadProgress,
   })
 
   const { error } = await args.supabase
@@ -294,6 +300,7 @@ export interface UpdateMaterialArgs {
   form:            RawFormState
   file:            File | null
   existingFileUrl: string | null
+  onUploadProgress?: UploadProgressHandler
 }
 
 export async function updateStudyMaterial(
@@ -312,6 +319,7 @@ export async function updateStudyMaterial(
     form:            { ...args.form, program_id: scopedProgramId ?? '' },
     file:            args.file,
     existingFileUrl: args.existingFileUrl,
+    onUploadProgress: args.onUploadProgress,
   })
 
   const { error } = await args.supabase

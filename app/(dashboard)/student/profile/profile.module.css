@@ -660,3 +660,23 @@
 :global(html.dark) .avatarFallback {
   background: #1e3a5f;
 }
+
+:global(html.dark) .progressLabelPct {
+  color: #e6edf7;
+}
+
+:global(html.dark) .infoValueMuted,
+:global(html.dark) .progressLabelText,
+:global(html.dark) .scoreTotal,
+:global(html.dark) .dateVal,
+:global(html.dark) .emptyText {
+  color: #9db0ca;
+}
+
+:global(html.dark) .avatar {
+  border-color: #243247;
+}
+
+:global(html.dark) .cardTitleIcon {
+  background: #172338;
+}

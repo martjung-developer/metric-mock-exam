@@ -32,14 +32,14 @@ import {
 
 import {
   rowToDTO,
-  type NotificationDTO,
   type NotificationRow,
 } from '@/lib/types/notifications/notification.dto'
+import type { Notification } from '@/lib/types/student/notifications/notifications.types'
 
 // ── Return type ───────────────────────────────────────────────────────────────
 
 export interface UseStudentNotificationsReturn {
-  notifications:      NotificationDTO[]
+  notifications:      Notification[]
   unreadCount:        number
   loading:            boolean
   markAsRead:         (id: string) => Promise<void>
@@ -64,7 +64,7 @@ export function useNotifications(
     pushToast,
   } = useNotificationStore()
 
-  const notifications = useNotificationStore(selectNotifications) as NotificationDTO[]
+  const notifications = useNotificationStore(selectNotifications) as Notification[]
   const loading       = useNotificationStore(selectLoading)       as boolean
   const unreadCount   = useNotificationStore(selectUnreadCount)   as number
 
@@ -85,7 +85,17 @@ export function useNotifications(
     )
 
     if (error === null && data !== null) {
-      setNotifications(data)
+      setNotifications(data.map((dto) => ({
+        id: dto.id,
+        user_id: dto.userId,
+        type: dto.type === 'result_released' ? 'exam' : (dto.type as Notification['type']),
+        title: dto.title,
+        message: dto.message,
+        timestamp: dto.createdAt,
+        is_read: dto.isRead,
+        link: dto.link,
+        ctaLabel: dto.ctaLabel,
+      })))
     }
     setLoading(false)
   }, [userId, setLoading, setNotifications])
@@ -121,7 +131,17 @@ export function useNotifications(
         (payload: RealtimePostgresChangesPayload<NotificationRow>) => {
           if (payload.eventType === 'INSERT') {
             const dto = rowToDTO(payload.new)
-            addNotification(dto)
+            addNotification({
+              id: dto.id,
+              user_id: dto.userId,
+              type: dto.type === 'result_released' ? 'exam' : (dto.type as Notification['type']),
+              title: dto.title,
+              message: dto.message,
+              timestamp: dto.createdAt,
+              is_read: dto.isRead,
+              link: dto.link,
+              ctaLabel: dto.ctaLabel,
+            })
             pushToast({
               id:      dto.id,
               title:   dto.title,
@@ -131,7 +151,17 @@ export function useNotifications(
 
           if (payload.eventType === 'UPDATE') {
             const dto = rowToDTO(payload.new)
-            updateNotification(dto.id, dto)
+            updateNotification(dto.id, {
+              id: dto.id,
+              user_id: dto.userId,
+              type: dto.type === 'result_released' ? 'exam' : (dto.type as Notification['type']),
+              title: dto.title,
+              message: dto.message,
+              timestamp: dto.createdAt,
+              is_read: dto.isRead,
+              link: dto.link,
+              ctaLabel: dto.ctaLabel,
+            })
           }
 
           if (
@@ -158,10 +188,10 @@ export function useNotifications(
 
   const markAsRead = useCallback(
     async (id: string): Promise<void> => {
-      updateNotification(id, { isRead: true })
+      updateNotification(id, { is_read: true })
       const { error } = await markNotificationRead(createClient(), id, true)
       if (error !== null) {
-        updateNotification(id, { isRead: false })
+        updateNotification(id, { is_read: false })
       }
     },
     [updateNotification],
@@ -169,10 +199,10 @@ export function useNotifications(
 
   const markAsUnread = useCallback(
     async (id: string): Promise<void> => {
-      updateNotification(id, { isRead: false })
+      updateNotification(id, { is_read: false })
       const { error } = await markNotificationRead(createClient(), id, false)
       if (error !== null) {
-        updateNotification(id, { isRead: true })
+        updateNotification(id, { is_read: true })
       }
     },
     [updateNotification],

@@ -140,7 +140,7 @@ const PROGRAMS: Program[] = [
 
 const STATS = [
   { icon: BookMarked, value: '9',       label: 'Active Programs'    },
-  { icon: Users,      value: '10,000+', label: 'Practice Questions' },
+  { icon: Users,      value: '10,000+', label: 'Reviewer Questions' },
   { icon: TrendingUp, value: '91%',     label: 'Avg Pass Rate'      },
   { icon: Calendar,   value: 'Live Now',label: 'LCCB Programs'      },
 ]
@@ -172,7 +172,7 @@ export default function ProgramsPage() {
                 <span className={styles.heroAccent}>specific board exam</span>
               </motion.h1>
               <motion.p {...heroItem} className={styles.heroSub}>
-                VeriPraxis covers PRC licensure programs with program-specific
+                M.E.T.R.I.C. covers PRC licensure programs with program-specific
                 question banks, analytics, and study plans — all in one platform.
               </motion.p>
               <motion.div {...heroItem} className={styles.heroActions}>

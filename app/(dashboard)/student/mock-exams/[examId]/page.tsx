@@ -1,7 +1,9 @@
+// app/(dashboard)/student/mock-exams/[examId]/page.tsx
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
   AlertCircle,
@@ -37,6 +39,23 @@ function formatHms(totalSeconds: number): string {
   return `${String(h).padStart(2, '0')} : ${String(m).padStart(2, '0')} : ${String(s).padStart(2, '0')}`
 }
 
+function toRoman(value: number): string {
+  const pairs: Array<[number, string]> = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+  ]
+  let n = Math.max(1, Math.floor(value))
+  let out = ''
+  for (const [num, roman] of pairs) {
+    while (n >= num) {
+      out += roman
+      n -= num
+    }
+  }
+  return out
+}
+
 export default function MockExamPage() {
   const router = useRouter()
   const params = useParams()
@@ -56,6 +75,7 @@ export default function MockExamPage() {
   const [showAntiCheatSubmitModal, setShowAntiCheatSubmitModal] = useState(false)
   const [antiCheatSubmitReason, setAntiCheatSubmitReason] = useState('')
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(false)
+  const [pendingSectionStart, setPendingSectionStart] = useState<number | null>(null)
   const prefersReducedMotion = useReducedMotion()
   const prevStatesRef = useRef<Record<string, string>>({})
   const antiCheatSubmittedRef = useRef(false)
@@ -95,6 +115,8 @@ export default function MockExamPage() {
 
   useEffect(() => {
     if (submitted && timeLeft === 0) {
+      // This toast is a time-limit side effect and should appear immediately.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTimeUpToast(true)
       const timer = setTimeout(() => setTimeUpToast(false), 2200)
       return () => clearTimeout(timer)
@@ -107,6 +129,8 @@ export default function MockExamPage() {
       return
     }
 
+    // Clear transient anti-cheat UI when submission becomes final.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setShowAntiCheatBanner(false)
     setAntiCheatViolations(0)
 
@@ -121,9 +145,12 @@ export default function MockExamPage() {
     try {
       const saved = window.localStorage.getItem(`mock-bookmarks-${examId}`)
       if (saved !== null) {
+        // Restore this exam's saved bookmarks from browser storage.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setBookmarks(JSON.parse(saved) as Record<string, boolean>)
       }
     } catch {
+      // Invalid local data should reset to the safe empty state.
       setBookmarks({})
     }
   }, [examId])
@@ -170,6 +197,8 @@ export default function MockExamPage() {
 
     if (Object.keys(changed).length === 0) {return}
 
+    // Animate only the questions whose answer status changed.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPoppingBubbles((prev) => ({ ...prev, ...changed }))
     const timer = setTimeout(() => {
       setPoppingBubbles((prev) => {
@@ -186,6 +215,11 @@ export default function MockExamPage() {
 
   useEffect(() => {
     if (loading || submitted || questions.length === 0 || isLocked) {
+      return
+    }
+
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    if (isMobile) {
       return
     }
 
@@ -309,15 +343,20 @@ export default function MockExamPage() {
     }
 
     const onFullscreenChange = () => {
-      const exitedFullscreen = document.fullscreenElement === null
-      if (!exitedFullscreen) {
-        setShowFullscreenPrompt(false)
-        return
-      }
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  if (isMobile) {
+    return
+  }
 
-      registerViolation('Exiting fullscreen was detected.')
-      setShowFullscreenPrompt(true)
-    }
+  const exitedFullscreen = document.fullscreenElement === null
+  if (!exitedFullscreen) {
+    setShowFullscreenPrompt(false)
+    return
+  }
+
+  registerViolation('Exiting fullscreen was detected.')
+  setShowFullscreenPrompt(true)
+}
 
     document.addEventListener('visibilitychange', onVisibilityChange)
     window.addEventListener('blur', onWindowBlur)
@@ -380,6 +419,45 @@ export default function MockExamPage() {
   const state = resolveQState(q.id, answers, qStates)
   const isFlagged = state === 'flagged' || state === 'flagged-answered'
   const hasAnswer = String(answers[q.id] ?? '').trim().length > 0
+  const hasSections = questions.some((item) => Boolean(item.section_title?.trim()))
+  const sectionGroups = (() => {
+    if (!hasSections) {return [] as Array<{start: number; end: number; section_number: number; section_title: string; count: number}>}
+    const groups: Array<{start: number; end: number; section_number: number; section_title: string; count: number}> = []
+    for (let idx = 0; idx < questions.length; idx += 1) {
+      const item = questions[idx]
+      const title = item.section_title?.trim()
+      if (!title) {continue}
+      const num = typeof item.section_number === 'number' ? item.section_number : (groups.length + 1)
+      const last = groups[groups.length - 1]
+      if (!last || last.section_number !== num || last.section_title !== title) {
+        groups.push({ start: idx, end: idx, section_number: num, section_title: title, count: 1 })
+      } else {
+        last.end = idx
+        last.count += 1
+      }
+    }
+    return groups
+  })()
+  const pendingSection = pendingSectionStart === null ? null : sectionGroups.find((group) => group.start === pendingSectionStart) ?? null
+
+  const goToIndex = (target: number, direction: -1 | 0 | 1 = 0) => {
+    const safe = Math.max(0, Math.min(questions.length - 1, target))
+    if (hasSections && safe === current + 1) {
+      const from = questions[current]
+      const to = questions[safe]
+      const fromTitle = from.section_title?.trim()
+      const toTitle = to.section_title?.trim()
+      const fromNum = from.section_number ?? null
+      const toNum = to.section_number ?? null
+      if (fromTitle && toTitle && (fromTitle !== toTitle || fromNum !== toNum)) {
+        setPendingSectionStart(safe)
+        return
+      }
+    }
+    setPendingSectionStart(null)
+    setNavDirection(direction)
+    setCurrent(safe)
+  }
 
   const onNext = () => {
     if (current === questions.length - 1) {
@@ -387,12 +465,10 @@ export default function MockExamPage() {
       return
     }
     if (!hasAnswer) {
-      setNavDirection(1)
       handleSkip()
       return
     }
-    setNavDirection(1)
-    setCurrent(Math.min(questions.length - 1, current + 1))
+    goToIndex(current + 1, 1)
   }
 
   const content = submitted ? (
@@ -474,7 +550,16 @@ export default function MockExamPage() {
 
             <section className={styles.questionGridSection}>
               <div className={styles.numberGrid}>
-                {questions.map((item, idx) => {
+                {questions.flatMap((item, idx) => {
+                  const sectionLabel = hasSections && item.section_title?.trim() && (
+                    idx === 0 ||
+                    item.section_title?.trim() !== questions[idx - 1]?.section_title?.trim() ||
+                    item.section_number !== questions[idx - 1]?.section_number
+                  ) ? (
+                    <div key={`section-${item.id}`} className={styles.sectionMarker}>
+                      {toRoman(item.section_number ?? 1)}
+                    </div>
+                  ) : null;
                   const itemState = resolveQState(item.id, answers, qStates)
                   const isCurrent = idx === current
                   const stateClass = isCurrent
@@ -487,15 +572,12 @@ export default function MockExamPage() {
                           ? styles.numFlagged
                           : styles.numNotVisited
 
-                  return (
+                  const button = (
                     <motion.button
                       key={item.id}
                       aria-label={`Go to question ${idx + 1}`}
                       className={`${styles.numBtn} ${stateClass}`}
-                      onClick={() => {
-                        setNavDirection(0)
-                        setCurrent(idx)
-                      }}
+                      onClick={() => goToIndex(idx, 0)}
                       variants={bubbleVariants}
                       animate={poppingBubbles[item.id] ? 'pop' : 'idle'}
                       transition={prefersReducedMotion ? { duration: 0 } : undefined}
@@ -503,6 +585,7 @@ export default function MockExamPage() {
                       {idx + 1}
                     </motion.button>
                   )
+                  return sectionLabel === null ? [button] : [sectionLabel, button]
                 })}
               </div>
             </section>
@@ -525,6 +608,24 @@ export default function MockExamPage() {
         ) : null}
 
         <main className={styles.mainArea}>
+          {pendingSection !== null ? (
+            <article className={styles.sectionTransitionCard}>
+              <p className={styles.sectionTransitionOverline}>Section {toRoman(pendingSection.section_number)}</p>
+              <h2 className={styles.sectionTransitionTitle}>{pendingSection.section_title}</h2>
+              <p className={styles.sectionTransitionMeta}>{pendingSection.count} question{pendingSection.count !== 1 ? 's' : ''}</p>
+              <button
+                className={styles.footerPrimaryBtn}
+                onClick={() => {
+                  setNavDirection(1)
+                  setCurrent(pendingSection.start)
+                  setPendingSectionStart(null)
+                }}
+              >
+                <span>Continue</span>
+                <ChevronRight size={16} />
+              </button>
+            </article>
+          ) : (
           <article className={styles.questionCard}>
             <div className={styles.questionHead}>
               <span className={styles.questionMetaLabel}>QUESTION {current + 1} OF {questions.length}</span>
@@ -561,6 +662,12 @@ export default function MockExamPage() {
                 ) : null}
 
                 <h2 className={styles.questionStem}>{q.question_text}</h2>
+
+                {q.image_url ? (
+  <div className={styles.questionImageWrap}>
+    <Image className={styles.questionImage} src={q.image_url} alt="Question reference" width={1200} height={800} unoptimized />
+  </div>
+) : null}
 
                 {q.question_type === 'multiple_choice' && q.options ? (
                   <div className={styles.choiceList}>
@@ -666,8 +773,7 @@ export default function MockExamPage() {
                 <button
                   className={styles.footerOutlineBtn}
                   onClick={() => {
-                    setNavDirection(-1)
-                    setCurrent(Math.max(0, current - 1))
+                    goToIndex(current - 1, -1)
                   }}
                   disabled={current === 0}
                 >
@@ -676,7 +782,6 @@ export default function MockExamPage() {
                 </button>
                 {current < questions.length - 1 ? (
                   <button className={styles.footerOutlineBtn} onClick={() => {
-                    setNavDirection(1)
                     const result = skipAndNext(false)
                     if (result === 'confirm') {setShowSkipConfirm(true)}
                   }}>
@@ -692,6 +797,7 @@ export default function MockExamPage() {
               </div>
             </div>
           </article>
+          )}
         </main>
       </div>
     </>

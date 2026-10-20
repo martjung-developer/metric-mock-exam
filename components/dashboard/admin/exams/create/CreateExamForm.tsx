@@ -30,6 +30,7 @@ interface CreateExamFormProps {
   success:     boolean
   submitError: string | null
   setField:    <K extends keyof ExamFormData>(field: K, value: ExamFormData[K]) => void
+  addCategory: (name: string, programId: string) => Promise<CategoryOption>
   onSubmit:    (e: React.FormEvent) => Promise<void>
 }
 
@@ -43,6 +44,7 @@ export default function CreateExamForm({
   success,
   submitError,
   setField,
+  addCategory,
   onSubmit,
 }: CreateExamFormProps) {
   return (
@@ -79,6 +81,7 @@ export default function CreateExamForm({
               programs={programs}    
               catLoading={catLoading}
               setField={setField}
+              addCategory={addCategory}
             />
             <ExamSettingsSection
               form={form}

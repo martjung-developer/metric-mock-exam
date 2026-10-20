@@ -1,5 +1,6 @@
 // components/dashboard/student/mock-exams/QuestionCard.tsx
 import { BookOpen, Flag } from 'lucide-react'
+import Image from 'next/image'
 import type { Question } from '@/lib/types/student/mock-exams/mock-exams'
 import styles from '@/app/(dashboard)/student/mock-exams/[examId]/mock.module.css'
 
@@ -41,6 +42,10 @@ export function QuestionCard({ question: q, index, total, answer, isFlagged, onA
       ) : null}
 
       <p className={styles.questionText}>{q.question_text}</p>
+
+      {q.image_url ? (
+        <Image className={styles.questionImage} src={q.image_url} alt="Question reference" width={1200} height={800} unoptimized />
+      ) : null}
 
       {/* Multiple Choice */}
       {q.question_type === 'multiple_choice' && q.options && (

@@ -52,6 +52,14 @@ interface NotificationItemProps {
   onPreview:     (notification: Notification) => void    // NEW
 }
 
+function getDisplayMessage(message: string | null | undefined): string {
+  return (message ?? '—')
+    .replace(/\[(?:[a-z_]*id|id):[^\]]*\]/gi, '')
+    .replace(/\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
 export function NotificationItem({
   notification: notif,
   onToggleRead,
@@ -78,7 +86,7 @@ export function NotificationItem({
           <TypeBadge type={notif.type} />
           {!notif.is_read && <span className={styles.newTag}>New</span>}
         </div>
-        <p className={styles.notifMessage}>{notif.message ?? "—"}</p>
+        <p className={styles.notifMessage}>{getDisplayMessage(notif.message)}</p>
         <span className={styles.notifTime}>
           <Clock size={11} />
           {formatDate(notif.created_at)}

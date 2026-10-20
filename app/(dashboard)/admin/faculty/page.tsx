@@ -5,6 +5,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { UserPlus, RefreshCw, Users, Search, X } from 'lucide-react'
 import { useFacultyList }   from '@/lib/hooks/admin/faculty/useFacultyList'
 import type { FacultyRoleType } from '@/lib/types/admin/faculty'
+import { ROLE_TYPE_LABELS } from '@/lib/types/admin/faculty'
 import FacultyTable          from '@/components/dashboard/admin/faculty/FacultyTable'
 import FacultyStatsBar       from '@/components/dashboard/admin/faculty/FacultyStatsBar'
 import AddFacultyModal       from '@/components/dashboard/admin/faculty/AddFacultyModal'
@@ -17,11 +18,12 @@ function getStringField(row: AnyRecord, key: string): string | undefined {
   return typeof value === 'string' ? value : undefined
 }
 
-function mapRoleTypeToAssignment(role: FacultyRoleType | null): string {
-  if (role === 'professional') { return 'Full-time' }
-  if (role === 'major') { return 'Part-time' }
-  if (role === 'minor') { return 'Adjunct' }
-  return 'Emeritus'
+function getRoleTypesField(row: AnyRecord): FacultyRoleType[] {
+  const value = row.role_types
+  if (!Array.isArray(value)) { return [] }
+  return value.filter(
+    (v): v is FacultyRoleType => v === 'professional' || v === 'major' || v === 'minor',
+  )
 }
 
 // Derive unique departments from the faculty list for tab filters
@@ -45,7 +47,7 @@ export default function FacultyPage() {
   const [toast,          setToast]          = useState<string | null>(null)
   const [search,         setSearch]         = useState('')
   const [activeDept,     setActiveDept]     = useState('All')
-  const [roleFilter,     setRoleFilter]     = useState('All')
+  const [roleFilter,     setRoleFilter]     = useState<'All' | FacultyRoleType>('All')
 
   const showToast = useCallback((msg: string) => {
     setToast(msg)
@@ -61,25 +63,24 @@ export default function FacultyPage() {
 
   // Client-side filtering (mirrors students page pattern)
   const filtered = useMemo(() => {
-    return faculty.filter((f: AnyRecord) => {
-      const department = getStringField(f, 'department')
-      const roleTypeRaw = f.role_type
-      const roleType = (roleTypeRaw === 'professional' || roleTypeRaw === 'major' || roleTypeRaw === 'minor' || roleTypeRaw === null)
-        ? (roleTypeRaw as FacultyRoleType | null)
-        : null
-      const role = mapRoleTypeToAssignment(roleType)
+    return faculty.filter(f => {
+      const row = f as AnyRecord
+      const department = getStringField(row, 'department')
+      const roleTypes = getRoleTypesField(row)
       const matchesDept = activeDept === 'All' || department === activeDept
-      const matchesRole = roleFilter === 'All' || role === roleFilter
+      // A faculty member matches the role filter if that role is one of
+      // (possibly several) role types they hold — not an exact-match.
+      const matchesRole = roleFilter === 'All' || roleTypes.includes(roleFilter)
       const q = search.toLowerCase()
-      const name = getStringField(f, 'name')
-      const email = getStringField(f, 'email')
+      const name = getStringField(row, 'name')
+      const email = getStringField(row, 'email')
       const facultyId =
-        getStringField(f, 'facultyId') ?? getStringField(f, 'faculty_id')
+        getStringField(row, 'facultyId') ?? getStringField(row, 'faculty_id')
       const matchesSearch =
         !q ||
-        name?.toLowerCase().includes(q) ||
-        email?.toLowerCase().includes(q) ||
-        facultyId?.toLowerCase().includes(q)
+        !!name?.toLowerCase().includes(q) ||
+        !!email?.toLowerCase().includes(q) ||
+        !!facultyId?.toLowerCase().includes(q)
       return matchesDept && matchesRole && matchesSearch
     })
   }, [faculty, activeDept, roleFilter, search])
@@ -89,7 +90,7 @@ export default function FacultyPage() {
   return (
     <div className={styles.page}>
 
-      {/* ── Header — flat, mirrors Students page exactly ── */}
+      {/* ── Header ── */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <div className={styles.headerIcon} aria-hidden="true">
@@ -127,12 +128,12 @@ export default function FacultyPage() {
         </div>
       </div>
 
-      {/* ── Stats bar — only once data is available ── */}
+      {/* ── Stats bar ── */}
       {!error && faculty.length > 0 && (
         <FacultyStatsBar faculty={faculty} />
       )}
 
-      {/* ── Department tabs — mirrors Students program tabs ── */}
+      {/* ── Department tabs ── */}
       {!error && faculty.length > 0 && (
         <div className={styles.tabsRow}>
           {['All', ...departments].map(dept => (
@@ -148,7 +149,7 @@ export default function FacultyPage() {
         </div>
       )}
 
-      {/* ── Controls — search + role filter, mirrors Students controls ── */}
+      {/* ── Controls ── */}
       {!error && faculty.length > 0 && (
         <div className={styles.controls}>
           <div className={styles.searchWrap}>
@@ -175,14 +176,13 @@ export default function FacultyPage() {
           <select
             className={styles.roleSelect}
             value={roleFilter}
-            onChange={e => setRoleFilter(e.target.value)}
-            aria-label="Filter by role"
+            onChange={e => setRoleFilter(e.target.value as 'All' | FacultyRoleType)}
+            aria-label="Filter by role type"
           >
-            <option value="All">All Roles</option>
-            <option value="Full-time">Full-time</option>
-            <option value="Part-time">Part-time</option>
-            <option value="Adjunct">Adjunct</option>
-            <option value="Emeritus">Emeritus</option>
+            <option value="All">All Role Types</option>
+            {(Object.entries(ROLE_TYPE_LABELS) as [FacultyRoleType, string][]).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
           </select>
         </div>
       )}
@@ -192,7 +192,7 @@ export default function FacultyPage() {
         <div className={styles.errorBanner} role="alert">{error}</div>
       )}
 
-      {/* ── Skeleton — first load only ── */}
+      {/* ── Skeleton ── */}
       {isFirstLoad && !error && (
         <div className={styles.tableWrap}>
           <div className={styles.skeleton}>
@@ -204,7 +204,7 @@ export default function FacultyPage() {
         </div>
       )}
 
-      {/* ── Table — show with stale data during refetch too ── */}
+      {/* ── Table ── */}
       {!error && (faculty.length > 0 || (!loading && faculty.length === 0)) && (
         <div className={styles.tableWrap}>
           <FacultyTable

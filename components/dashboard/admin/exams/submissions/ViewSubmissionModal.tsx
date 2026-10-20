@@ -6,12 +6,13 @@ import {
   Clock,
   Loader2,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import type { Submission } from '@/lib/types/admin/exams/submissions/submission.types'
 import type { ExamInfo, PreviewScore } from '@/lib/types/admin/exams/submissions/exam.types'
 import type { GradingMode } from '@/lib/types/admin/exams/submissions/submission.types'
 import { fmtDate, initials } from '@/lib/utils/admin/submissions/format'
 import { SubmissionQuestionCard } from './SubmissionQuestionCard'
+import { computeTosBreakdown } from '@/lib/utils/admin/results/tosBreakdown'
+import type { TosBreakdownWeight } from '@/lib/utils/admin/results/tosBreakdown'
 import css from './GradingModal.module.css'
 
 interface QuestionModalRow {
@@ -23,13 +24,30 @@ interface QuestionModalRow {
   correct_answer: string | null
   points: number
   order_number: number | null
+  section_title: string | null
 }
 
 interface AnswerModalRow {
+  id?: string
   question_id: string
   answer_text: string | null
   is_correct: boolean | null
   points_earned: number | null
+}
+
+interface AnswersPayload {
+  questions?: Array<{
+    id: string
+    question_text: string
+    scenario: string | null
+    options: unknown
+    correct_answer: string | null
+    points: number | null
+    order_number: number | null
+    section_title?: string | null
+  }>
+  answers?: AnswerModalRow[]
+  tosAreas?: TosBreakdownWeight[]
 }
 
 interface RenderQuestionRow {
@@ -47,6 +65,7 @@ interface ViewSubmissionModalProps {
   gradingSubmission: boolean
   onClose: () => void
   onGrade: () => void
+  tosErrors?: string[]
 }
 
 function parseOptions(raw: unknown): Array<{ label: string; text: string }> | null {
@@ -125,10 +144,11 @@ export function ViewSubmissionModal({
   gradingSubmission,
   onClose,
   onGrade,
+  tosErrors = [],
 }: ViewSubmissionModalProps) {
-  const supabase = useMemo(() => createClient(), [])
   const [loading, setLoading] = useState(false)
   const [rows, setRows] = useState<RenderQuestionRow[]>([])
+  const [tosAreas, setTosAreas] = useState<TosBreakdownWeight[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -136,20 +156,14 @@ export function ViewSubmissionModal({
     async function loadModalData() {
       setLoading(true)
 
-      const { data: questions } = await supabase
-        .from('questions')
-        .select('id, question_text, scenario, options, correct_answer, points, order_number')
-        .eq('exam_id', examId)
-        .order('order_number', { ascending: true })
-
-      const { data: answers } = await supabase
-        .from('answers')
-        .select('question_id, answer_text, is_correct, points_earned')
-        .eq('submission_id', target.id)
+      const res = await fetch(`/api/admin/exams/${examId}/submissions/${target.id}/answers`, {
+        credentials: 'include',
+      })
+      const payload = (await res.json().catch(() => ({}))) as AnswersPayload
 
       if (cancelled) {return}
 
-      const questionRows: QuestionModalRow[] = (questions ?? []).map((q) => ({
+      const questionRows: QuestionModalRow[] = (payload.questions ?? []).map((q) => ({
         id: q.id,
         question_text: (
           (typeof q.question_text === 'string' ? q.question_text : '') ||
@@ -162,10 +176,11 @@ export function ViewSubmissionModal({
         correct_answer: q.correct_answer,
         points: q.points ?? 1,
         order_number: q.order_number,
+        section_title: q.section_title ?? null,
       }))
 
       const answerMap = new Map<string, AnswerModalRow>(
-        (answers ?? []).map((a) => [
+        (payload.answers ?? []).filter((a) => a.question_id).map((a) => [
           a.question_id,
           {
             question_id: a.question_id,
@@ -182,12 +197,13 @@ export function ViewSubmissionModal({
       }))
 
       setRows(merged)
+      setTosAreas(payload.tosAreas ?? [])
       setLoading(false)
     }
 
     void loadModalData()
     return () => { cancelled = true }
-  }, [examId, supabase, target.id])
+  }, [examId, target.id])
 
   const modalStats = useMemo(() => {
     let correct = 0
@@ -223,6 +239,20 @@ export function ViewSubmissionModal({
 
   const displayPct = previewScore?.pct ?? modalStats.pct
   const displayPassed = previewScore?.passed ?? modalStats.passed
+  const tosBreakdown = useMemo(() => computeTosBreakdown(
+    rows.map(({ question }) => ({
+      id: question.id,
+      question_text: question.question_text,
+      section_title: question.section_title,
+      points: question.points,
+      correct_answer: question.correct_answer,
+      options: question.rawOptions,
+    })),
+    rows.flatMap(({ question, studentAnswer }) => studentAnswer
+      ? [{ question_id: question.id, answer_text: studentAnswer.answer_text }]
+      : []),
+    tosAreas,
+  ), [rows, tosAreas])
   const canGrade = mode === 'grade' && ['submitted', 'graded', 'reviewed'].includes(target.status)
   const statusLabel = target.status.replace('_', ' ').toUpperCase()
 
@@ -266,6 +296,33 @@ export function ViewSubmissionModal({
             {gradingMode === 'auto' ? 'Auto mode' : 'Manual mode'}
           </div>
         </div>
+
+        {!loading && rows.length > 0 && (
+          <section className={css.tosBreakdown}>
+            <h3>TOS Breakdown</h3>
+            {tosErrors.length > 0 && (
+              <div className={css.tosInlineNotice} role="status">
+                {tosErrors.map((error, index) => <div key={`${index}-${error}`}>{error}</div>)}
+              </div>
+            )}
+            <div className={css.tosTableWrap}>
+              <table className={css.tosTable}>
+                <thead><tr><th>Area</th><th>Questions</th><th>Answered</th><th>Correct</th><th>Wrong</th><th>Unanswered</th><th>Points</th><th>Score</th><th>Weight / Expected</th><th>Minimum</th><th>Weighted score</th></tr></thead>
+                <tbody>{tosBreakdown.map((area) => (
+                  <tr key={area.area_title}>
+                    <td>{area.area_title}</td>
+                    <td>{area.total_questions}</td><td>{area.answered}</td><td>{area.correct}</td><td>{area.wrong}</td><td>{area.unanswered}</td>
+                    <td>{area.points_earned}/{area.points_possible}</td>
+                    <td>{area.percent.toFixed(1)}%</td>
+                    <td>{area.weight_percent === undefined ? '—' : `${area.weight_percent}% / ${area.expected_items} items (actual ${area.total_questions})`}</td>
+                    <td>{area.minimum_met === undefined ? '—' : `${area.minimum_met ? 'Met' : 'Not met'} (${area.min_percent}%)`}</td>
+                    <td>{area.weighted_score === undefined ? '—' : `${area.weighted_score.toFixed(2)}%`}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         <div className={css.questionList}>
           <div style={{ fontSize: 12, color: '#334155', fontWeight: 700 }}>

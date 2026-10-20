@@ -712,6 +712,39 @@
   font-size: 0.74rem;
   color: var(--admin-text-muted);
   margin: 0;
+  max-width: 34rem;
+  line-height: 1.45;
+}
+
+.uploadProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.uploadProgressHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--admin-text-muted);
+}
+
+.uploadProgressTrack {
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e6edf7;
+}
+
+.uploadProgressBar {
+  height: 100%;
+  min-width: 0.5rem;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
+  transition: width 0.2s ease;
 }
 
 .uploadedFile {

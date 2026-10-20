@@ -158,8 +158,8 @@ export default function VerifyEmailPage() {
         >
           <div className={styles.logoWrap}>
             <Image
-              src="/images/veripraxis-logo.png"
-              alt="VeriPraxis"
+              src="/images/metric-logo.png"
+              alt="M.E.T.R.I.C."
               height={44}
               width={70}
               priority

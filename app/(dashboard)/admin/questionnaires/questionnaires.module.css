@@ -407,6 +407,51 @@
 }
 .searchClear:hover { color: var(--q-text); }
 
+.questionFilters {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.examFilter {
+  min-height: 2.35rem;
+  max-width: 280px;
+  padding: 0.45rem 2rem 0.45rem 0.75rem;
+  border: 1.5px solid var(--q-border);
+  border-radius: var(--q-r-btn);
+  background: var(--q-surface);
+  color: var(--q-text);
+  font-family: var(--q-font-body);
+  font-size: 0.8rem;
+  box-shadow: var(--q-shadow-btn);
+}
+
+.resultCount {
+  color: var(--q-text-muted);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.bulkSelectionBar {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  margin: 0 0 1rem;
+  color: var(--q-text-sub);
+  font-size: 0.78rem;
+}
+.bulkSelectionBar label { display: inline-flex; align-items: center; gap: 0.4rem; }
+.bulkSelectionActions { display: inline-flex; align-items: center; gap: 0.65rem; margin-left: auto; }
+.bulkSelectionActions button { border: 0; background: none; color: var(--q-primary); font: inherit; cursor: pointer; }
+.bulkSelectionActions .bulkDeleteButton { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.7rem; border: 1px solid var(--q-danger); border-radius: var(--q-r-btn); background: var(--q-danger); color: #fff; }
+.bulkSelectionActions button:disabled { opacity: 0.55; cursor: not-allowed; }
+.bulkDeleteMessage { margin: 0 0 0.75rem; font-size: 0.78rem; }
+.bulkDeleteSuccess { color: var(--q-success); }
+.bulkDeleteError { color: var(--q-danger); }
+
 /* ═══════════════════════════════════════════
    ERROR BANNER
 ═══════════════════════════════════════════ */
@@ -461,6 +506,17 @@
 }
 
 .questionPoints { font-size: 0.68rem; color: var(--q-text-muted); margin-top: 2px; }
+
+.questionImagePreview {
+  display: block;
+  max-width: min(100%, 320px);
+  max-height: 200px;
+  margin-top: 0.45rem;
+  object-fit: contain;
+  border: 1px solid var(--q-border);
+  border-radius: 8px;
+  background: var(--q-surface-soft);
+}
 
 .examTag { font-size: 0.72rem; color: var(--q-text-muted); font-style: italic; white-space: nowrap; }
 

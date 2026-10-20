@@ -15,13 +15,14 @@ type AppClient = SupabaseClient<Database>
 interface StudentScope {
   schoolId: string | null
   programId: string | null
+  role: 'admin' | 'faculty' | 'other'
 }
 
 async function getStudentScope(client: AppClient): Promise<StudentScope> {
   const { data: userRes } = await client.auth.getUser()
   const userId = userRes.user?.id ?? null
   if (!userId) {
-    return { schoolId: null, programId: null }
+    return { schoolId: null, programId: null, role: 'other' }
   }
 
   const { data: profile } = await client
@@ -40,6 +41,7 @@ async function getStudentScope(client: AppClient): Promise<StudentScope> {
     return {
       schoolId: facultyRow?.school_id ?? null,
       programId: facultyRow?.program_id ?? null,
+      role: 'faculty',
     }
   }
 
@@ -49,7 +51,11 @@ async function getStudentScope(client: AppClient): Promise<StudentScope> {
     .eq('user_id', userId)
     .maybeSingle()
 
-  return { schoolId: adminRow?.school_id ?? null, programId: null }
+  return {
+    schoolId: adminRow?.school_id ?? null,
+    programId: null,
+    role: profile?.role === 'admin' ? 'admin' : 'other',
+  }
 }
 
 // ── ADDED: Student access snapshot ───────────────────────────────────────────
@@ -98,6 +104,10 @@ export async function getStudentsWithProfiles(
   client: AppClient,
 ): Promise<FetchStudentsResult> {
   const scope = await getStudentScope(client)
+  if ((scope.role === 'admin' || scope.role === 'faculty') && !scope.schoolId) {
+    return { students: [], error: null }
+  }
+
   let query = client
     .from('students')
     .select(`

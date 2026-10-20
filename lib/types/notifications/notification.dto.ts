@@ -61,6 +61,8 @@ export interface NotificationDTO {
   readonly message:    string
   readonly isRead:     boolean
   readonly createdAt:  string   // ISO timestamp
+  readonly link:       string | null
+  readonly ctaLabel:   string | null
 }
 
 // ── Mapper: DB Row → DTO ──────────────────────────────────────────────────────
@@ -74,6 +76,8 @@ export function rowToDTO(row: NotificationRow): NotificationDTO {
     message:   row.message ?? '',
     isRead:    row.is_read ?? false,
     createdAt: row.created_at ?? new Date().toISOString(),
+    link:      row.link ?? null,
+    ctaLabel:  row.cta_label ?? null,
   }
 }
 

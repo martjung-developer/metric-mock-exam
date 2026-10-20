@@ -84,7 +84,7 @@ export default function Hero() {
         </p>
 
         <div className={`${styles.heroActions} reveal reveal-delay-3`}>
-          <Link href="/signup" className={styles.btnPrimary}>
+          <Link href="/" prefetch={true} className={styles.btnPrimary}>
             Start Reviewing Free
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5-5 5M6 12h12" />
@@ -97,7 +97,7 @@ export default function Hero() {
 
         <div className={`${styles.heroStats} reveal reveal-delay-4`}>
           <StatItem end={10000} suffix="+" label="Active Reviewees" />
-          <StatItem end={5000}  suffix="+" label="Practice Questions" />
+          <StatItem end={5000}  suffix="+" label="Reviewer Questions" />
           <StatItem end={95}    suffix="%" label="Pass Rate" />
         </div>
       </div>

@@ -6,6 +6,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 'use client'
 
+import { useState } from 'react'
 import {
   TrendingUp,
   TrendingDown,
@@ -19,10 +20,12 @@ import {
   Download,
   FileText,
 } from 'lucide-react'
-import type { StudentAttemptHistory, ImprovementTrend } from '@/lib/types/admin/exams/results/results.types'
-import { fmtDate, fmtTime } from '@/lib/utils/admin/results/results.utils'
+import type { StudentAttemptHistory, ImprovementTrend, Attempt } from '@/lib/types/admin/exams/results/results.types'
+import { fmtDate } from '@/lib/utils/admin/results/results.utils'
 import { exportSingleAttemptCSV } from '@/lib/utils/admin/results/exportResultsCSV'
 import { exportSingleAttemptPDF } from '@/lib/utils/admin/results/exportResultsPDF'
+import { elapsedSeconds, formatDuration } from '@/lib/utils/formatDuration'
+import { TosSummaryModal } from './TosSummaryModal'
 import s from '@/app/(dashboard)/admin/exams/[examId]/results/results.module.css'
 
 // ── Trend icon ────────────────────────────────────────────────────────────────
@@ -47,9 +50,11 @@ interface AttemptHistoryPanelProps {
   history:  StudentAttemptHistory
   colSpan:  number
   isOpen:   boolean
+  durationMinutes?: number | null
 }
 
-export function AttemptHistoryPanel({ history, colSpan, isOpen }: AttemptHistoryPanelProps) {
+export function AttemptHistoryPanel({ history, colSpan, isOpen, durationMinutes }: AttemptHistoryPanelProps) {
+  const [selectedAttempt, setSelectedAttempt] = useState<Attempt | null>(null)
   if (!isOpen) {return null}
 
   const { attempts, bestAttempt, improvementDelta, improvementTrend } = history
@@ -115,10 +120,30 @@ export function AttemptHistoryPanel({ history, colSpan, isOpen }: AttemptHistory
                       : <span className={s.badgeFail}><XCircle size={10} /> Failed</span>
                     }
                     <span className={s.attemptMeta}>
-                      <Clock size={10} /> {fmtTime(attempt.time_spent_seconds)}
+                    {(() => {
+                      const seconds = elapsedSeconds(attempt.started_at, attempt.submitted_at)
+                      const tooLong = seconds !== null && durationMinutes !== null && durationMinutes !== undefined &&
+                        seconds > (durationMinutes + 5) * 60
+                      return (
+                        <span
+                          className={tooLong ? s.durationUnavailable : undefined}
+                          title={tooLong ? "Exam was left open past its time limit, so active time can't be determined." : undefined}
+                        >
+                          <Clock size={10} /> {formatDuration(tooLong ? null : seconds)}
+                        </span>
+                      )
+                    })()}
                     </span>
                     <span className={s.attemptMeta}>{fmtDate(attempt.submitted_at)}</span>
                   </div>
+                  {attempt.tosBreakdown && attempt.tosBreakdown.length > 0 && (
+                    <div className={s.attemptTosSummaryLine}>
+                      <span>{attempt.tosBreakdown.length} areas summarized</span>
+                      <button type="button" onClick={() => setSelectedAttempt(attempt)}>
+                        View TOS Summary
+                      </button>
+                    </div>
+                  )}
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.3rem' }}>
   <button
     onClick={() => exportSingleAttemptCSV(history.student, attempt)}
@@ -163,6 +188,14 @@ export function AttemptHistoryPanel({ history, colSpan, isOpen }: AttemptHistory
           </div>
 
         </div>
+        {selectedAttempt?.tosBreakdown && (
+          <TosSummaryModal
+            student={history.student}
+            attempt={selectedAttempt}
+            areas={selectedAttempt.tosBreakdown}
+            onClose={() => setSelectedAttempt(null)}
+          />
+        )}
       </td>
     </tr>
   )

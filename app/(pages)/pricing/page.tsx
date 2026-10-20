@@ -76,7 +76,7 @@ const FAQS = [
   },
   {
     q: 'Can review centers get group pricing?',
-    a: 'Yes! We have special pricing for review centers and bulk enrollments. Contact us at support@veripraxis.ph for a quote.',
+    a: 'Yes! We have special pricing for review centers and bulk enrollments. Contact us at support@metric.ph for a quote.',
   },
 ]
 
@@ -222,7 +222,7 @@ export default function PricingPage() {
                 <div>
                   <div className={styles.planName}>Free</div>
                   <p className={styles.planDesc}>
-                    Explore VeriPraxis before committing.
+                    Explore M.E.T.R.I.C. before committing.
                   </p>
                 </div>
                 <div className={styles.priceBlock}>
@@ -437,7 +437,7 @@ export default function PricingPage() {
           <motion.div className={styles.ctaInner} {...ctaSection}>
             <h2 className={styles.ctaTitle}>Start your review today</h2>
             <p className={styles.ctaSub}>
-              Join 10,000+ reviewees preparing smarter with VeriPraxis.
+              Join 10,000+ reviewees preparing smarter with M.E.T.R.I.C..
             </p>
             <div className={styles.ctaActions}>
               <Link href="/register" className={styles.btnPrimary}>

@@ -10,6 +10,37 @@ export type MaterialType = 'document' | 'video' | 'notes'
 export type LinkType     = 'video' | 'meeting' | 'drive' | 'other'
 
 export const MATERIAL_TYPES: MaterialType[] = ['document', 'video', 'notes']
+export const MAX_MATERIAL_UPLOAD_BYTES = 1024 * 1024 * 1024
+export const MAX_MATERIAL_UPLOAD_LABEL = '1GB'
+export const COMMON_MATERIAL_ACCEPT = [
+  '.pdf',
+  '.doc',
+  '.docx',
+  '.ppt',
+  '.pptx',
+  '.xls',
+  '.xlsx',
+  '.csv',
+  '.txt',
+  '.rtf',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.svg',
+  '.mp3',
+  '.wav',
+  '.m4a',
+  '.mp4',
+  '.mov',
+  '.avi',
+  '.mkv',
+  '.webm',
+  '.zip',
+  '.rar',
+  '.7z',
+].join(',')
 
 // ── YouTube URL helper ────────────────────────────────────────────────────────
 
@@ -134,6 +165,9 @@ export function validateMaterialForm(
   // Document file: required on create only (edit can keep existing file)
   if (raw.type === 'document' && !isEditing && !file && !raw.external_url.trim()) {
     errors.file = 'Please upload a file or provide an external URL.'
+  }
+  if (file && file.size > MAX_MATERIAL_UPLOAD_BYTES) {
+    errors.file = `File must be ${MAX_MATERIAL_UPLOAD_LABEL} or smaller.`
   }
 
   return errors

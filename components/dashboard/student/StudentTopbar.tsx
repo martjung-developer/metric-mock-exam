@@ -10,7 +10,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Image                 from 'next/image'
 import Link                  from 'next/link'
-import { useRouter }         from 'next/navigation'
 import { Bell, Search, ChevronDown, UserCircle2, LogOut }      from 'lucide-react'
 import { createClient }      from '@/lib/supabase/client'
 import { useUnreadCount }    from '@/lib/hooks/notifications/useUnreadCount'
@@ -31,7 +30,6 @@ export default function StudentTopbar({ profile, userId }: Props) {
   const [avatarUrl,   setAvatarUrl]   = useState<string | null>(profile.avatar_url ?? null)
   const [displayName, setDisplayName] = useState<string>(profile.full_name ?? 'Student')
   const [menuOpen, setMenuOpen] = useState(false)
-  const router = useRouter()
 
   // ── Realtime: update avatar + name without refresh ────────────────────────
   useRealtimeProfile({
@@ -55,8 +53,7 @@ export default function StudentTopbar({ profile, userId }: Props) {
     .toUpperCase() || 'S'
 
   async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push('/login')
+    window.location.href = '/api/auth/signout'
   }
 
   useEffect(() => {

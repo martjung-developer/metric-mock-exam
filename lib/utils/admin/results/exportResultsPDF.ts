@@ -15,7 +15,7 @@ function fmtSeconds(secs: number): string {
 async function loadLogo(doc: jsPDF): Promise<void> {
   return new Promise((resolve) => {
     const img = new Image()
-    img.src = '/images/veripraxis-logo.png'
+    img.src = '/images/metric-logo.png'
     img.onload = () => {
       doc.addImage(img, 'PNG', 14, 10, 18, 18)
       resolve()

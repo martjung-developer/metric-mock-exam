@@ -970,3 +970,117 @@
     align-items: flex-start;
   }
 }
+
+:global(html.dark) .page {
+  --bg: #0d1420;
+  --surface: #111a2b;
+  --surface-soft: #172338;
+  --surface-tint: #172338;
+  --surface-raised: #172338;
+  --border: #243247;
+  --border-light: #243247;
+  --border-soft: #243247;
+  --text: #e6edf7;
+  --text-sub: #9db0ca;
+  --text-muted: #9db0ca;
+  --primary-pale: rgba(37, 99, 235, 0.14);
+  --primary-tint: rgba(96, 165, 250, 0.28);
+  --success-pale: rgba(5, 150, 105, 0.14);
+  --warning-pale: rgba(217, 119, 6, 0.16);
+  --danger-pale: rgba(220, 38, 38, 0.14);
+  --accent-pale: rgba(124, 58, 237, 0.14);
+}
+
+:global(html.dark) .previewCard,
+:global(html.dark) .group,
+:global(html.dark) .searchInput,
+:global(html.dark) .textAnswerInput,
+:global(html.dark) .shortAnswerTextarea,
+:global(html.dark) .rubricModal,
+:global(html.dark) .rubricTextarea {
+  background: #111a2b;
+  border-color: #243247;
+}
+
+:global(html.dark) .coverageBar,
+:global(html.dark) .groupHeader:hover,
+:global(html.dark) .groupBody,
+:global(html.dark) .questionRow:hover,
+:global(html.dark) .qType,
+:global(html.dark) .qPoints,
+:global(html.dark) .mcqOption,
+:global(html.dark) .tfBtn,
+:global(html.dark) .rubricBtn,
+:global(html.dark) .aiFuturePlaceholder,
+:global(html.dark) .emptyIcon,
+:global(html.dark) .modalClose:hover,
+:global(html.dark) .rubricModalHeader,
+:global(html.dark) .rubricModalFooter {
+  background: #172338;
+}
+
+:global(html.dark) .btnSecondary,
+:global(html.dark) .previewToggle,
+:global(html.dark) .searchInput,
+:global(html.dark) .group,
+:global(html.dark) .groupBody,
+:global(html.dark) .questionRow,
+:global(html.dark) .mcqOption,
+:global(html.dark) .tfBtn,
+:global(html.dark) .textAnswerInput,
+:global(html.dark) .shortAnswerTextarea,
+:global(html.dark) .rubricBtn,
+:global(html.dark) .aiFuturePlaceholder,
+:global(html.dark) .rubricModalHeader,
+:global(html.dark) .rubricTextarea,
+:global(html.dark) .rubricModalFooter {
+  border-color: #243247;
+}
+
+:global(html.dark) .searchClear,
+:global(html.dark) .groupToggle,
+:global(html.dark) .modalClose,
+:global(html.dark) .toastClose,
+:global(html.dark) .groupProgressPartial {
+  color: #9db0ca;
+}
+
+:global(html.dark) .groupIcon_blue,
+:global(html.dark) .answerTypeMcq,
+:global(html.dark) .rubricInfo {
+  background: rgba(37, 99, 235, 0.14);
+}
+
+:global(html.dark) .groupIcon_green,
+:global(html.dark) .tfBtnTrue,
+:global(html.dark) .answerCorrect,
+:global(html.dark) .validationSuccess {
+  background: rgba(5, 150, 105, 0.14);
+}
+
+:global(html.dark) .groupIcon_rose,
+:global(html.dark) .tfBtnFalse,
+:global(html.dark) .answerMissing,
+:global(html.dark) .toastError,
+:global(html.dark) .errorBox {
+  background: rgba(220, 38, 38, 0.14);
+}
+
+:global(html.dark) .groupIcon_amber,
+:global(html.dark) .unsavedBadge,
+:global(html.dark) .questionRowOverridden,
+:global(html.dark) .answerOverride,
+:global(html.dark) .clearOverride {
+  background: rgba(217, 119, 6, 0.16);
+}
+
+:global(html.dark) .groupIcon_violet,
+:global(html.dark) .answerTypeEssay,
+:global(html.dark) .rubricBtnFilled,
+:global(html.dark) .aiBadge {
+  background: rgba(124, 58, 237, 0.14);
+}
+
+:global(html.dark) .groupIcon_teal {
+  background: rgba(8, 145, 178, 0.14);
+}

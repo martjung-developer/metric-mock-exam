@@ -62,6 +62,9 @@ export function RoleSelectBackground() {
     let W = 0, H = 0
 
     function resize() {
+      if (!canvas) {
+        return
+      }
       W = window.innerWidth
       H = window.innerHeight
       canvas.width  = W

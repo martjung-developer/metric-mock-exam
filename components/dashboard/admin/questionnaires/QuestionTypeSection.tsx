@@ -8,11 +8,12 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChevronDown, HelpCircle, Eye, Pencil, Trash2,
   ChevronLeft, ChevronRight, AlertCircle, CheckCircle2,
-  BookOpen,
+  BookOpen, Image as ImageIcon,
 } from 'lucide-react'
 import type { QuestionType } from '@/lib/types/database'
 import type { DisplayQuestion } from '@/lib/types/admin/questionnaires/questionnaires'
@@ -32,6 +33,10 @@ interface Props {
   onView:    (q: DisplayQuestion) => void
   onEdit:    (q: DisplayQuestion) => void
   onDelete:  (id: string) => void
+  selected?: ReadonlySet<string>
+  onToggleSelect?: (id: string) => void
+  allSelected?: boolean
+  onSelectAll?: (selected: boolean) => void
 }
 
 // Whether a question type requires a correct answer
@@ -41,8 +46,27 @@ const NEEDS_ANSWER = new Set<QuestionType>([
   'fill_blank',
 ])
 
+function formatModified(q: DisplayQuestion): string | null {
+  if (!q.last_modified_at) {
+    return null
+  }
+  const name = q.lastModifiedByName ?? 'Unknown user'
+  const date = new Date(q.last_modified_at).toLocaleDateString('en-PH', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+  return `Last modified by ${name} on ${date}`
+}
+
+function referencesImageFilename(q: DisplayQuestion): boolean {
+  const text = `${q.question_text} ${q.scenario ?? ''}`
+  return /\b[\w.-]+\.(?:png|jpe?g|webp|gif)\b/i.test(text)
+}
+
 export function QuestionTypeSection({
-  type, questions, loading, onView, onEdit, onDelete,
+  type, questions, loading, onView, onEdit, onDelete, selected = new Set<string>(), onToggleSelect,
+  allSelected = false, onSelectAll,
 }: Props) {
   const [expanded, setExpanded] = useState(true)
   const [page,     setPage]     = useState(1)
@@ -106,6 +130,16 @@ export function QuestionTypeSection({
                   <table className={styles.table}>
                     <thead>
                       <tr>
+                        {onToggleSelect && (
+                          <th>
+                            <input
+                              type="checkbox"
+                              aria-label="Select all current filtered results"
+                              checked={allSelected}
+                              onChange={(event) => onSelectAll?.(event.target.checked)}
+                            />
+                          </th>
+                        )}
                         <th style={{ width: '35%' }}>Question</th>
                         {hasScenarioCol && <th style={{ width: '15%' }}>Scenario</th>}
                         <th>Difficulty</th>
@@ -124,9 +158,21 @@ export function QuestionTypeSection({
                             const hasAnswer    = Boolean(q.correct_answer)
                             const needsAnswer  = NEEDS_ANSWER.has(q.question_type)
                             const scenario     = (q.scenario ?? '').trim()
+                            const canAttachImage = !q.image_url && referencesImageFilename(q)
+                            const hasImage = Boolean(q.image_url)
 
                             return (
                               <tr key={q.id} className={styles.tableRow}>
+                                {onToggleSelect && (
+                                  <td>
+                                    <input
+                                      type="checkbox"
+                                      aria-label="Select question"
+                                      checked={selected.has(q.id)}
+                                      onChange={() => onToggleSelect(q.id)}
+                                    />
+                                  </td>
+                                )}
                                 {/* Question text */}
                                 <td>
                                   <div className={styles.questionCell}>
@@ -150,6 +196,65 @@ export function QuestionTypeSection({
                                       <div className={styles.questionPoints}>
                                         {q.points} pt{q.points !== 1 ? 's' : ''}
                                       </div>
+                                      {hasImage && (
+                                        <Image
+                                          className={styles.questionImagePreview}
+                                          src={q.image_url ?? ''}
+                                          alt={`Image for ${q.question_text}`}
+                                          width={1200}
+                                          height={800}
+                                          unoptimized
+                                          loading="lazy"
+                                        />
+                                      )}
+                                      {formatModified(q) && (
+                                        <div className={styles.questionPoints}>
+                                          {formatModified(q)}
+                                        </div>
+                                      )}
+                                      {hasImage && (
+                                        <span
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: 5,
+                                            marginTop: 5,
+                                            border: '1px solid #bbf7d0',
+                                            borderRadius: 20,
+                                            background: '#f0fdf4',
+                                            color: '#047857',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 700,
+                                            padding: '2px 8px',
+                                          }}
+                                        >
+                                          <ImageIcon size={11} />
+                                          Image attached
+                                        </span>
+                                      )}
+                                      {canAttachImage && (
+                                        <button
+                                          type="button"
+                                          onClick={() => onEdit(q)}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: 5,
+                                            marginTop: 5,
+                                            border: '1px solid #bfdbfe',
+                                            borderRadius: 20,
+                                            background: '#eff6ff',
+                                            color: '#1d4ed8',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 700,
+                                            padding: '2px 8px',
+                                            cursor: 'pointer',
+                                          }}
+                                        >
+                                          <ImageIcon size={11} />
+                                          Attach image
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
                                 </td>

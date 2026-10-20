@@ -1,11 +1,15 @@
-'use client'
 // components/dashboard/admin/questionnaires/ViewModal.tsx
+'use client'
 // ─────────────────────────────────────────────────────────────────────────────
 // Read-only question detail modal.
+// CHANGES FROM PREVIOUS VERSION:
+//   + Renders q.viewQ.image_url when present, placed after the scenario
+//     block and before the answer choices (matches typical exam layout).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { X, Pencil, CheckCircle2, BookOpen } from 'lucide-react'
+import { X, Pencil, CheckCircle2, BookOpen, Image as ImageIcon } from 'lucide-react'
 import { motion, AnimatePresence }           from 'framer-motion'
+import Image                                 from 'next/image'
 
 import { modalVariants }               from '@/animations/admin/questionnaires/questionnaires'
 import { TypeTag }                     from './TypeTag'
@@ -17,6 +21,12 @@ type Q = UseQuestionnairesReturn
 
 export function ViewModal({ q }: { q: Q }) {
   if (!q.viewQ) {return null}
+  const modifiedBy = q.viewQ.lastModifiedByName ?? 'Unknown user'
+  const modifiedAt = q.viewQ.last_modified_at
+    ? new Date(q.viewQ.last_modified_at).toLocaleDateString('en-PH', {
+        year: 'numeric', month: 'long', day: 'numeric',
+      })
+    : null
 
   return (
     <AnimatePresence>
@@ -68,6 +78,26 @@ export function ViewModal({ q }: { q: Q }) {
                   }}>
                     {q.viewQ.scenario}
                   </div>
+                </div>
+              )}
+
+              {/* ── Image (ADDED) ── */}
+              {(q.viewQ.image_url ?? '').trim().length > 0 && (
+                <div className={styles.viewSection}>
+                  <div className={styles.viewSectionTitle}>
+                    <ImageIcon size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                    Image
+                  </div>
+                  <Image
+                    src={q.viewQ.image_url ?? ''}
+                    alt="Question visual"
+                    width={1200}
+                    height={320}
+                    style={{
+                      maxWidth: '100%', maxHeight: 320, borderRadius: 8,
+                      border: '1px solid #e2e8f0', objectFit: 'contain', display: 'block', height: 'auto',
+                    }}
+                  />
                 </div>
               )}
 
@@ -126,6 +156,9 @@ export function ViewModal({ q }: { q: Q }) {
                       year: 'numeric', month: 'long', day: 'numeric',
                     })}
                   </span>
+                  {modifiedAt && (
+                    <span><strong>Last modified:</strong> by {modifiedBy} on {modifiedAt}</span>
+                  )}
                 </div>
               </div>
 

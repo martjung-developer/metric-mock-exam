@@ -23,11 +23,16 @@ import {
   extractErrorMessage,
   getPasswordStrength,
 } from '@/lib/utils/auth'
+import type { Database } from '@/lib/types/database'
 // Local types and initial state to avoid missing exports.
 type SignupStep = 'id' | 'credentials' | 'program' | 'review'
 type ProgramCode = string
 type YearLevel = number
-type AuthResult = { success: boolean; error?: string | null }
+type AuthResult = { success: boolean; error?: string | null; emailConfirmationRequired?: boolean }
+export type SignupProgram = Pick<
+  Database['public']['Tables']['programs']['Row'],
+  'id' | 'code' | 'name' | 'full_name' | 'major' | 'years' | 'school_id'
+>
 
 interface SignupState {
   step: SignupStep
@@ -37,6 +42,7 @@ interface SignupState {
   phone: string
   password: string
   programCode: ProgramCode | null
+  selectedProgram: SignupProgram | null
   yearLevel: YearLevel | null
 }
 
@@ -48,6 +54,7 @@ const INITIAL_SIGNUP_STATE: SignupState = {
   phone: '',
   password: '',
   programCode: null,
+  selectedProgram: null,
   yearLevel: null,
 }
 
@@ -142,18 +149,18 @@ export function useSignup(): UseSignupReturn {
   // ── Step 3 ────────────────────────────────────────────────────────────────
 
   const handleProgramNext = useCallback(() => {
-    if (!state.programCode) { setError('Please select your program.'); return }
+    if (!state.programCode || !state.selectedProgram) { setError('Please select your program.'); return }
 
     const yrErr = validateYearLevel(state.yearLevel)
     if (yrErr) { setError(yrErr); return }
 
     patch({ step: 'review' })
-  }, [state.programCode, state.yearLevel, patch])
+  }, [state.programCode, state.selectedProgram, state.yearLevel, patch])
 
   // ── Step 4: Final submit ──────────────────────────────────────────────────
 
   const handleSignupWithReturn = useCallback(async (): Promise<AuthResult> => {
-    if (!state.programCode) {
+    if (!state.programCode || !state.selectedProgram) {
       const err = 'Invalid program. Please go back and select one.'
       setError(err)
       return { success: false, error: err }
@@ -173,7 +180,7 @@ export function useSignup(): UseSignupReturn {
         state.fullName,
         state.email,
         state.password,
-        state.programCode as ProgramCode,
+        state.selectedProgram,
         state.yearLevel   as YearLevel,
         state.phone       || undefined,
       )

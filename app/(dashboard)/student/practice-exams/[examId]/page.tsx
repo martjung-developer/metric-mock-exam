@@ -13,7 +13,7 @@ export default function PracticeExamPage() {
   return (
     <PracticeExamShell
       hook={hook}
-      onBack={() => router.push('/student/practice-exams')}
+      onBack={() => router.push('/student/reviewer')}
     />
   )
 } 

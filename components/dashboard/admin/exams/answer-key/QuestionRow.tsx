@@ -88,13 +88,13 @@ export function QuestionRow({
           ) : (
             <div className={s.answerInputWrap}>
               <input
-                className={`${s.answerInput} ${isDirty ? s.answerInputDirty : ''}`}
-                value={entry.override ?? (entry.correct_answer ?? '')}
-                placeholder="Enter answer…"
-                onChange={(e) =>
-                  onSetOverride(entry.question_id, e.target.value || null)
-                }
-              />
+  className={`${s.answerInput} ${isDirty ? s.answerInputDirty : ''}`}
+  value={entry.override ?? (entry.correct_answer ?? '')}
+  placeholder="Enter answer…"
+  onChange={(e) =>
+    onSetOverride(entry.question_id, e.target.value)
+  }
+/>
               {isDirty && (
                 <button
                   className={s.answerRevert}

@@ -16,17 +16,13 @@ interface RecentActivityProps {
 
 function SkeletonRow() {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '0.65rem',
-      padding: '0.55rem 0.75rem', background: '#f8fafc',
-      borderRadius: 9, border: '1.5px solid #edf0f5',
-    }}>
-      <div style={{ width: 15, height: 15, borderRadius: '50%', background: '#e4ecf3' }} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ width: '55%', height: 12, borderRadius: 4, background: '#e4ecf3' }} />
-        <div style={{ width: '35%', height: 10, borderRadius: 4, background: '#edf0f5' }} />
+    <div className={styles.dashboardRow}>
+      <div className={styles.activitySkeletonDot} />
+      <div className={styles.activitySkeletonBody}>
+        <div className={styles.activitySkeletonTitle} />
+        <div className={styles.activitySkeletonMeta} />
       </div>
-      <div style={{ width: 36, height: 14, borderRadius: 4, background: '#e4ecf3' }} />
+      <div className={styles.activitySkeletonScore} />
     </div>
   )
 }
@@ -76,7 +72,7 @@ export function RecentActivity({ items, loading }: RecentActivityProps) {
       </div>
 
       {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div className={styles.dashboardList}>
           {Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} />)}
         </div>
       ) : items.length === 0 ? (
@@ -91,36 +87,20 @@ export function RecentActivity({ items, loading }: RecentActivityProps) {
           </Link>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div className={styles.dashboardList}>
           {items.map((item) => (
             <div
               key={item.id}
-              style={{
-                display:      'flex',
-                alignItems:   'center',
-                gap:          '0.65rem',
-                padding:      '0.55rem 0.75rem',
-                background:   '#f8fafc',
-                borderRadius: 9,
-                border:       '1.5px solid #edf0f5',
-              }}
+              className={styles.dashboardRow}
             >
               <ActivityIcon item={item} />
 
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{
-                  fontSize:     '0.8rem',
-                  fontWeight:   600,
-                  color:        '#0d2540',
-                  margin:       0,
-                  overflow:     'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace:   'nowrap',
-                }}>
+                <p className={styles.dashboardRowTitle}>
                   {item.examTitle}
                 </p>
-                <p style={{ fontSize: '0.72rem', color: '#7a8fa8', margin: 0 }}>
-                  {item.examType === 'mock' ? 'Mock Exam' : 'Practice'}{' '}
+                <p className={styles.dashboardRowMeta}>
+                  {item.examType === 'mock' ? 'Mock Exam' : 'Reviewer'}{' '}
                   · {formatRelative(item.submittedAt)}
                 </p>
               </div>

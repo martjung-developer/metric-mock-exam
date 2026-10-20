@@ -20,7 +20,6 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { createClient }   from '@/lib/supabase/client'
-import { signOut }        from '@/lib/auth/actions'
 import { useUnreadCount } from '@/lib/hooks/notifications/useUnreadCount'
 import type { Profile }   from '@/lib/types/auth'
 import styles             from './StudentSidebar.module.css'
@@ -29,7 +28,7 @@ import styles             from './StudentSidebar.module.css'
 const NAV = [
   { href: '/student/dashboard',       icon: LayoutDashboard, label: 'Overview',        badge: false },
   { href: '/student/mock-exams',      icon: ClipboardList,   label: 'Mock Exam',       badge: false },
-  { href: '/student/practice-exams',  icon: BookOpen,        label: 'Practice Exam',   badge: false },
+  { href: '/student/reviewer',        icon: BookOpen,        label: 'Reviewer',        badge: false },
   { href: '/student/study-materials', icon: FileText,        label: 'Study Materials', badge: false },
   { href: '/student/progress',        icon: BarChart2,       label: 'My Progress',     badge: false },
   { href: '/student/results',         icon: GraduationCap,   label: 'Results',         badge: false },
@@ -68,8 +67,8 @@ export default function StudentSidebar({ profile }: Props) {
       <div className={styles.logoWrap}>
         {!collapsed && (
           <Image
-            src="/images/veripraxis-logo.png"
-            alt="VeriPraxis"
+            src="/images/metric-logo.png"
+            alt="M.E.T.R.I.C."
             width={0}
             height={30}
             style={{ width: 'auto', height: 30, filter: 'brightness(0) invert(1)' }}
@@ -173,7 +172,7 @@ export default function StudentSidebar({ profile }: Props) {
         {!collapsed && (
           <button
             className={styles.signOutBtn}
-            onClick={() => void signOut()}
+            onClick={() => { window.location.href = '/api/auth/signout' }}
             title="Sign out"
             type="button"
             aria-label="Sign out"

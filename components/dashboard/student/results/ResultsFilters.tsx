@@ -30,7 +30,7 @@ export function ResultsFilters({
             className={`${styles.tabBtn} ${tab === t ? styles.tabBtnActive : ''}`}
             onClick={() => onTab(t)}
           >
-            {t === 'all' ? 'All Exams' : t === 'mock' ? 'Mock Exams' : 'Practice Exams'}
+            {t === 'all' ? 'All Exams' : t === 'mock' ? 'Mock Exams' : 'Reviewers'}
           </button>
         ))}
       </div>

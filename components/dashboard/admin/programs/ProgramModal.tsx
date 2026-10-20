@@ -224,7 +224,7 @@ export function ProgramModal({
                               : styles.typePractice
                           }
                         >
-                          {ex.exam_type === 'mock' ? 'Mock' : 'Practice'}
+                          {ex.exam_type === 'mock' ? 'Mock' : 'Reviewer'}
                         </span>
                       </div>
                     ))}

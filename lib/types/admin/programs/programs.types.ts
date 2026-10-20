@@ -11,16 +11,15 @@ import type { Database } from '@/lib/types/database'
 
 export type ProgramRow = Database['public']['Tables']['programs']['Row']
 export type ExamRow    = Database['public']['Tables']['exams']['Row']
+type SchoolJoin = {
+  code: string
+  name: string
+  full_name: string
+}
+
 export type ProgramRowWithSchool = ProgramRow & {
-  schools: {
-    code: string
-    name: string
-    full_name: string
-  } | {
-    code: string
-    name: string
-    full_name: string
-  }[] | null
+  school?: SchoolJoin | SchoolJoin[] | null
+  schools?: SchoolJoin | SchoolJoin[] | null
 }
 
 // ── Subset of ExamRow used in program lists ───────────────────────────────────

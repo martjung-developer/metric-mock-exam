@@ -2,6 +2,7 @@
 // Pure UI — renders a single question row inside a group.
 
 import { FilePenLine, GripVertical, Lightbulb, Pencil, Trash2 } from 'lucide-react'
+import Image from 'next/image'
 import type { Question, QuestionOption } from '@/lib/types/admin/exams/questions/questions.types'
 import { TYPE_META } from '@/lib/utils/admin/questions/helpers'
 import s from '@/app/(dashboard)/admin/exams/[examId]/questions/questions.module.css'
@@ -12,6 +13,8 @@ interface QuestionRowProps {
   displayIndex: number
   onEdit: (q: Question) => void
   onDelete: (q: Question) => void
+  selected?: boolean
+  onToggleSelect?: () => void
 }
 
 export function QuestionRow({
@@ -19,11 +22,22 @@ export function QuestionRow({
   displayIndex,
   onEdit,
   onDelete,
+  selected = false,
+  onToggleSelect,
 }: QuestionRowProps): JSX.Element {
   const meta = TYPE_META[q.question_type]
 
   return (
     <div className={s.questionRow}>
+      {onToggleSelect && (
+        <input
+          className={s.rowSelectCheckbox}
+          type="checkbox"
+          aria-label="Select question"
+          checked={selected}
+          onChange={onToggleSelect}
+        />
+      )}
       <div className={s.questionDragHandle}>
         <GripVertical size={14} />
       </div>
@@ -34,6 +48,18 @@ export function QuestionRow({
 
       <div className={s.questionContent}>
         <p className={s.questionText}>{q.question_text}</p>
+
+        {q.image_url && (
+          <Image
+            className={s.questionImage}
+            src={q.image_url}
+            alt={`Image for ${q.question_text}`}
+            width={1200}
+            height={800}
+            unoptimized
+            loading="lazy"
+          />
+        )}
 
         {q.question_type === 'multiple_choice' && q.options && (
           <div className={s.optionsPreview}>

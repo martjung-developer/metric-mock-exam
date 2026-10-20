@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import json
 import re
 import sys
@@ -21,8 +22,19 @@ except Exception as exc:
 
 
 RED_COLOR = 0xFF0000
+BLUE_COLOR = 0x0000FF
+GREEN_COLOR = 0x008000
 RE_QNUM = re.compile(r"^\s*(\d{1,3})[\.\)\-]\s+(.+)$")
 RE_CHOICE = re.compile(r"^\s*[\(\[]?([a-dA-D])[\.\)\]]\s+(.+)$")
+# Keep section matching strict to avoid false positives on choices like "C. ..."
+# Supports typical exam section headers such as I., II., III., IV., ... up to XX.
+RE_SECTION_ROMAN = re.compile(
+    r"^\s*(I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI|XVII|XVIII|XIX|XX)\.\s+(.+?)\s*$",
+    re.I,
+)
+RE_SECTION_PART = re.compile(r"^\s*Part\s+(\d+)\s*[-:\u2013\u2014]?\s*(.*?)\s*$", re.I)
+RE_ANSWER_KEY_START = re.compile(r"^\s*(answer\s*key|key\s*answers?)\b", re.I)
+RE_ANSWER_KEY_LINE = re.compile(r"^\s*(\d{1,3})\s*[\.\)\-:]?\s*([A-D])\b", re.I)
 RE_SKIP = re.compile(
     r"^(bachelor|mock board|direction|name:|date:|score:|prepared by|subject reviewer)\b",
     re.I,
@@ -64,9 +76,10 @@ def build_row(number: int, stem: str, choices: list, passage: str = ""):
 
     by_label = {c["label"].upper(): c["text"] for c in choices}
     return {
-        "_rowIndex": number + 1,
+        "_rowIndex": number,
         "_valid": valid,
         "_errors": errors,
+        "status": "ready" if valid else "needs_review",
         "question_text": stem.strip(),
         "question_type": "multiple_choice",
         "correct_answer": correct_label,
@@ -80,7 +93,91 @@ def build_row(number: int, stem: str, choices: list, passage: str = ""):
         "points": 1,
         "exam_id": "",
         "program_id": "",
+        "section_title": "",
+        "section_number": None,
     }
+
+
+def roman_to_int(roman: str) -> int | None:
+    roman = roman.upper().strip()
+    values = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
+    total = 0
+    prev = 0
+    for ch in reversed(roman):
+        val = values.get(ch)
+        if val is None:
+            return None
+        if val < prev:
+            total -= val
+        else:
+            total += val
+            prev = val
+    return total if total > 0 else None
+
+
+def parse_answer_key_map(lines: list[str]) -> dict[int, str]:
+    key_map: dict[int, str] = {}
+    in_key = False
+    for raw in lines:
+        text = re.sub(r"\s+", " ", raw).strip()
+        if not text:
+            continue
+        if RE_ANSWER_KEY_START.search(text):
+            in_key = True
+            continue
+        if not in_key:
+            continue
+        m = RE_ANSWER_KEY_LINE.match(text)
+        if m:
+            key_map[int(m.group(1))] = m.group(2).upper()
+            continue
+        # stop if key block appears to end
+        if len(key_map) > 0 and RE_QNUM.match(text):
+            break
+    return key_map
+
+
+def int_color_to_rgb(color: int) -> tuple[int, int, int]:
+    color = int(color) & 0xFFFFFF
+    return ((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF)
+
+
+def color_distance(c1: tuple[int, int, int], c2: tuple[int, int, int]) -> float:
+    dr = c1[0] - c2[0]
+    dg = c1[1] - c2[1]
+    db = c1[2] - c2[2]
+    return (dr * dr + dg * dg + db * db) ** 0.5
+
+
+def is_emphasis_style(font_name: str, flags: int, color: int, baseline_color: int | None) -> bool:
+    font_l = (font_name or "").lower()
+    is_bold = (
+        bool(flags & 16)
+        or "bold" in font_l
+        or "black" in font_l
+        or "demi" in font_l
+        or "semibold" in font_l
+    )
+    if is_bold:
+        return True
+
+    rgb = int_color_to_rgb(color)
+    # Strong common emphasis colors.
+    target_rgbs = [
+        int_color_to_rgb(RED_COLOR),
+        int_color_to_rgb(BLUE_COLOR),
+        int_color_to_rgb(GREEN_COLOR),
+    ]
+    close_to_target = any(color_distance(rgb, t) <= 36 for t in target_rgbs)
+    if close_to_target:
+        return True
+
+    # If document baseline color is known, treat clearly different non-black colors as emphasis.
+    if baseline_color is not None:
+        base_rgb = int_color_to_rgb(baseline_color)
+        if color_distance(rgb, base_rgb) >= 28 and rgb != (0, 0, 0):
+            return True
+    return False
 
 
 def split_inline_choices(line: str):
@@ -663,36 +760,78 @@ def parse_pdf(path: Path):
         raise RuntimeError(f"Missing PDF dependency: {_IMPORT_ERROR}")
     doc = fitz.open(str(path))
     lines = []
+    flat_text_lines: list[str] = []
+    color_counts: dict[int, int] = {}
     for page in doc:
         blocks = page.get_text("dict", sort=True).get("blocks", [])
         for block in blocks:
             for line in block.get("lines", []):
                 spans = line.get("spans", [])
                 parts = []
-                is_red = False
+                span_infos = []
                 for s in spans:
                     txt = s.get("text", "")
                     if txt:
                         parts.append(txt)
-                    if int(s.get("color", 0)) == RED_COLOR:
-                        is_red = True
+                    color = int(s.get("color", 0))
+                    flags = int(s.get("flags", 0))
+                    font = str(s.get("font", ""))
+                    if txt and txt.strip():
+                        color_counts[color] = color_counts.get(color, 0) + len(txt.strip())
+                    span_infos.append(
+                        {
+                            "text": txt,
+                            "color": color,
+                            "flags": flags,
+                            "font": font,
+                        }
+                    )
                 text = re.sub(r"\s+", " ", "".join(parts)).strip()
                 if text:
-                    lines.append({"text": text, "is_red": is_red})
+                    flat_text_lines.append(text)
+                    lines.append({"text": text, "spans": span_infos})
+
+    baseline_color = None
+    if color_counts:
+        baseline_color = max(color_counts.items(), key=lambda kv: kv[1])[0]
 
     questions = []
     current = None
     pending_scenario = []
+    current_section_title = ""
+    current_section_number = None
 
     for ln in lines:
         text = ln["text"]
         if should_skip(text):
             continue
+
+        part_match = RE_SECTION_PART.match(text)
+        if part_match:
+            current_section_number = int(part_match.group(1))
+            current_section_title = part_match.group(2).strip() or f"Part {current_section_number}"
+            continue
+
+        roman_match = RE_SECTION_ROMAN.match(text)
+        if roman_match:
+            roman_num = roman_to_int(roman_match.group(1))
+            if roman_num is not None:
+                current_section_number = roman_num
+            current_section_title = roman_match.group(2).strip()
+            continue
+
         qm = RE_QNUM.match(text)
         if qm:
             if current:
                 questions.append(current)
-            current = {"stem": qm.group(2).strip(), "choices": [], "passage": "\n".join(pending_scenario).strip()}
+            current = {
+                "number": int(qm.group(1)),
+                "stem": qm.group(2).strip(),
+                "choices": [],
+                "passage": "\n".join(pending_scenario).strip(),
+                "section_title": current_section_title,
+                "section_number": current_section_number,
+            }
             pending_scenario = []
             continue
         if current is None:
@@ -708,24 +847,68 @@ def parse_pdf(path: Path):
             cm = RE_CHOICE.match(seg)
             if not cm:
                 continue
+            raw_seg = re.sub(r"\s+", " ", seg).strip()
+            raw_seg_low = raw_seg.lower()
+            clean_seg = clean_choice_prefix(seg)
+            seg_low = clean_seg.lower()
+            score = 0
+            for s in ln.get("spans", []):
+                st = re.sub(r"\s+", " ", str(s.get("text", ""))).strip()
+                if not st:
+                    continue
+                st_low = st.lower()
+                overlaps = (
+                    (st_low in raw_seg_low)
+                    or (raw_seg_low in st_low)
+                    or (st_low in seg_low)
+                    or (seg_low in st_low)
+                )
+                if not overlaps:
+                    continue
+                if is_emphasis_style(
+                    str(s.get("font", "")),
+                    int(s.get("flags", 0)),
+                    int(s.get("color", 0)),
+                    baseline_color,
+                ):
+                    score += max(1, len(st))
             current["choices"].append(
                 {
                     "label": cm.group(1).upper(),
-                    "text": clean_choice_prefix(seg),
-                    "is_correct": ln["is_red"],
+                    "text": clean_seg,
+                    "is_correct": score > 0,
+                    "_emphasis_score": score,
                 }
             )
 
     if current:
         questions.append(current)
 
+    answer_key_map = parse_answer_key_map(flat_text_lines)
     rows = []
     for idx, q in enumerate(questions, start=1):
         correct_ix = [i for i, c in enumerate(q["choices"]) if c["is_correct"]]
         if len(correct_ix) > 1:
-            for i in correct_ix[1:]:
-                q["choices"][i]["is_correct"] = False
-        rows.append(build_row(idx, q["stem"], q["choices"], q["passage"]))
+            best_i = max(range(len(q["choices"])), key=lambda i: q["choices"][i].get("_emphasis_score", 0))
+            for i, _ in enumerate(q["choices"]):
+                q["choices"][i]["is_correct"] = (i == best_i)
+            correct_ix = [best_i]
+        if len(correct_ix) == 0:
+            keyed = answer_key_map.get(q["number"])
+            if keyed:
+                for choice in q["choices"]:
+                    if choice["label"] == keyed:
+                        choice["is_correct"] = True
+                        break
+                correct_ix = [i for i, c in enumerate(q["choices"]) if c["is_correct"]]
+        row = build_row(idx, q["stem"], q["choices"], q["passage"])
+        row["section_title"] = q.get("section_title") or ""
+        row["section_number"] = q.get("section_number")
+        if len(correct_ix) == 0:
+            row["_valid"] = False
+            row["status"] = "needs_review"
+            row["_errors"] = [*row["_errors"], "Correct answer not confidently detected; needs review."]
+        rows.append(row)
     return rows
 
 

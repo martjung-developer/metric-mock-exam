@@ -4,7 +4,8 @@ import { Eye, ClipboardPenLine, PlayCircle, Loader2, ArrowUpDown } from 'lucide-
 import { useState }                  from 'react'
 import type { Submission }           from '@/lib/types/admin/exams/submissions/submission.types'
 import { STATUS_CONFIG }             from '@/lib/utils/admin/submissions/constants'
-import { fmtDate, fmtOrdinalTake, fmtTime, initials } from '@/lib/utils/admin/submissions/format'
+import { fmtDate, fmtOrdinalTake, initials } from '@/lib/utils/admin/submissions/format'
+import { elapsedSeconds, formatDuration } from '@/lib/utils/formatDuration'
 import { EmptyState, LoadingSkeleton } from './SubmissionsUI'
 import s from '@/app/(dashboard)/admin/exams/[examId]/submissions/submissions.module.css'
 
@@ -15,6 +16,7 @@ interface SubmissionsTableProps {
   onTakeSort:   (v: 'asc' | 'desc') => void
   onView:       (sub: Submission, mode: 'grade' | 'view') => void
   onForceSubmit?: (submissionId: string, startedAt: string) => Promise<string | null>
+  durationMinutes?: number | null
 }
 
 export function SubmissionsTable({
@@ -24,6 +26,7 @@ export function SubmissionsTable({
   onTakeSort,
   onView,
   onForceSubmit,
+  durationMinutes,
 }: SubmissionsTableProps) {
   // Track which row is currently being force-submitted
   const [forcingId, setForcingId] = useState<string | null>(null)
@@ -65,6 +68,9 @@ export function SubmissionsTable({
               const isInProgress = sub.status === 'in_progress'
               const canGrade   = ['submitted', 'graded', 'reviewed'].includes(sub.status)
               const isForcing  = forcingId === sub.id
+              const durationSeconds = elapsedSeconds(sub.started_at, sub.submitted_at)
+              const durationTooLong = durationSeconds !== null && durationMinutes !== null && durationMinutes !== undefined &&
+                durationSeconds > (durationMinutes + 5) * 60
 
               return (
                 <tr
@@ -102,9 +108,9 @@ export function SubmissionsTable({
                   {/* Time */}
                   <td>
                     <span className={s.timeCell}>
-                      {sub.time_spent_seconds !== null
-                        ? fmtTime(sub.time_spent_seconds)
-                        : <span className={s.na}>—</span>}
+                      <span title={durationTooLong ? "Exam was left open past its time limit, so active time can't be determined." : undefined}>
+                        {formatDuration(durationTooLong ? null : durationSeconds)}
+                      </span>
                     </span>
                   </td>
 

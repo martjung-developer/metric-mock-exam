@@ -6,6 +6,13 @@
 //  • No `as`, `any`, or `unknown` casts anywhere.
 //  • Transformer functions live here — they own the raw→domain mapping.
 //  • Service functions return domain types, never raw DB shapes.
+//
+// SCOPING MODEL
+// ─────────────
+//  • admin            → all programs under their school (schoolId)
+//  • faculty (head)    → only the programs they are marked is_program_head
+//                        for, via faculty_programs (programIds)
+//  • faculty (regular) → only their single home program (faculty.program_id)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -25,16 +32,20 @@ import type { ExamType } from '@/lib/types/database'
 // ── Convenience client alias ──────────────────────────────────────────────────
 type DB = SupabaseClient<Database>
 
+// ── Access scope ──────────────────────────────────────────────────────────────
+// programIds takes precedence over programId when both are present.
+// Resolution order used by callers: programIds → programId → schoolId → none.
 interface AccessScope {
-  schoolId: string | null
-  programId: string | null
+  schoolId:   string | null
+  programId:  string | null
+  programIds: string[] | null
 }
 
 async function getAccessScope(supabase: DB): Promise<AccessScope> {
   const { data: userRes } = await supabase.auth.getUser()
   const userId = userRes.user?.id ?? null
   if (!userId) {
-    return { schoolId: null, programId: null }
+    return { schoolId: null, programId: null, programIds: null }
   }
 
   const { data: profile } = await supabase
@@ -46,13 +57,49 @@ async function getAccessScope(supabase: DB): Promise<AccessScope> {
   if (profile?.role === 'faculty') {
     const { data: facultyRow } = await supabase
       .from('faculty')
-      .select('school_id, program_id')
+      .select('id, school_id, program_id, is_program_head')
       .eq('user_id', userId)
       .maybeSingle()
 
+    if (!facultyRow) {
+      return { schoolId: null, programId: null, programIds: null }
+    }
+
+    if (facultyRow.is_program_head) {
+      // Program head: may oversee multiple degree programs.
+      // Real mapping lives in faculty_programs, not the single
+      // faculty.program_id column (which is just their home program).
+      const { data: headPrograms } = await supabase
+        .from('faculty_programs')
+        .select('program_id')
+        .eq('faculty_id', facultyRow.id)
+        .eq('is_program_head', true)
+        .returns<{ program_id: string }[]>()
+
+      const programIds = (headPrograms ?? []).map((p) => p.program_id)
+
+      // Fallback: if faculty_programs has no rows yet for this head
+      // (e.g. data not backfilled), don't strand them with zero access —
+      // fall back to their home program.
+      const resolvedProgramIds =
+        programIds.length > 0
+          ? programIds
+          : facultyRow.program_id
+            ? [facultyRow.program_id]
+            : []
+
+      return {
+        schoolId:   facultyRow.school_id ?? null,
+        programId:  null,
+        programIds: resolvedProgramIds,
+      }
+    }
+
+    // Regular faculty: scoped to their single home program only.
     return {
-      schoolId: facultyRow?.school_id ?? null,
-      programId: facultyRow?.program_id ?? null,
+      schoolId:   facultyRow.school_id ?? null,
+      programId:  facultyRow.program_id ?? null,
+      programIds: null,
     }
   }
 
@@ -62,12 +109,38 @@ async function getAccessScope(supabase: DB): Promise<AccessScope> {
     .eq('user_id', userId)
     .maybeSingle()
 
-  return { schoolId: adminRow?.school_id ?? null, programId: null }
+  return { schoolId: adminRow?.school_id ?? null, programId: null, programIds: null }
+}
+
+/**
+ * Resolves an AccessScope down to a concrete list of allowed program ids,
+ * or `null` meaning "no program restriction" (full admin, no schoolId set).
+ * An empty array means "restricted, but resolves to zero programs" —
+ * callers should treat that as "return nothing" rather than "no filter".
+ */
+async function resolveAllowedProgramIds(
+  supabase: DB,
+  scope: AccessScope,
+): Promise<string[] | null> {
+  if (scope.programIds) {
+    return scope.programIds
+  }
+  if (scope.programId) {
+    return [scope.programId]
+  }
+  if (scope.schoolId) {
+    const { data: scopedPrograms } = await supabase
+      .from('programs')
+      .select('id')
+      .eq('school_id', scope.schoolId)
+      .returns<{ id: string }[]>()
+    return (scopedPrograms ?? []).map((p) => p.id)
+  }
+  return null
 }
 
 // ── Internal raw query types (not exported) ───────────────────────────────────
-// These match exactly what Supabase returns for the join query.
-type QuestionCountRow  = Pick<Database['public']['Tables']['questions']['Row'],      'exam_id'>
+type QuestionCountRow   = Pick<Database['public']['Tables']['questions']['Row'],       'exam_id'>
 type AssignmentCountRow = Pick<Database['public']['Tables']['exam_assignments']['Row'], 'exam_id'>
 
 // ── Transformers ──────────────────────────────────────────────────────────────
@@ -128,18 +201,24 @@ function toExam(
 }
 
 // ── getPrograms ───────────────────────────────────────────────────────────────
+// Used to populate the "Program" filter dropdown — must mirror the same
+// scoping used by getAllExamsWithMeta, or the filter options and the actual
+// results silently diverge (e.g. head sees a program in the filter that
+// then shows zero exams, or vice versa).
 
 export async function getPrograms(supabase: DB): Promise<ProgramOption[]> {
   const scope = await getAccessScope(supabase)
+  const allowedProgramIds = await resolveAllowedProgramIds(supabase, scope)
+
   let query = supabase
     .from('programs')
     .select('id, code, name')
 
-  if (scope.schoolId) {
-    query = query.eq('school_id', scope.schoolId)
-  }
-  if (scope.programId) {
-    query = query.eq('id', scope.programId)
+  if (allowedProgramIds) {
+    if (allowedProgramIds.length === 0) {
+      return []
+    }
+    query = query.in('id', allowedProgramIds)
   }
 
   const { data } = await query
@@ -207,18 +286,7 @@ export async function getExamCounts(
 
 export async function getAllExamsWithMeta(supabase: DB): Promise<Exam[]> {
   const scope = await getAccessScope(supabase)
-
-  let allowedProgramIds: string[] | null = null
-  if (scope.programId) {
-    allowedProgramIds = [scope.programId]
-  } else if (scope.schoolId) {
-    const { data: scopedPrograms } = await supabase
-      .from('programs')
-      .select('id')
-      .eq('school_id', scope.schoolId)
-      .returns<{ id: string }[]>()
-    allowedProgramIds = (scopedPrograms ?? []).map((p) => p.id)
-  }
+  const allowedProgramIds = await resolveAllowedProgramIds(supabase, scope)
 
   let query = supabase
     .from('exams')
@@ -313,7 +381,7 @@ export async function updateExam(
         user_id: a.id,
         title: 'Exam Resubmitted',
         message: `${actorName} resubmitted ${payload.title} for review.`,
-        type: 'info',
+        type: 'info' as const,
       })),
     )
   }

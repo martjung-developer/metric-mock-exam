@@ -16,15 +16,11 @@ interface AssignedExamsProps {
 
 function SkeletonRow() {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '0.65rem',
-      padding: '0.55rem 0.75rem', background: '#f8fafc',
-      borderRadius: 9, border: '1.5px solid #edf0f5',
-    }}>
-      <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e4ecf3' }} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ width: '60%', height: 12, borderRadius: 4, background: '#e4ecf3' }} />
-        <div style={{ width: '40%', height: 10, borderRadius: 4, background: '#edf0f5' }} />
+    <div className={styles.dashboardRow}>
+      <div className={styles.assignedSkeletonIcon} />
+      <div className={styles.activitySkeletonBody}>
+        <div className={styles.assignedSkeletonTitle} />
+        <div className={styles.assignedSkeletonMeta} />
       </div>
     </div>
   )
@@ -41,7 +37,7 @@ export function AssignedExams({ assignedExams, loading }: AssignedExamsProps) {
       </div>
 
       {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div className={styles.dashboardList}>
           <SkeletonRow />
           <SkeletonRow />
         </div>
@@ -51,39 +47,22 @@ export function AssignedExams({ assignedExams, loading }: AssignedExamsProps) {
           <p className={styles.assignedEmptyText}>No assignments yet</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div className={styles.dashboardList}>
           {assignedExams.slice(0, 3).map((item) => (
             <Link
               key={item.id}
               href={`/student/mock-exams/${item.examId}`}
-              style={{
-                display:       'flex',
-                alignItems:    'center',
-                gap:           '0.65rem',
-                padding:       '0.55rem 0.75rem',
-                background:    '#f8fafc',
-                borderRadius:  9,
-                border:        '1.5px solid #edf0f5',
-                textDecoration: 'none',
-                transition:    'border-color 0.15s',
-              }}
+              className={styles.assignedRow}
             >
-              <div style={{
-                width: 32, height: 32, borderRadius: 8,
-                background: '#dbeafe', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
+              <div className={styles.assignedIconBox}>
                 <PlayCircle size={16} color="#1d4ed8" />
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{
-                  fontSize: '0.8rem', fontWeight: 600, color: '#0d2540', margin: 0,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
+                <p className={styles.dashboardRowTitle}>
                   {item.examTitle}
                 </p>
-                <p style={{ fontSize: '0.72rem', color: '#7a8fa8', margin: 0 }}>
+                <p className={styles.dashboardRowMeta}>
                   Assigned {formatRelative(item.assignedAt)}
                   {item.deadline !== null && (
                     <> · Due {formatRelative(item.deadline)}</>

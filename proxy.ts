@@ -1,6 +1,7 @@
 // proxy.ts
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient }            from '@supabase/ssr'
+import type { CookieOptions }            from '@supabase/ssr'
 import type { Database }                 from '@/lib/types/database'
 
 type Role = Database['public']['Enums']['user_role']
@@ -17,6 +18,12 @@ type ScopeCachePayload = {
   s:   string | null
   p:   string | null
   exp: number
+}
+
+type SupabaseCookie = {
+  name: string
+  value: string
+  options: CookieOptions
 }
 
 const SCOPE_REQUIRED_PREFIXES = ['/student', '/faculty']
@@ -94,72 +101,79 @@ async function decodeCache(raw: string, userId: string): Promise<Scope | null> {
 
 async function resolveScope(
   request: NextRequest,
-): Promise<{ scope: Scope | null; userId: string | null; fresh: boolean }> {
+): Promise<{ scope: Scope | null; userId: string | null; fresh: boolean; cookiesToSet: SupabaseCookie[] }> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) { return { scope: null, userId: null, fresh: false } }
+  const cookiesToSet: SupabaseCookie[] = []
+  if (!url || !key) { return { scope: null, userId: null, fresh: false, cookiesToSet } }
 
   const supabase = createServerClient<Database>(url, key, {
+    cookieOptions: {
+      name: 'metric-auth',
+    },
     cookies: {
       getAll: () => request.cookies.getAll(),
-      setAll: () => {},
+      setAll: (cookiesToRefresh: SupabaseCookie[]) => {
+        cookiesToRefresh.forEach(({ name, value }) => {
+          request.cookies.set(name, value)
+        })
+        cookiesToSet.push(...cookiesToRefresh)
+      },
     },
   })
 
-  let session: { user: { id: string } } | null = null
   try {
-    const { data } = await supabase.auth.getSession()
-    session = data.session
-  } catch {
-    return { scope: null, userId: null, fresh: false }
-  }
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error || !user) {
+      return { scope: null, userId: null, fresh: false, cookiesToSet }
+    }
 
-  const user = session?.user ?? null
-  if (!user) { return { scope: null, userId: null, fresh: false } }
+    const cachedRaw = request.cookies.get(SCOPE_COOKIE)?.value
+    if (cachedRaw) {
+      const cached = await decodeCache(cachedRaw, user.id)
+      if (cached) { return { scope: cached, userId: user.id, fresh: false, cookiesToSet } }
+    }
 
-  const cachedRaw = request.cookies.get(SCOPE_COOKIE)?.value
-  if (cachedRaw) {
-    const cached = await decodeCache(cachedRaw, user.id)
-    if (cached) { return { scope: cached, userId: user.id, fresh: false } }
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single() as { data: { role: Role } | null }
-
-  if (!profile) { return { scope: null, userId: user.id, fresh: true } }
-
-  let schoolId:  string | null = null
-  let programId: string | null = null
-
-  if (profile.role === 'student') {
-    const { data } = await supabase
-      .from('students')
-      .select('school_id, program_id')
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
       .eq('id', user.id)
-      .maybeSingle() as { data: { school_id: string | null; program_id: string | null } | null }
-    schoolId  = data?.school_id  ?? null
-    programId = data?.program_id ?? null
-  } else if (profile.role === 'faculty') {
-    const { data } = await supabase
-      .from('faculty')
-      .select('school_id, program_id')
-      .eq('user_id', user.id)
-      .maybeSingle() as { data: { school_id: string | null; program_id: string | null } | null }
-    schoolId  = data?.school_id  ?? null
-    programId = data?.program_id ?? null
-  } else {
-    const { data } = await supabase
-      .from('admins')
-      .select('school_id')
-      .eq('user_id', user.id)
-      .maybeSingle() as { data: { school_id: string | null } | null }
-    schoolId = data?.school_id ?? null
-  }
+      .single() as { data: { role: Role } | null }
 
-  return { scope: { role: profile.role, schoolId, programId }, userId: user.id, fresh: true }
+    if (!profile) { return { scope: null, userId: user.id, fresh: true, cookiesToSet } }
+
+    let schoolId:  string | null = null
+    let programId: string | null = null
+
+    if (profile.role === 'student') {
+      const { data } = await supabase
+        .from('students')
+        .select('school_id, program_id')
+        .eq('id', user.id)
+        .maybeSingle() as { data: { school_id: string | null; program_id: string | null } | null }
+      schoolId  = data?.school_id  ?? null
+      programId = data?.program_id ?? null
+    } else if (profile.role === 'faculty') {
+      const { data } = await supabase
+        .from('faculty')
+        .select('school_id, program_id')
+        .eq('user_id', user.id)
+        .maybeSingle() as { data: { school_id: string | null; program_id: string | null } | null }
+      schoolId  = data?.school_id  ?? null
+      programId = data?.program_id ?? null
+    } else {
+      const { data } = await supabase
+        .from('admins')
+        .select('school_id')
+        .eq('user_id', user.id)
+        .maybeSingle() as { data: { school_id: string | null } | null }
+      schoolId = data?.school_id ?? null
+    }
+
+    return { scope: { role: profile.role, schoolId, programId }, userId: user.id, fresh: true, cookiesToSet }
+  } catch {
+    return { scope: null, userId: null, fresh: false, cookiesToSet }
+  }
 }
 
 // ── Cache writer (unchanged) ──────────────────────────────────────────────────
@@ -170,12 +184,16 @@ async function withScopeCache(
   scope:      Scope | null,
   fresh:      boolean,
   clearCache: boolean,
+  cookiesToSet: SupabaseCookie[],
 ): Promise<NextResponse> {
   const secure = process.env.NODE_ENV === 'production'
   const base   = { path: '/', httpOnly: true, sameSite: 'lax' as const, secure }
 
   if (clearCache || !scope || !userId) {
     response.cookies.set({ name: SCOPE_COOKIE, value: '', maxAge: 0, ...base })
+    cookiesToSet.forEach(({ name, value, options }) => {
+      response.cookies.set(name, value, options)
+    })
     return response
   }
 
@@ -190,6 +208,10 @@ async function withScopeCache(
     const encoded = await encodeCache(payload)
     response.cookies.set({ name: SCOPE_COOKIE, value: encoded, maxAge: SCOPE_TTL_SECONDS, ...base })
   }
+
+  cookiesToSet.forEach(({ name, value, options }) => {
+    response.cookies.set(name, value, options)
+  })
 
   return response
 }
@@ -212,35 +234,35 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   if (DEV_BYPASS_AUTH)  { return NextResponse.next() }
   if (shouldSkip(pathname)) { return NextResponse.next() }
 
-  const { scope, userId, fresh } = await resolveScope(request)
+  const { scope, userId, fresh, cookiesToSet } = await resolveScope(request)
 
   // ── Not authenticated ─────────────────────────────────────────────────────
   if (!scope) {
     const res = redirectToLogin(request, `${pathname}${search}`)
-    return withScopeCache(res, userId, null, false, true)
+    return withScopeCache(res, userId, null, false, true, cookiesToSet)
   }
 
   // ── Role guards — now preserve ?next= ─────────────────────────────────────
   if (pathname.startsWith('/student') && scope.role !== 'student') {
     const res = redirectToLogin(request)
-    return withScopeCache(res, userId, scope, fresh, false)
+    return withScopeCache(res, userId, scope, fresh, false, cookiesToSet)
   }
 
   if (pathname.startsWith('/faculty') && scope.role !== 'faculty') {
     const res = redirectToLogin(request)
-    return withScopeCache(res, userId, scope, fresh, false)
+    return withScopeCache(res, userId, scope, fresh, false, cookiesToSet)
   }
 
   if (pathname.startsWith('/admin') && scope.role === 'student') {
     const res = redirectToLogin(request)
-    return withScopeCache(res, userId, scope, fresh, false)
+    return withScopeCache(res, userId, scope, fresh, false, cookiesToSet)
   }
 
   if (scope.role === 'faculty' && pathname.startsWith('/admin')) {
     const blocked = ['/admin/programs', '/admin/analytics', '/admin/faculty']
     if (blocked.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
       const res = redirectToLogin(request)
-      return withScopeCache(res, userId, scope, fresh, false)
+      return withScopeCache(res, userId, scope, fresh, false, cookiesToSet)
     }
   }
 
@@ -251,10 +273,10 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     const onboardUrl = new URL('/onboarding', request.url)
     onboardUrl.searchParams.set('next', `${pathname}${search}`)
     const res = NextResponse.redirect(onboardUrl)
-    return withScopeCache(res, userId, scope, fresh, false)
+    return withScopeCache(res, userId, scope, fresh, false, cookiesToSet)
   }
 
-  return withScopeCache(NextResponse.next(), userId, scope, fresh, false)
+  return withScopeCache(NextResponse.next(), userId, scope, fresh, false, cookiesToSet)
 }
 
 export const config = {

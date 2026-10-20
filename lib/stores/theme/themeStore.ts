@@ -13,7 +13,7 @@ interface ThemeState {
   hydrate: () => void
 }
 
-const THEME_KEY = 'veripraxis:theme'
+const THEME_KEY = 'metric:theme'
 
 function getSystemTheme(): ResolvedTheme {
   if (typeof window === 'undefined') {

@@ -40,6 +40,8 @@ export interface QuestionBank extends ApprovalFields {
   exam_id:      string | null
   rejected_at:  string | null
   published_at: string | null
+  last_modified_by: string | null
+  last_modified_at: string | null
   created_at:   string
   updated_at:   string
   // Joined

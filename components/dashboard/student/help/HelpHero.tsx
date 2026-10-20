@@ -2,6 +2,7 @@
 // Pure UI — renders the top search hero banner.
 
 import React from 'react'
+import Image from 'next/image'
 import { Search, X, HelpCircle } from 'lucide-react'
 import styles from '@/app/(dashboard)/student/help/help.module.css'
 
@@ -25,6 +26,16 @@ export default function HelpHero({
 }: HelpHeroProps) {
   return (
     <div className={styles.hero}>
+      <Image
+        src="/images/lccb_student_help.jpg"
+        alt=""
+        fill
+        sizes="100vw"
+        className={styles.heroImage}
+        aria-hidden="true"
+        priority
+      />
+      <div className={styles.heroOverlay} aria-hidden="true" />
       <div className={styles.heroInner}>
         <div className={styles.heroBadge}>
           <HelpCircle size={14} strokeWidth={2.5} />

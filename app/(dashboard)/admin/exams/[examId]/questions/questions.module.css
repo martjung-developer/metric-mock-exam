@@ -575,6 +575,22 @@
 }
 .questionRow:last-of-type { border-bottom: none; }
 .questionRow:hover { background: var(--surface-tint); }
+.rowSelectCheckbox { align-self: center; flex-shrink: 0; }
+
+.bulkSelectionBar {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin: 0 0 1rem;
+  color: var(--text-sub);
+  font-size: .8rem;
+}
+.bulkSelectionBar label { display: inline-flex; align-items: center; gap: .4rem; }
+.bulkSelectionActions { display: inline-flex; align-items: center; gap: .65rem; margin-left: auto; }
+.bulkSelectionActions button { border: 0; background: none; color: var(--primary); font: inherit; cursor: pointer; }
+.bulkSelectionActions .bulkDeleteButton { display: inline-flex; align-items: center; gap: .35rem; padding: .45rem .7rem; border: 1px solid var(--danger); border-radius: var(--r-btn); background: var(--danger); color: #fff; }
+.bulkSelectionActions button:disabled { opacity: .55; cursor: not-allowed; }
 
 .questionDragHandle {
   display: flex;
@@ -618,6 +634,15 @@
   color: var(--text);
   line-height: 1.55;
   margin: 0;
+}
+
+.questionImage {
+  max-width: min(100%, 360px);
+  max-height: 220px;
+  object-fit: contain;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
 }
 
 /* Options preview */
@@ -907,6 +932,55 @@
 }
 .textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-tint); }
 
+.imageUploadBox {
+  min-height: 76px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--r-btn);
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+}
+.imageUploadBox:hover { border-color: var(--primary-tint); color: var(--primary); background: var(--primary-pale); }
+.imageUploadBoxBusy { cursor: wait; opacity: .75; }
+.imageInput { display: none; }
+.imagePreviewWrap {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+.imagePreview {
+  max-width: min(100%, 360px);
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-soft);
+}
+.replaceImageBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: .55rem;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+}
+.imageUploadError {
+  margin: .45rem 0 0;
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--danger);
+}
+
 /* ── Type Grid ────────────────────────────────────────── */
 .typeGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .45rem; }
 
@@ -1093,4 +1167,51 @@
   .heading    { font-size: 1.2rem; }
   .typeGrid   { grid-template-columns: repeat(2, 1fr); }
   .groupStats { display: none; }
+}
+
+:global(html.dark) .page {
+  --bg: #0d1420;
+  --surface: #111a2b;
+  --surface-soft: #172338;
+  --surface-tint: #172338;
+  --border: #243247;
+  --border-soft: #243247;
+  --text: #e6edf7;
+  --text-sub: #9db0ca;
+  --text-muted: #9db0ca;
+  --primary-pale: rgba(37, 99, 235, 0.14);
+  --primary-tint: rgba(96, 165, 250, 0.28);
+  --success-pale: rgba(5, 150, 105, 0.14);
+  --warning-pale: rgba(217, 119, 6, 0.16);
+  --danger-pale: rgba(220, 38, 38, 0.14);
+  --accent-pale: rgba(124, 58, 237, 0.14);
+  --skel-base: #172338;
+  --skel-shine: #243247;
+  --shadow-card: none;
+  --shadow-btn: none;
+  --shadow-modal: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+:global(html.dark) .groupHeader,
+:global(html.dark) .questionRow:hover,
+:global(html.dark) .questionNumber,
+:global(html.dark) .questionPoints,
+:global(html.dark) .typeOptionIcon,
+:global(html.dark) .modalHeader,
+:global(html.dark) .modalFooter {
+  background: #172338;
+}
+
+:global(html.dark) .input:focus,
+:global(html.dark) .textarea:focus,
+:global(html.dark) .searchInput:focus {
+  background: #111a2b;
+}
+
+:global(html.dark) .actionEdit,
+:global(html.dark) .actionDelete,
+:global(html.dark) .modalClose,
+:global(html.dark) .searchClear,
+:global(html.dark) .pageBtn {
+  color: #9db0ca;
 }
